@@ -96,8 +96,8 @@ fi
 
 # ─── Step 3: Create Volume Directories ─────────────────────────────────────
 log "Creating host volume directories…"
-mkdir -p "$PROJECT_DIR/radio_vault" "$PROJECT_DIR/persona_db" "$PROJECT_DIR/market_ingest"
-ok "Volumes ready: radio_vault/, persona_db/, market_ingest/"
+mkdir -p "$PROJECT_DIR/radio_vault" "$PROJECT_DIR/persona_db" "$PROJECT_DIR/market_ingest" "$PROJECT_DIR/data" "$PROJECT_DIR/redis_data"
+ok "Volumes ready: radio_vault/, persona_db/, market_ingest/, data/, redis_data/"
 
 # ─── Step 4: Configure .env ────────────────────────────────────────────────
 if [[ ! -f "$PROJECT_DIR/.env" ]]; then

@@ -1,0 +1,28 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, dev ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install bandit
+        run: pip install bandit
+      - name: Run bandit
+        run: bandit -r . -ll -ii || echo "Bandit found potential issues"
+      - name: NPM audit
+        run: |
+          if [ -d frontend ]; then cd frontend && npm audit; fi

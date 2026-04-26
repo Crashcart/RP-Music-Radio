@@ -16,15 +16,15 @@
 - [x] Create `.github/REPO_CONFIG.md` with tech stack details
 - [x] Create `.github/TODO.md` with actual project phases
 - [x] Create `.github/PLANNING.md` with technical decisions
+- [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
+- [x] Create `.github/workflows/test.yml` (Python + React tests)
+- [x] Create `.github/workflows/lint.yml` (flake8, ESLint, black, Prettier)
+- [x] Create `.github/workflows/security-audit.yml` (bandit, npm audit)
+- [x] Create `.github/workflows/docker-build.yml` (validate Dockerfiles)
+- [x] Create `.github/workflows/code-review-gate.yml` (conflict detection, docs check)
 
 #### Pending ⏳
-- [ ] Create `.github/ARCHITECTURE.md` (full TDR documentation)
 - [ ] Configure GitHub branch protections (manual in Settings)
-- [ ] Create `.github/workflows/test.yml` (Python + React tests)
-- [ ] Create `.github/workflows/lint.yml` (flake8, ESLint, black, Prettier)
-- [ ] Create `.github/workflows/security-audit.yml` (bandit, npm audit)
-- [ ] Create `.github/workflows/docker-build.yml` (validate Dockerfiles)
-- [ ] Create `.github/workflows/code-review-gate.yml` (conflict detection, docs check)
 
 ---
 

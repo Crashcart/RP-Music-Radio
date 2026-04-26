@@ -145,7 +145,7 @@ ok "On branch: $(git rev-parse --abbrev-ref HEAD)"
 # ─── Phase 4: Volume Setup ─────────────────────────────────────────────────
 header "Phase 4: Volume Setup"
 
-for vol in radio_vault persona_db market_ingest redis_data; do
+for vol in radio_vault persona_db market_ingest redis_data data; do
   mkdir -p "$PROJECT_DIR/$vol"
   chmod 755 "$PROJECT_DIR/$vol"
   ok "Created: $vol/"

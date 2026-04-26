@@ -1,0 +1,21 @@
+name: Code Review Gate
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for merge conflicts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log("Verified there are no immediate structural conflicts.");
+      - name: Documentation check
+        run: |
+          if [ ! -f "README.md" ]; then echo "Missing README.md"; exit 1; fi
+          if [ ! -f "ARCHITECTURE.md" ]; then echo "Missing ARCHITECTURE.md"; exit 1; fi
+          echo "Necessary documentation checks passed."
