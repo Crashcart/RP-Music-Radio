@@ -21,35 +21,41 @@ All metadata is baked directly into MP3 ID3v2.4 tags, making each file a portabl
 - 4-8 GB RAM available
 - 50 GB disk space
 
-### Setup
+### Setup (Recommended)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/crashcart/rp-music-radio.git
-   cd rp-music-radio
-   ```
+```bash
+git clone https://github.com/crashcart/rp-music-radio.git
+cd rp-music-radio
+./install-full.sh                   # Guided install with hardware detection
+# Edit .env with your GOOGLE_API_KEY when prompted
+```
 
-2. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Google API key
-   ```
+Then open `http://localhost:8080`.
 
-3. **Create host volumes**
-   ```bash
-   mkdir -p radio_vault persona_db market_ingest
-   ```
+### Operational Scripts
 
-4. **Launch Docker stack**
-   ```bash
-   docker-compose up -d
-   docker-compose ps
-   ```
+| Script | Purpose |
+| --- | --- |
+| `./install.sh` | Quick install on the current branch |
+| `./install-full.sh` | Full guided install (hardware detection, security hardening) |
+| `node install.js` | Cross-platform Node-based installer (macOS/Windows/Linux) |
+| `./update.sh` | Pull latest, rebuild, redeploy with optional rollback |
+| `./switch-branch.sh <branch>` | Safely switch between `main` / `test` / `dev` |
+| `./uninstall.sh` | Stop & clean containers (preserves generated content) |
+| `./uninstall-full.sh` | Complete removal (purges everything, optional repo deletion) |
+| `./collect-logs.sh` | Bundle diagnostics into a tarball for support |
+| `./scripts/logs.sh <cmd>` | Centralized log viewer/manager |
+| `./scripts/troubleshoot.sh` | Run all diagnostic checks (60+ failure modes) |
 
-5. **Access the frontend**
-   ```
-   http://localhost:8080
-   ```
+All scripts accept `--branch <main\|test\|dev>` to target a specific branch.
+
+### Branches
+
+| Branch | Purpose | Image Source |
+| --- | --- | --- |
+| `main` | Production (stable releases) | Pre-built images |
+| `test` | Pre-production staging | Release-candidate images |
+| `dev` | Active development | Built from source |
 
 ## Architecture
 
@@ -146,11 +152,71 @@ Follow the governance rules in [.github/copilot-instructions.md](.github/copilot
 4. Pass CI/CD checks
 5. Await human review
 
+## Troubleshooting
+
+AetherWave ships with a centralized **compile log system** for diagnostics.
+All install/update/uninstall scripts write structured logs to `logs/` with
+ISO 8601 timestamps and severity levels (DEBUG / INFO / WARN / ERROR).
+
+### Run Full Diagnostics
+```bash
+./scripts/troubleshoot.sh           # 60+ checks with prioritized fixes
+./scripts/troubleshoot.sh --quick   # Skip slow network/Docker checks
+./scripts/troubleshoot.sh --export  # Save report to logs/troubleshoot-report-*.txt
+```
+
+### View & Manage Logs
+```bash
+./scripts/logs.sh list                  # List all log files
+./scripts/logs.sh tail install-full     # Tail latest install-full log
+./scripts/logs.sh show update           # Print full content of latest update log
+./scripts/logs.sh docker aetherwave_api # View a specific container's logs
+./scripts/logs.sh search "API_KEY"      # Search across all logs
+./scripts/logs.sh errors                # Show recent errors across all logs
+./scripts/logs.sh summary               # Counts, sizes, error totals
+./scripts/logs.sh clean                 # Remove logs older than 30 days
+./scripts/logs.sh clean --all           # Wipe all log files
+```
+
+### Bundle for Support
+```bash
+./collect-logs.sh
+# Produces: aetherwave-logs-<timestamp>.tar.gz
+# Includes: system info, container logs, redacted config, troubleshoot
+# snapshot, error summary, and recent script logs.
+```
+
+### Log File Layout
+```
+logs/
+├── install-20260426-093015.log
+├── install-full-20260426-093020.log
+├── update-20260426-101430.log
+├── uninstall-20260426-110500.log
+├── troubleshoot-20260426-120000.log
+└── *-latest.log                # symlinks to most recent log per script
+```
+
+Logs are auto-rotated (last 30 per script) and ignored by `.gitignore`.
+
+### Quick Health Check
+```bash
+curl http://localhost:8080/health
+docker-compose logs -f
+```
+
+### Reset Everything
+```bash
+./uninstall-full.sh --backup-vault   # Total reset with vault backup
+./install-full.sh                    # Reinstall fresh
+```
+
 ## Support
 
 - **Full Documentation**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **GitHub Issues**: Post questions
 - **Development Log**: [.github/PLANNING.md](.github/PLANNING.md)
+- **Bundle Diagnostics**: `./collect-logs.sh` then attach the tarball to your issue
 
 ---
 

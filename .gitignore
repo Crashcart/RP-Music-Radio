@@ -15,8 +15,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Note: only ignore Python virtualenv lib/ at repo root, not scripts/lib/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -68,9 +69,12 @@ persona_db/
 market_ingest/
 redis_data/
 
-# Logs
-logs/
+# Logs — keep the directory + .gitkeep but ignore actual log files
+logs/*.log
+logs/*.tar.gz
+logs/troubleshoot-report-*.txt
 *.log
+!logs/.gitkeep
 
 # Testing
 .pytest_cache/
