@@ -11,4 +11,4 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build Docker Compose Services
         run: |
-          if [ -f docker-compose.yml ]; then docker-compose build; else echo "No docker-compose.yml found."; fi
+          if [ -f docker-compose.yml ]; then docker compose build; else echo "No docker-compose.yml found."; fi
