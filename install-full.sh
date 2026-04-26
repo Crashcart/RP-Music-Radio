@@ -238,7 +238,7 @@ if [[ "$LAUNCH_NOW" =~ ^[Yy]$ ]]; then
 
   log "Waiting for API to become healthy…"
   for i in {1..30}; do
-    if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
       ok "API is healthy"
       break
     fi
@@ -257,9 +257,9 @@ echo "Project dir:   ${BLUE}$PROJECT_DIR${NC}"
 echo "Log file:      ${BLUE}$LOG_FILE${NC}"
 echo ""
 echo "Endpoints:"
-echo "  • Web UI:     ${YELLOW}http://localhost:8080${NC}"
-echo "  • Health:     ${YELLOW}http://localhost:8080/health${NC}"
-echo "  • API docs:   ${YELLOW}http://localhost:8080/docs${NC}"
+echo "  • Web UI:     ${YELLOW}http://localhost:8432${NC}"
+echo "  • Health:     ${YELLOW}http://localhost:8000/health${NC}"
+echo "  • API docs:   ${YELLOW}http://localhost:8000/docs${NC}"
 echo ""
 echo "Generated content will appear in: ${BLUE}$PROJECT_DIR/radio_vault/${NC}"
 echo ""

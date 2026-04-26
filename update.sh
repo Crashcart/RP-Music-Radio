@@ -186,7 +186,7 @@ sleep 3
 log "Waiting for API to become healthy…"
 HEALTHY=0
 for i in {1..30}; do
-  if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+  if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
     HEALTHY=1
     break
   fi
@@ -207,7 +207,7 @@ else
     docker-compose pull 2>/dev/null || docker-compose build
     docker-compose up -d
     sleep 5
-    if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    if curl -sf http://localhost:8000/health >/dev/null 2>&1; then
       ok "Rollback successful — service restored"
     else
       err "Rollback also failed — manual intervention required"
@@ -244,7 +244,7 @@ NEW_COMMIT=$(git rev-parse --short HEAD)
 echo "Branch:         ${GREEN}$TARGET_BRANCH${NC}"
 echo "Previous:       ${BLUE}$(git rev-parse --short "$PREVIOUS_COMMIT")${NC}"
 echo "Now at:         ${GREEN}$NEW_COMMIT${NC}"
-echo "Web UI:         ${YELLOW}http://localhost:8080${NC}"
+echo "Web UI:         ${YELLOW}http://localhost:8432${NC}"
 echo "Health:         ${GREEN}OK${NC}"
 echo ""
 
