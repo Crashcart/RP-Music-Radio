@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  aetherwave-api:
+    image: aetherwave/factory-core:latest
+    container_name: aetherwave_api
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    volumes:
+      - ./radio_vault:/app/output        # Host mount: generated MP3s
+      - ./persona_db:/app/persistence    # Host mount: Voice DNA storage
+      - ./market_ingest:/app/input       # Host mount: CSV uploads
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DEVICE_TYPE=${DEVICE_TYPE:-INTEL_QUICKSYNC}
+      - AUTO_NAME_FORMAT={STATION}_{ARTIST}_{TRACK}.mp3
+      - FILLER_ENABLED=true
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////app/data/aetherwave.db
+      - LOG_LEVEL=INFO
+    ports:
+      - "8080:8000"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  aetherwave-worker:
+    image: aetherwave/factory-worker:latest
+    container_name: aetherwave_worker
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    volumes:
+      - ./radio_vault:/app/output
+      - ./persona_db:/app/persistence
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DEVICE_TYPE=${DEVICE_TYPE:-INTEL_QUICKSYNC}
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:////app/data/aetherwave.db
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+
+  redis:
+    image: redis:7-alpine
+    container_name: aetherwave_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: aetherwave_network
