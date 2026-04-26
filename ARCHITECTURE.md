@@ -48,7 +48,7 @@ The application is containerized using Docker to ensure easy installation and re
                ▼
       ┌────────────────┐
       │ FastAPI Server │
-      │ (Port 8080)    │
+      │ (Port 8000)    │
       ├────────────────┤
       │ GET  /drafts   │
       │ POST /ingest   │
@@ -344,7 +344,7 @@ services:
       - API_PORT=${API_PORT:-8000}
       - API_HOST=${API_HOST:-0.0.0.0}
     ports:
-      - "8080:8000"
+      - "8000:8000"
     depends_on:
       - redis
     restart: unless-stopped
@@ -521,13 +521,13 @@ docker-compose ps
 
 ### Step 4: Verify API Health
 ```bash
-curl http://localhost:8080/health
-# Expected response: {"status": "healthy", "services": {...}}
+curl http://localhost:8000/health
+# Expected response: {"status": "ok", "service": "AetherWave API"}
 ```
 
 ### Step 5: Access Frontend
 ```
-Open browser: http://localhost:8080
+Open browser: http://localhost:8432
 Upload first "Market Manifest" or "Station Seed"
 ```
 
