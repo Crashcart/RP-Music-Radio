@@ -31,21 +31,21 @@
 ## Phase 1: Backend Foundation (MVP)
 
 ### Subtasks:
-- [ ] Create `backend/` directory structure
-  - [ ] `app/main.py` — FastAPI server
+- [x] Create `backend/` directory structure
+  - [x] `app/main.py` — FastAPI server
   - [ ] `app/api/v1/` — Routes (ingest, drafts, commit, tasks)
   - [ ] `app/models/` — SQLAlchemy models (Draft, Persona, History)
   - [ ] `app/tasks/` — Celery task definitions
   - [ ] `app/integrations/` — Google APIs (Gemini, Lyria, Nano)
   - [ ] `app/utils/` — Helpers (mutagen_handler, filler_protocol, etc.)
-- [ ] Create `requirements.txt` with core dependencies
-  - [ ] FastAPI, Uvicorn, Pydantic
-  - [ ] SQLAlchemy, Alembic (migrations)
-  - [ ] Celery, Redis
-  - [ ] Mutagen (ID3 tagging)
-  - [ ] google-cloud-generativeai (Gemini API)
-  - [ ] Pytest, Black, Flake8
-- [ ] Create `docker/` and `Dockerfile.api`, `Dockerfile.worker`
+- [x] Create `requirements.txt` with core dependencies
+  - [x] FastAPI, Uvicorn, Pydantic
+  - [x] SQLAlchemy, Alembic (migrations)
+  - [x] Celery, Redis
+  - [x] Mutagen (ID3 tagging)
+  - [x] google-cloud-generativeai (Gemini API)
+  - [x] Pytest, Black, Flake8
+- [x] Create `docker/` and `Dockerfile.api`, `Dockerfile.worker`
 - [ ] Set up database schema (Drafts, Personas, History)
 - [ ] Implement `POST /api/v1/ingest` endpoint
 - [ ] Implement `GET /api/v1/drafts` endpoint
@@ -61,14 +61,14 @@
 ## Phase 2: Frontend Foundation (React)
 
 ### Subtasks:
-- [ ] Create `frontend/` directory structure
+- [x] Create `frontend/` directory structure
   - [ ] `src/components/` — Reusable UI components
   - [ ] `src/pages/DraftingTable.tsx` — Main spreadsheet interface
   - [ ] `src/pages/GenerateQueue.tsx` — Task queue monitor
   - [ ] `src/api/client.ts` — API client (fetch/axios)
   - [ ] `src/hooks/` — Custom React hooks
   - [ ] `src/styles/` — Tailwind CSS setup
-- [ ] Create `package.json` with React, Vite, Tailwind, Jest
+- [x] Create `package.json` with React, Vite, Tailwind, Jest
 - [ ] Build "Drafting Table" UI component (spreadsheet-like)
 - [ ] Implement CSV/seed list upload form
 - [ ] Create task queue monitor (task status polling)
