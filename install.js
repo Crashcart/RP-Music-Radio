@@ -154,7 +154,7 @@ if (!NO_PULL) {
 
 // Phase 4: Volumes
 header('Phase 4: Volume Setup');
-for (const vol of ['radio_vault', 'persona_db', 'market_ingest', 'redis_data']) {
+for (const vol of ['radio_vault', 'persona_db', 'market_ingest', 'redis_data', 'data']) {
   ensureDir(path.join(PROJECT_DIR, vol));
   ok(`Created: ${vol}/`);
 }

@@ -68,6 +68,8 @@ radio_vault/
 persona_db/
 market_ingest/
 redis_data/
+data/
+backups/
 
 # Logs — keep the directory + .gitkeep but ignore actual log files
 logs/*.log

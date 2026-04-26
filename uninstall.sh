@@ -85,7 +85,7 @@ fi
 # ─── Step 3: Purge Generated Content ───────────────────────────────────────
 if [[ $PURGE -eq 1 ]]; then
   log "Purging generated content…"
-  for dir in radio_vault persona_db market_ingest redis_data; do
+  for dir in radio_vault persona_db market_ingest redis_data data backups; do
     if [[ -d "$PROJECT_DIR/$dir" ]]; then
       rm -rf "$PROJECT_DIR/$dir"
       ok "Removed: $dir/"
@@ -101,6 +101,8 @@ else
   log "  • radio_vault/   (generated MP3s)"
   log "  • persona_db/    (Voice DNA seeds)"
   log "  • market_ingest/ (uploaded CSVs)"
+  log "  • data/          (SQLite database)"
+  log "  • backups/       (system backups)"
   log "  • .env           (configuration)"
 fi
 
