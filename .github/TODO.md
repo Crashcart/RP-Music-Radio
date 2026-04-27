@@ -32,7 +32,7 @@
 
 ## Phase 1: Backend Foundation (MVP)
 
-### Subtasks
+### Backend Tasks
 
 - [x] Create `backend/` directory structure
   - [x] `app/main.py` — FastAPI server
@@ -59,7 +59,7 @@
 - [x] Document API in OpenAPI/Swagger (auto-generated at /docs)
 - [ ] Write unit tests for all endpoints
 
-### Blockers
+### Backend Blockers
 
 - [ ] Google Cloud API credentials setup
 
@@ -67,7 +67,7 @@
 
 ## Phase 2: Frontend Foundation (React)
 
-### Subtasks
+### Frontend Tasks
 
 - [x] Create `frontend/` directory structure
   - [x] `src/pages/DraftingTable.tsx` — Main drafting interface with ingest + edit modals
@@ -89,7 +89,7 @@
 
 ## Phase 3: AI Integration (MVP)
 
-### Subtasks
+### AI Integration Tasks
 
 - [ ] Set up Google Cloud credentials
 - [x] Implement Gemini integration (script + lore generation)
@@ -105,7 +105,7 @@
 - [x] Implement task status tracking API (`GET /api/v1/tasks/{task_id}`)
 - [ ] Write integration tests
 
-### Blockers
+### AI Blockers
 
 - [ ] API rate limits (may need to implement queue management)
 - [ ] Cost tracking (generative AI can be expensive)
@@ -114,7 +114,7 @@
 
 ## Phase 4: Persistence & Output
 
-### Subtasks
+### Persistence Tasks
 
 - [x] Implement Mutagen ID3v2.4 tagging
   - [x] TPE1, TALB, TIT2, USLT, APIC, COMM, TXXX (Lore_Ledger)
@@ -136,7 +136,7 @@
 
 ## Phase 5: Docker & Deployment
 
-### Subtasks
+### Deployment Tasks
 
 - [x] Finalize `docker-compose.yml`
   - [x] aetherwave-api service
@@ -154,7 +154,7 @@
 
 ## Phase 6: Testing & Quality
 
-### Subtasks
+### Testing Tasks
 
 - [ ] Achieve 80%+ test coverage (Python + React)
 - [ ] Set up CI/CD workflows (GitHub Actions)
