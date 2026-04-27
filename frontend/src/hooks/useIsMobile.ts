@@ -1,0 +1,21 @@
+import { useState, useEffect } from 'react';
+
+/**
+ * Returns true if the viewport is ≤768px (mobile).
+ * Uses matchMedia for efficient, real-time detection.
+ */
+export function useIsMobile(breakpoint = 768): boolean {
+  const [isMobile, setIsMobile] = useState(
+    () => window.innerWidth <= breakpoint
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    setIsMobile(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}

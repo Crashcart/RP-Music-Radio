@@ -1,0 +1,1 @@
+# AetherWave API v1 package
