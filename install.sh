@@ -96,8 +96,8 @@ fi
 
 # ─── Step 3: Create Volume Directories ─────────────────────────────────────
 log "Creating host volume directories…"
-mkdir -p "$PROJECT_DIR/radio_vault" "$PROJECT_DIR/persona_db" "$PROJECT_DIR/market_ingest"
-ok "Volumes ready: radio_vault/, persona_db/, market_ingest/"
+mkdir -p "$PROJECT_DIR/radio_vault" "$PROJECT_DIR/persona_db" "$PROJECT_DIR/market_ingest" "$PROJECT_DIR/data" "$PROJECT_DIR/redis_data"
+ok "Volumes ready: radio_vault/, persona_db/, market_ingest/, data/, redis_data/"
 
 # ─── Step 4: Configure .env ────────────────────────────────────────────────
 if [[ ! -f "$PROJECT_DIR/.env" ]]; then
@@ -134,10 +134,10 @@ echo "  2. Launch AetherWave:"
 echo "     ${YELLOW}docker-compose up -d${NC}"
 echo ""
 echo "  3. Verify health:"
-echo "     ${YELLOW}curl http://localhost:8080/health${NC}"
+echo "     ${YELLOW}curl http://localhost:8000/health${NC}"
 echo ""
 echo "  4. Open the Drafting Table UI:"
-echo "     ${YELLOW}http://localhost:8080${NC}"
+echo "     ${YELLOW}http://localhost:8432${NC}"
 echo ""
 echo "Branch: ${GREEN}$BRANCH${NC}"
 echo "Logs:   ${YELLOW}docker-compose logs -f${NC}"

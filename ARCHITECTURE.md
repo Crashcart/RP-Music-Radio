@@ -48,7 +48,7 @@ The application is containerized using Docker to ensure easy installation and re
                ▼
       ┌────────────────┐
       │ FastAPI Server │
-      │ (Port 8080)    │
+      │ (Port 8000)    │
       ├────────────────┤
       │ GET  /drafts   │
       │ POST /ingest   │
@@ -332,16 +332,19 @@ services:
       - ./radio_vault:/app/output        # Host mount: generated MP3s
       - ./persona_db:/app/persistence    # Host mount: Voice DNA storage
       - ./market_ingest:/app/input       # Host mount: CSV uploads
+      - ./data:/app/data                 # Host mount: SQLite database
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - DEVICE_TYPE=${DEVICE_TYPE:-INTEL_QUICKSYNC}
-      - AUTO_NAME_FORMAT={STATION}_{ARTIST}_{TRACK}.mp3
-      - FILLER_ENABLED=true
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=sqlite:////app/data/aetherwave.db
-      - LOG_LEVEL=INFO
+      - AUTO_NAME_FORMAT=${AUTO_NAME_FORMAT:-{STATION}_{ARTIST}_{TRACK}.mp3}
+      - FILLER_ENABLED=${FILLER_ENABLED:-true}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/aetherwave.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - API_PORT=${API_PORT:-8000}
+      - API_HOST=${API_HOST:-0.0.0.0}
     ports:
-      - "8080:8000"
+      - "8000:8000"
     depends_on:
       - redis
     restart: unless-stopped
@@ -518,13 +521,13 @@ docker-compose ps
 
 ### Step 4: Verify API Health
 ```bash
-curl http://localhost:8080/health
-# Expected response: {"status": "healthy", "services": {...}}
+curl http://localhost:8000/health
+# Expected response: {"status": "ok", "service": "AetherWave API"}
 ```
 
 ### Step 5: Access Frontend
 ```
-Open browser: http://localhost:8080
+Open browser: http://localhost:8432
 Upload first "Market Manifest" or "Station Seed"
 ```
 

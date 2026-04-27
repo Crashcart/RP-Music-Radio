@@ -5,7 +5,7 @@
 # Performs a TOTAL removal of AetherWave from the system. Unlike uninstall.sh
 # (which preserves data by default), this script removes EVERYTHING:
 #   • Docker containers, images, volumes, networks
-#   • All generated content (radio_vault, persona_db, market_ingest)
+#   • All generated content (radio_vault, persona_db, market_ingest, data, backups)
 #   • Configuration (.env, install logs)
 #   • Optionally: cloned git repository
 #
@@ -133,7 +133,7 @@ fi
 
 # ─── Phase 6: Purge Host Volumes ───────────────────────────────────────────
 header "Phase 6: Purge Generated Content"
-for dir in radio_vault persona_db market_ingest redis_data; do
+for dir in radio_vault persona_db market_ingest redis_data data backups; do
   if [[ -d "$PROJECT_DIR/$dir" ]]; then
     rm -rf "$PROJECT_DIR/$dir"
     ok "Removed: $dir/"
@@ -182,7 +182,7 @@ header "Uninstall Complete"
 
 echo "Removed:"
 echo "  ✓ Docker containers, images, volumes, networks"
-echo "  ✓ radio_vault/ persona_db/ market_ingest/ redis_data/"
+echo "  ✓ radio_vault/ persona_db/ market_ingest/ redis_data/ data/ backups/"
 echo "  ✓ .env and install logs"
 echo ""
 if [[ $KEEP_REPO -eq 1 ]]; then

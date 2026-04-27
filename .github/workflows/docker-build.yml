@@ -1,0 +1,14 @@
+name: Docker Build Validation
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker Compose Services
+        run: |
+          if [ -f docker-compose.yml ]; then docker compose build; else echo "No docker-compose.yml found."; fi
