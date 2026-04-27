@@ -11,6 +11,7 @@
 ### Governance & Documentation (✅ In Progress)
 
 #### Completed ✅
+
 - [x] Copy governance files from Kali-AI-term repository
 - [x] Adapt governance files for AetherWave project
 - [x] Create `.github/REPO_CONFIG.md` with tech stack details
@@ -24,20 +25,23 @@
 - [x] Create `.github/workflows/code-review-gate.yml` (conflict detection, docs check)
 
 #### Pending ⏳
+
 - [ ] Configure GitHub branch protections (manual in Settings)
 
 ---
 
 ## Phase 1: Backend Foundation (MVP)
 
-### Subtasks:
+### Subtasks
+
 - [x] Create `backend/` directory structure
   - [x] `app/main.py` — FastAPI server
-  - [ ] `app/api/v1/` — Routes (ingest, drafts, commit, tasks)
-  - [ ] `app/models/` — SQLAlchemy models (Draft, Persona, History)
-  - [ ] `app/tasks/` — Celery task definitions
-  - [ ] `app/integrations/` — Google APIs (Gemini, Lyria, Nano)
-  - [ ] `app/utils/` — Helpers (mutagen_handler, filler_protocol, etc.)
+  - [x] `app/api/v1/` — Routes (ingest, drafts, commit, tasks) + schemas
+  - [x] `app/models/` — Pydantic schemas (PersonaDNA, StationStyle, LoreLedger, LicenseRecord)
+  - [x] `app/models/` — SQLAlchemy ORM models (Draft, GenerationHistory)
+  - [x] `app/tasks/` — Celery app config + synthesis pipeline task
+  - [x] `app/integrations/` — Gemini client (script/lore generation)
+  - [x] `app/utils/` — mutagen_handler, dna_manager, audio_generator, art_generator, licensing
 - [x] Create `requirements.txt` with core dependencies
   - [x] FastAPI, Uvicorn, Pydantic
   - [x] SQLAlchemy, Alembic (migrations)
@@ -46,56 +50,63 @@
   - [x] google-cloud-generativeai (Gemini API)
   - [x] Pytest, Black, Flake8
 - [x] Create `docker/` and `Dockerfile.api`, `Dockerfile.worker`
-- [ ] Set up database schema (Drafts, Personas, History)
-- [ ] Implement `POST /api/v1/ingest` endpoint
-- [ ] Implement `GET /api/v1/drafts` endpoint
-- [ ] Implement `PATCH /api/v1/drafts/{id}` endpoint (editing)
+- [x] Create `app/database.py` (engine, session, init_db)
+- [x] Set up database schema (Drafts, GenerationHistory)
+- [x] Implement `POST /api/v1/ingest` endpoint
+- [x] Implement `GET /api/v1/drafts` endpoint
+- [x] Implement `PATCH /api/v1/drafts/{id}` endpoint (editing)
+- [x] Wire CORS middleware and API v1 router in main.py
+- [x] Document API in OpenAPI/Swagger (auto-generated at /docs)
 - [ ] Write unit tests for all endpoints
-- [ ] Document API in OpenAPI/Swagger
 
-### Blockers:
+### Blockers
+
 - [ ] Google Cloud API credentials setup
 
 ---
 
 ## Phase 2: Frontend Foundation (React)
 
-### Subtasks:
+### Subtasks
+
 - [x] Create `frontend/` directory structure
-  - [ ] `src/components/` — Reusable UI components
-  - [ ] `src/pages/DraftingTable.tsx` — Main spreadsheet interface
-  - [ ] `src/pages/GenerateQueue.tsx` — Task queue monitor
-  - [ ] `src/api/client.ts` — API client (fetch/axios)
-  - [ ] `src/hooks/` — Custom React hooks
-  - [ ] `src/styles/` — Tailwind CSS setup
-- [x] Create `package.json` with React, Vite, Tailwind, Jest
-- [ ] Build "Drafting Table" UI component (spreadsheet-like)
-- [ ] Implement CSV/seed list upload form
-- [ ] Create task queue monitor (task status polling)
-- [ ] Add settings panel (API key input, device type selection)
+  - [x] `src/pages/DraftingTable.tsx` — Main drafting interface with ingest + edit modals
+  - [x] `src/pages/GenerationQueue.tsx` — Real-time task queue monitor
+  - [x] `src/pages/PersonaGallery.tsx` — DJ/Artist persona gallery
+  - [x] `src/api/client.ts` — Typed API client for all 5 endpoints
+  - [x] `src/hooks/useIsMobile.ts` — Mobile detection hook (matchMedia)
+  - [x] `src/index.css` — Full design system (dark sci-fi theme, 900+ lines)
+- [x] Create `package.json` with React, Vite, TypeScript
+- [x] Build "Drafting Table" UI (desktop table + mobile card layout)
+- [x] Implement seed ingestion form (multi-row, pipe-delimited items)
+- [x] Create task queue monitor (real-time polling, animated progress)
+- [x] Add settings page (API status, system info)
+- [x] Build responsive layout: sidebar (desktop) + bottom tab bar (mobile)
+- [x] Fix Dockerfile (removed NODE_ENV=production conflict)
 - [ ] Write component tests (Jest + React Testing Library)
-- [ ] Style with Tailwind CSS
 
 ---
 
 ## Phase 3: AI Integration (MVP)
 
-### Subtasks:
+### Subtasks
+
 - [ ] Set up Google Cloud credentials
-- [ ] Implement Gemini 3 Flash integration
-  - [ ] "Flesh-Out" research (expand seeds to full scripts)
-  - [ ] Filler Protocol (procedural quirks, PSAs)
-  - [ ] Market Research Ad Logic
-- [ ] Implement Lyria 3 Pro integration (audio synthesis)
-  - [ ] Voice DNA system (Latent Voice Vectors)
-  - [ ] Consistent voice across multiple tracks
-- [ ] Implement Nano Banana 2 integration (image generation)
-  - [ ] Batch Style Seed (consistent album art)
-- [ ] Create Celery async tasks for synthesis
-- [ ] Implement task status tracking API (`GET /api/v1/tasks/{task_id}`)
+- [x] Implement Gemini integration (script + lore generation)
+  - [x] "Flesh-Out" research (expand seeds to full scripts)
+  - [x] Filler Protocol (procedural quirks, PSAs)
+  - [x] Market Research Ad Logic
+- [x] Implement Lyria 3 Pro integration (audio synthesis)
+  - [x] Voice DNA system (Latent Voice Vectors)
+  - [x] Consistent voice across multiple tracks
+- [x] Implement Nano Banana 2 integration (image generation)
+  - [x] Batch Style Seed (consistent album art)
+- [x] Create Celery async tasks for synthesis (full pipeline)
+- [x] Implement task status tracking API (`GET /api/v1/tasks/{task_id}`)
 - [ ] Write integration tests
 
-### Blockers:
+### Blockers
+
 - [ ] API rate limits (may need to implement queue management)
 - [ ] Cost tracking (generative AI can be expensive)
 
@@ -103,43 +114,48 @@
 
 ## Phase 4: Persistence & Output
 
-### Subtasks:
-- [ ] Implement Mutagen ID3v2.4 tagging
-  - [ ] TPE1, TALB, TIT2, USLT, APIC, COMM, TXXX (Lore_Ledger)
-- [ ] Create Lore_Ledger JSON schema (backstory, market_research, voice_id)
+### Subtasks
+
+- [x] Implement Mutagen ID3v2.4 tagging
+  - [x] TPE1, TALB, TIT2, USLT, APIC, COMM, TXXX (Lore_Ledger)
+- [x] Create Lore_Ledger JSON schema (backstory, market_research, voice_id)
 - [ ] Implement host volume mapping (./radio_vault/)
-- [ ] Create Persona DNA persistence (./persona_db/)
-  - [ ] Voice seed storage & retrieval
-  - [ ] Memory lookup (habits, rivals, history)
+- [x] Create Persona DNA persistence (./persona_db/)
+  - [x] Voice seed storage & retrieval
+  - [x] Memory lookup (habits, rivals, history)
 - [ ] Implement `POST /api/v1/commit` endpoint (full synthesis)
   - [ ] Call Gemini for script
   - [ ] Call Lyria for audio
   - [ ] Call Nano for art
   - [ ] Imprint with Mutagen
   - [ ] Move to radio_vault/
-- [ ] Create file naming convention ({STATION}_{ARTIST}_{TRACK}.mp3)
+- [x] Create file naming convention ({STATION}_{ARTIST}_{TRACK}.mp3)
 - [ ] Write tests for MP3 generation & tagging
 
 ---
 
 ## Phase 5: Docker & Deployment
 
-### Subtasks:
-- [ ] Finalize `docker-compose.yml`
-  - [ ] aetherwave-api service
-  - [ ] aetherwave-worker service (Celery)
-  - [ ] redis service
-- [ ] Create `.env.example` with all required variables
+### Subtasks
+
+- [x] Finalize `docker-compose.yml`
+  - [x] aetherwave-api service
+  - [x] aetherwave-worker service (Celery)
+  - [x] redis service
+  - [x] aetherwave-frontend service
+- [x] Create `.env.example` with all required variables
 - [ ] Test full Docker stack locally
 - [ ] Document setup for Synology DS918+ / Beelink S12 Pro
-- [ ] Create installation guide in README.md
+- [x] Create installation guide in README.md
+- [ ] Fix frontend Dockerfile (dev server in production mode — will crash)
 - [ ] Test on target hardware (if available)
 
 ---
 
 ## Phase 6: Testing & Quality
 
-### Subtasks:
+### Subtasks
+
 - [ ] Achieve 80%+ test coverage (Python + React)
 - [ ] Set up CI/CD workflows (GitHub Actions)
 - [ ] Run full integration tests (end-to-end)
