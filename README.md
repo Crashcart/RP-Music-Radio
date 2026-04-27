@@ -30,7 +30,7 @@ cd rp-music-radio
 # Edit .env with your GOOGLE_API_KEY when prompted
 ```
 
-Then open `http://localhost:8080`.
+Then open `http://localhost:8432`.
 
 ### Operational Scripts
 
@@ -148,9 +148,8 @@ npm audit
 Follow the governance rules in [.github/copilot-instructions.md](.github/copilot-instructions.md):
 1. Create feature branch: `feat/issue-N-slug`
 2. Complete Planning → Implementation → Verification
-3. Submit PR with full context
-4. Pass CI/CD checks
-5. Await human review
+3. Pass CI/CD checks
+4. Await human review
 
 ## Troubleshooting
 
@@ -201,7 +200,7 @@ Logs are auto-rotated (last 30 per script) and ignored by `.gitignore`.
 
 ### Quick Health Check
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8000/health
 docker-compose logs -f
 ```
 

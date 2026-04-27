@@ -18,10 +18,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
       - name: Test with pytest
         run: |
-          if [ -f requirements.txt ]; then pytest; else echo "No backend implementation yet."; fi
+          if [ -d backend ]; then cd backend && pytest; else echo "No backend implementation yet."; fi
         continue-on-error: true
 
   test-frontend:
