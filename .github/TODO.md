@@ -53,7 +53,7 @@
 - [x] Build real-time task queue monitor (`GenerationQueue.tsx`)
 - [x] Refactor `api/client.ts` to support all 28 API methods
 - [ ] Write component tests (Jest + React Testing Library)
-- [ ] Clean up legacy `DraftingTable.tsx` so it only handles raw CSV ingestion.
+- [x] Clean up legacy `DraftingTable.tsx` so it only handles raw CSV ingestion.
 
 ---
 
