@@ -243,10 +243,13 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">API Key</label>
             <input className="form-input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
-              placeholder="Enter your Google API key..." />
+              placeholder="AIzaSy..." />
+            <div style={{ marginTop: 'var(--space-xs)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Get your free Gemini 2.0 API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Google AI Studio</a>.
+            </div>
           </div>
           <button className="btn btn-primary" onClick={handleSaveKey} disabled={testing || !apiKey.trim()}
-            style={{ height: 42 }}>
+            style={{ height: 42, marginBottom: 20 }}>
             {testing ? 'Testing...' : 'Save & Test'}
           </button>
         </div>
