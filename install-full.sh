@@ -92,11 +92,15 @@ docker info >/dev/null 2>&1 || { err "Docker daemon not running. Run: sudo syste
 ok "Docker is installed and running"
 
 # Check docker-compose
-command -v docker-compose >/dev/null 2>&1 || command -v "docker compose" >/dev/null 2>&1 || {
+if command -v docker-compose >/dev/null 2>&1; then
+  DOCKER_COMPOSE_CMD="docker-compose"
+elif docker compose version >/dev/null 2>&1; then
+  DOCKER_COMPOSE_CMD="docker compose"
+else
   err "docker-compose not found"
   exit 1
-}
-ok "docker-compose available"
+fi
+ok "$DOCKER_COMPOSE_CMD available"
 
 # Validate branch
 case "$BRANCH" in
@@ -186,18 +190,18 @@ header "Phase 6: Docker Image Setup"
 case "$BRANCH" in
   main)
     log "Pulling pre-built production images…"
-    docker-compose pull 2>/dev/null || {
+    $DOCKER_COMPOSE_CMD pull 2>/dev/null || {
       warn "Pull failed; falling back to build"
-      docker-compose build
+      $DOCKER_COMPOSE_CMD build
     }
     ;;
   test)
     log "Pulling test/staging images…"
-    docker-compose pull 2>/dev/null || docker-compose build
+    $DOCKER_COMPOSE_CMD pull 2>/dev/null || $DOCKER_COMPOSE_CMD build
     ;;
   dev)
     log "Building from source (dev mode)…"
-    docker-compose build --no-cache
+    $DOCKER_COMPOSE_CMD build --no-cache
     ;;
 esac
 ok "Docker images ready"
@@ -212,7 +216,7 @@ chmod 600 "$PROJECT_DIR/.env" 2>/dev/null && ok ".env permissions: 0600"
 chmod 700 "$PROJECT_DIR/persona_db" && ok "persona_db permissions: 0700"
 
 # Validate compose file
-if docker-compose config >/dev/null 2>&1; then
+if $DOCKER_COMPOSE_CMD config >/dev/null 2>&1; then
   ok "docker-compose.yml is valid"
 else
   err "docker-compose.yml has syntax errors"
@@ -231,9 +235,9 @@ fi
 
 if [[ "$LAUNCH_NOW" =~ ^[Yy]$ ]]; then
   log "Starting services…"
-  docker-compose up -d
+  $DOCKER_COMPOSE_CMD up -d
   sleep 5
-  docker-compose ps
+  $DOCKER_COMPOSE_CMD ps
   ok "Services launched"
 
   log "Waiting for API to become healthy…"
@@ -245,7 +249,7 @@ if [[ "$LAUNCH_NOW" =~ ^[Yy]$ ]]; then
     sleep 2
   done
 else
-  log "Skipping launch — run 'docker-compose up -d' when ready"
+  log "Skipping launch — run '$DOCKER_COMPOSE_CMD up -d' when ready"
 fi
 
 # ─── Phase 9: Final Summary ────────────────────────────────────────────────
@@ -264,9 +268,9 @@ echo ""
 echo "Generated content will appear in: ${BLUE}$PROJECT_DIR/radio_vault/${NC}"
 echo ""
 echo "Useful commands:"
-echo "  • View logs:  ${YELLOW}docker-compose logs -f${NC}"
-echo "  • Restart:    ${YELLOW}docker-compose restart${NC}"
-echo "  • Stop:       ${YELLOW}docker-compose down${NC}"
+echo "  • View logs:  ${YELLOW}$DOCKER_COMPOSE_CMD logs -f${NC}"
+echo "  • Restart:    ${YELLOW}$DOCKER_COMPOSE_CMD restart${NC}"
+echo "  • Stop:       ${YELLOW}$DOCKER_COMPOSE_CMD down${NC}"
 echo "  • Uninstall:  ${YELLOW}./uninstall.sh${NC}"
 echo "  • Diagnostics: ${YELLOW}./collect-logs.sh${NC}"
 echo ""
