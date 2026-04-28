@@ -1,16 +1,14 @@
 # AetherWave / RP-Music-Radio — Active Task List
 
-**Last Updated**: 2026-04-26  
+**Last Updated**: 2026-04-27  
 **Project**: Headless Media Factory for procedural lore-heavy radio content  
-**Status**: Foundation & Governance phase
+**Status**: Foundation & UI Architecture phase
 
 ---
 
-## Current Session: Foundation Setup
+## Current Session: Architecture & UI Realignment
 
-### Governance & Documentation (✅ In Progress)
-
-#### Completed ✅
+### Governance & Documentation (✅ Completed)
 
 - [x] Copy governance files from Kali-AI-term repository
 - [x] Adapt governance files for AetherWave project
@@ -18,50 +16,27 @@
 - [x] Create `.github/TODO.md` with actual project phases
 - [x] Create `.github/PLANNING.md` with technical decisions
 - [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
-- [x] Create `.github/workflows/test.yml` (Python + React tests)
-- [x] Create `.github/workflows/lint.yml` (flake8, ESLint, black, Prettier)
-- [x] Create `.github/workflows/security-audit.yml` (bandit, npm audit)
-- [x] Create `.github/workflows/docker-build.yml` (validate Dockerfiles)
-- [x] Create `.github/workflows/code-review-gate.yml` (conflict detection, docs check)
-
-#### Pending ⏳
-
-- [ ] Configure GitHub branch protections (manual in Settings)
+- [x] Update TODO list to reflect the new hierarchical DB architecture
 
 ---
 
-## Phase 1: Backend Foundation (MVP)
+## Phase 1: Backend Foundation (Hierarchical DB)
 
 ### Backend Tasks
 
 - [x] Create `backend/` directory structure
-  - [x] `app/main.py` — FastAPI server
-  - [x] `app/api/v1/` — Routes (ingest, drafts, commit, tasks) + schemas
-  - [x] `app/models/` — Pydantic schemas (PersonaDNA, StationStyle, LoreLedger, LicenseRecord)
-  - [x] `app/models/` — SQLAlchemy ORM models (Draft, GenerationHistory)
-  - [x] `app/tasks/` — Celery app config + synthesis pipeline task
-  - [x] `app/integrations/` — Gemini client (script/lore generation)
-  - [x] `app/utils/` — mutagen_handler, dna_manager, audio_generator, art_generator, licensing
-- [x] Create `requirements.txt` with core dependencies
-  - [x] FastAPI, Uvicorn, Pydantic
-  - [x] SQLAlchemy, Alembic (migrations)
-  - [x] Celery, Redis
-  - [x] Mutagen (ID3 tagging)
-  - [x] google-cloud-generativeai (Gemini API)
-  - [x] Pytest, Black, Flake8
+- [x] Set up database schema with hierarchical models (Station, Artist, Brand, Jingle, Draft)
+- [x] Implement API routers for all entities (CRUD for Stations, Artists, Brands, Jingles)
+- [x] Implement `POST /api/v1/chat` endpoint (Gemini brainstorming with Google Search grounding)
+- [x] Implement `/api/v1/settings/api-key` validation endpoint
+- [x] Integrate Lyria, Nano Banana 2, and Gemini SDKs
+- [x] Create Celery app config + synthesis pipeline task
 - [x] Create `docker/` and `Dockerfile.api`, `Dockerfile.worker`
-- [x] Create `app/database.py` (engine, session, init_db)
-- [x] Set up database schema (Drafts, GenerationHistory)
-- [x] Implement `POST /api/v1/ingest` endpoint
-- [x] Implement `GET /api/v1/drafts` endpoint
-- [x] Implement `PATCH /api/v1/drafts/{id}` endpoint (editing)
-- [x] Wire CORS middleware and API v1 router in main.py
-- [x] Document API in OpenAPI/Swagger (auto-generated at /docs)
-- [ ] Write unit tests for all endpoints
+- [ ] Write unit tests for the 28+ new hierarchical API endpoints
 
 ### Backend Blockers
 
-- [ ] Google Cloud API credentials setup
+- [ ] Need to verify Celery task runner works flawlessly with the new nested ID fields (station_id, artist_id).
 
 ---
 
@@ -69,21 +44,16 @@
 
 ### Frontend Tasks
 
-- [x] Create `frontend/` directory structure
-  - [x] `src/pages/DraftingTable.tsx` — Main drafting interface with ingest + edit modals
-  - [x] `src/pages/GenerationQueue.tsx` — Real-time task queue monitor
-  - [x] `src/pages/PersonaGallery.tsx` — DJ/Artist persona gallery
-  - [x] `src/api/client.ts` — Typed API client for all 5 endpoints
-  - [x] `src/hooks/useIsMobile.ts` — Mobile detection hook (matchMedia)
-  - [x] `src/index.css` — Full design system (dark sci-fi theme, 900+ lines)
-- [x] Create `package.json` with React, Vite, TypeScript
-- [x] Build "Drafting Table" UI (desktop table + mobile card layout)
-- [x] Implement seed ingestion form (multi-row, pipe-delimited items)
-- [x] Create task queue monitor (real-time polling, animated progress)
-- [x] Add settings page (API status, system info)
-- [x] Build responsive layout: sidebar (desktop) + bottom tab bar (mobile)
-- [x] Fix Dockerfile (removed NODE_ENV=production conflict)
+- [x] Create `frontend/` directory structure and `index.css` design system (dark sci-fi)
+- [x] Build **Stations Dashboard** (`Stations.tsx`) with nested DJ & Jingle sub-lists
+- [x] Build **Artists Gallery** (`Artists.tsx`) with deep-field forms (22 fields) and portrait generation
+- [x] Build **Brands Portal** (`Brands.tsx`) for fictional sponsors and ad settings
+- [x] Build **Settings Page** with secure Google API key storage and system status
+- [x] Build **AI Chat Assistant** (`ChatAssistant.tsx`) floating widget
+- [x] Build real-time task queue monitor (`GenerationQueue.tsx`)
+- [x] Refactor `api/client.ts` to support all 28 API methods
 - [ ] Write component tests (Jest + React Testing Library)
+- [ ] Clean up legacy `DraftingTable.tsx` so it only handles raw CSV ingestion.
 
 ---
 
@@ -91,24 +61,18 @@
 
 ### AI Integration Tasks
 
-- [ ] Set up Google Cloud credentials
-- [x] Implement Gemini integration (script + lore generation)
-  - [x] "Flesh-Out" research (expand seeds to full scripts)
-  - [x] Filler Protocol (procedural quirks, PSAs)
-  - [x] Market Research Ad Logic
-- [x] Implement Lyria 3 Pro integration (audio synthesis)
-  - [x] Voice DNA system (Latent Voice Vectors)
-  - [x] Consistent voice across multiple tracks
-- [x] Implement Nano Banana 2 integration (image generation)
-  - [x] Batch Style Seed (consistent album art)
-- [x] Create Celery async tasks for synthesis (full pipeline)
-- [x] Implement task status tracking API (`GET /api/v1/tasks/{task_id}`)
-- [ ] Write integration tests
+- [x] Implement Gemini Chat Assistant with Google Search grounding
+- [x] Wire up Nano Banana 2 integration for Artist Portraits and Station Logos
+- [ ] Implement Gemini "Flesh-Out" protocol (expand brand/station seeds into full scripts)
+- [ ] Implement Lyria 3 Pro integration for Voice DNA and procedural audio generation
+- [ ] Ensure voice consistency across multiple tracks for the same Artist
+- [ ] Create Celery async tasks to link generation steps together seamlessly
+- [ ] Write AI integration tests
 
 ### AI Blockers
 
-- [ ] API rate limits (may need to implement queue management)
-- [ ] Cost tracking (generative AI can be expensive)
+- [ ] API rate limits (may need to implement queue management and exponential backoff)
+- [ ] Cost tracking strategies for heavy Lyria/Gemini API usage
 
 ---
 
@@ -116,21 +80,12 @@
 
 ### Persistence Tasks
 
-- [x] Implement Mutagen ID3v2.4 tagging
-  - [x] TPE1, TALB, TIT2, USLT, APIC, COMM, TXXX (Lore_Ledger)
-- [x] Create Lore_Ledger JSON schema (backstory, market_research, voice_id)
-- [ ] Implement host volume mapping (./radio_vault/)
-- [x] Create Persona DNA persistence (./persona_db/)
-  - [x] Voice seed storage & retrieval
-  - [x] Memory lookup (habits, rivals, history)
-- [ ] Implement `POST /api/v1/commit` endpoint (full synthesis)
-  - [ ] Call Gemini for script
-  - [ ] Call Lyria for audio
-  - [ ] Call Nano for art
-  - [ ] Imprint with Mutagen
-  - [ ] Move to radio_vault/
-- [x] Create file naming convention ({STATION}_{ARTIST}_{TRACK}.mp3)
-- [ ] Write tests for MP3 generation & tagging
+- [x] Implement enhanced Mutagen ID3v2.4 tagging (18+ tags: genre, BPM, copyright, TXXX seeds)
+- [ ] Update Lore_Ledger JSON schema to pull directly from the relational database (Artist/Brand DB)
+- [ ] Implement host volume mapping for persistent output (`./radio_vault/`)
+- [ ] Implement `POST /api/v1/commit` endpoint (Full synthesis trigger)
+- [ ] Establish new hierarchical file naming convention (e.g., `{STATION}/{ARTIST}/{TRACK}.mp3` or `{STATION}/jingles/{JINGLE_TYPE}.mp3`)
+- [ ] Write tests for MP3 generation & metadata tagging
 
 ---
 
@@ -138,16 +93,11 @@
 
 ### Deployment Tasks
 
-- [x] Finalize `docker-compose.yml`
-  - [x] aetherwave-api service
-  - [x] aetherwave-worker service (Celery)
-  - [x] redis service
-  - [x] aetherwave-frontend service
+- [x] Finalize `docker-compose.yml` (api, worker, redis, frontend)
 - [x] Create `.env.example` with all required variables
-- [ ] Test full Docker stack locally
-- [ ] Document setup for Synology DS918+ / Beelink S12 Pro
 - [x] Create installation guide in README.md
-- [ ] Fix frontend Dockerfile (dev server in production mode — will crash)
+- [ ] Test full Docker stack locally and resolve any `NODE_ENV` conflicts
+- [ ] Document setup for Synology DS918+ / Beelink S12 Pro
 - [ ] Test on target hardware (if available)
 
 ---
@@ -168,10 +118,10 @@
 
 ## Notes
 
-- **Branch**: `claude/copy-github-rules-w1KTY` — development branch
+- **Branch**: `feature/stations-artists-brands-restructure` — active development branch
 - **Governance**: Follow 10 rules in `.github/copilot-instructions.md`
 - **Reference**: Full TDR at `ARCHITECTURE.md`
-- **Database**: SQLite (persistent), Redis (task queue)
+- **Database**: SQLite (persistent relational), Redis (task queue)
 - **APIs**: Google Cloud (Gemini, Lyria, Nano Banana 2)
 
 ---
@@ -179,3 +129,4 @@
 ## History
 
 - **2026-04-26**: Initial governance setup + TDR v1.0.4 documentation
+- **2026-04-27**: Abandoned flat architecture; migrated to hierarchical relational DB (Stations, Artists, Brands) + AI Chat Assistant.
