@@ -3,7 +3,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+ENV DEBIAN_FRONTEND=noninteractive
+RUN echo 'APT::Install-Recommends "false";\nAPT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99no-recommends && \
+    apt-get update && apt-get install -y \
     curl \
     build-essential \
     ffmpeg \
