@@ -71,10 +71,14 @@ header "AetherWave Quick Installer (branch: $BRANCH)"
 log "Checking prerequisites…"
 
 command -v docker >/dev/null 2>&1 || { err "Docker not installed. Install: https://docs.docker.com/get-docker/"; exit 1; }
-command -v docker-compose >/dev/null 2>&1 || command -v "docker compose" >/dev/null 2>&1 || {
+if command -v docker-compose >/dev/null 2>&1; then
+  DOCKER_COMPOSE_CMD="docker-compose"
+elif docker compose version >/dev/null 2>&1; then
+  DOCKER_COMPOSE_CMD="docker compose"
+else
   err "docker-compose not found. Install: https://docs.docker.com/compose/install/"
   exit 1
-}
+fi
 command -v git >/dev/null 2>&1 || { err "git not installed."; exit 1; }
 ok "All prerequisites present"
 
@@ -113,9 +117,9 @@ if [[ $SKIP_DEPS -eq 0 ]]; then
   log "Pulling/building Docker images…"
   if [[ "$BRANCH" == "dev" ]]; then
     log "Building from source (dev mode)"
-    docker-compose build
+    $DOCKER_COMPOSE_CMD build
   else
-    docker-compose pull 2>/dev/null || docker-compose build
+    $DOCKER_COMPOSE_CMD pull 2>/dev/null || $DOCKER_COMPOSE_CMD build
   fi
   ok "Docker images ready"
 else
@@ -131,7 +135,7 @@ echo "  1. Edit .env and add your GOOGLE_API_KEY:"
 echo "     ${YELLOW}nano $PROJECT_DIR/.env${NC}"
 echo ""
 echo "  2. Launch AetherWave:"
-echo "     ${YELLOW}docker-compose up -d${NC}"
+echo "     ${YELLOW}$DOCKER_COMPOSE_CMD up -d${NC}"
 echo ""
 echo "  3. Verify health:"
 echo "     ${YELLOW}curl http://localhost:8000/health${NC}"
@@ -140,6 +144,6 @@ echo "  4. Open the Drafting Table UI:"
 echo "     ${YELLOW}http://localhost:8432${NC}"
 echo ""
 echo "Branch: ${GREEN}$BRANCH${NC}"
-echo "Logs:   ${YELLOW}docker-compose logs -f${NC}"
-echo "Stop:   ${YELLOW}docker-compose down${NC}"
+echo "Logs:   ${YELLOW}$DOCKER_COMPOSE_CMD logs -f${NC}"
+echo "Stop:   ${YELLOW}$DOCKER_COMPOSE_CMD down${NC}"
 echo ""
