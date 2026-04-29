@@ -210,8 +210,8 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
         api.checkApiKey().then(setKeyStatus);
         setApiKey('');
       }
-    } catch {
-      setTestResult({ valid: false, message: 'Failed to validate' });
+    } catch (err: any) {
+      setTestResult({ valid: false, message: err?.message || 'Failed to validate' });
     } finally {
       setTesting(false);
     }
@@ -292,8 +292,8 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
           </span>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-          The AetherWave API runs at <code>http://localhost:8000</code>.
-          Make sure the Docker stack is running: <code>docker-compose up -d</code>
+          The AetherWave API is currently routed through your active network connection.
+          Make sure the Docker stack is running: <code>docker compose up -d</code>
         </p>
       </div>
 

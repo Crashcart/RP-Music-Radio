@@ -153,9 +153,9 @@ docker-compose down 2>/dev/null || warn "Containers were not running"
 # ─── Step 6: Update Images ─────────────────────────────────────────────────
 header "Step 6: Update Docker Images"
 
-if [[ $REBUILD -eq 1 ]] || [[ "$TARGET_BRANCH" == "dev" ]]; then
-  log "Rebuilding from source (no cache)…"
-  docker-compose build --no-cache
+if [[ $REBUILD -eq 1 ]] || [[ "$TARGET_BRANCH" == "dev" ]] || [[ "$BEFORE_PULL" != "$AFTER_PULL" ]]; then
+  log "Rebuilding from source to apply new code…"
+  docker-compose build
 else
   log "Pulling latest images…"
   docker-compose pull 2>/dev/null || {
