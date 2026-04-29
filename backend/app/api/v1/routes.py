@@ -562,7 +562,13 @@ You help users:
 
 Always stay in-universe. Be creative, specific, and give concrete suggestions.
 When suggesting a DJ or station, include specific details the user can paste into their forms.
-Format suggestions clearly with bullet points or sections."""
+Format suggestions clearly with bullet points or sections.
+
+CRITICAL INSTRUCTION: If the user explicitly agrees to create or finalize a new entity (Station, Brand, or Artist/DJ), you MUST append a JSON block at the very end of your response exactly like this:
+```json
+{"action": "propose", "entity": "station", "data": {"name": "Night City FM", "description": "...", "genre": "Synthwave"}}
+```
+Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency).
 
 
 class ChatRequest(BaseModel):
@@ -619,7 +625,22 @@ def chat_assistant(payload: ChatRequest):
             ),
         )
 
-        return {"reply": response.text}
+        reply_text = response.text
+        proposal = None
+        
+        # Try to parse any trailing JSON block
+        import re
+        match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', reply_text, re.DOTALL)
+        if match:
+            try:
+                parsed = json.loads(match.group(1))
+                if parsed.get("action") == "propose":
+                    proposal = parsed
+                reply_text = reply_text[:match.start()].strip()
+            except Exception as e:
+                logger.warning("Failed to parse AI proposal: %s", e)
+
+        return {"reply": reply_text, "proposal": proposal}
 
     except Exception as exc:
         logger.error("Chat failed: %s", exc)

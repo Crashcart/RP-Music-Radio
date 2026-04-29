@@ -241,18 +241,18 @@ header "Update Complete"
 
 NEW_COMMIT=$(git rev-parse --short HEAD)
 
-echo "Branch:         ${GREEN}$TARGET_BRANCH${NC}"
-echo "Previous:       ${BLUE}$(git rev-parse --short "$PREVIOUS_COMMIT")${NC}"
-echo "Now at:         ${GREEN}$NEW_COMMIT${NC}"
-echo "Web UI:         ${YELLOW}http://localhost:8432${NC}"
-echo "Health:         ${GREEN}OK${NC}"
+echo -e "Branch:         ${GREEN}$TARGET_BRANCH${NC}"
+echo -e "Previous:       ${BLUE}$(git rev-parse --short "$PREVIOUS_COMMIT")${NC}"
+echo -e "Now at:         ${GREEN}$NEW_COMMIT${NC}"
+echo -e "Web UI:         ${YELLOW}http://localhost:8432${NC}"
+echo -e "Health:         ${GREEN}OK${NC}"
 echo ""
 
 if [[ $SKIP_BACKUP -eq 0 ]]; then
-  echo "Backups stored: ${BLUE}$PROJECT_DIR/backups/${NC}"
+  echo -e "Backups stored: ${BLUE}$PROJECT_DIR/backups/${NC}"
 fi
 echo ""
-echo "View changes:   ${YELLOW}git log --oneline $PREVIOUS_COMMIT..HEAD${NC}"
-echo "View logs:      ${YELLOW}docker-compose logs -f${NC}"
-echo "Rollback:       ${YELLOW}git reset --hard $PREVIOUS_COMMIT && docker-compose up -d${NC}"
+echo -e "View changes:   ${YELLOW}git log --oneline $PREVIOUS_COMMIT..HEAD${NC}"
+echo -e "View logs:      ${YELLOW}docker-compose logs -f${NC}"
+echo -e "Rollback:       ${YELLOW}git reset --hard $PREVIOUS_COMMIT && docker-compose up -d${NC}"
 echo ""

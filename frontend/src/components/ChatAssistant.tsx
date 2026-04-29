@@ -4,6 +4,12 @@ import { api } from '../api/client';
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  proposal?: {
+    action: string;
+    entity: 'station' | 'brand' | 'artist';
+    data: any;
+  };
+  proposalStatus?: 'pending' | 'success' | 'error';
 }
 
 const SYSTEM_INTRO = "Hi! I'm AetherWave's AI assistant. I can help you brainstorm station concepts, create DJ personas, design fictional brands, and build your radio universe. What would you like to create?";
@@ -42,7 +48,12 @@ export function ChatAssistant() {
         }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.reply,
+        proposal: data.proposal,
+        proposalStatus: data.proposal ? 'pending' : undefined
+      }]);
     } catch {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -57,6 +68,33 @@ export function ChatAssistant() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       send();
+    }
+  };
+
+  const confirmProposal = async (index: number, proposal: NonNullable<ChatMessage['proposal']>) => {
+    try {
+      if (proposal.entity === 'station') {
+        await api.createStation(proposal.data);
+      } else if (proposal.entity === 'brand') {
+        await api.createBrand(proposal.data);
+      } else if (proposal.entity === 'artist') {
+        await api.createArtist(proposal.data);
+      }
+      
+      setMessages(prev => {
+        const copy = [...prev];
+        copy[index].proposalStatus = 'success';
+        return copy;
+      });
+      // Force a full page reload so other components see the new data
+      window.location.reload();
+    } catch (err: any) {
+      setMessages(prev => {
+        const copy = [...prev];
+        copy[index].proposalStatus = 'error';
+        return copy;
+      });
+      alert(`Failed to create ${proposal.entity}: ${err.message}`);
     }
   };
 
@@ -79,6 +117,24 @@ export function ChatAssistant() {
         {messages.map((msg, i) => (
           <div key={i} className={`chat-message ${msg.role}`}>
             {msg.content}
+            {msg.proposal && (
+              <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)' }}>
+                <p style={{ margin: '0 0 var(--space-sm) 0', fontSize: '0.9em', color: 'var(--text-secondary)' }}>
+                  ✨ AI proposes a new {msg.proposal.entity}: <strong>{msg.proposal.data.name}</strong>
+                </p>
+                {msg.proposalStatus === 'pending' && (
+                  <button className="btn btn-primary" onClick={() => confirmProposal(i, msg.proposal!)}>
+                    Confirm & Create {msg.proposal.entity.charAt(0).toUpperCase() + msg.proposal.entity.slice(1)}
+                  </button>
+                )}
+                {msg.proposalStatus === 'success' && (
+                  <span style={{ color: 'var(--success-color)' }}>✅ Created successfully!</span>
+                )}
+                {msg.proposalStatus === 'error' && (
+                  <span style={{ color: 'var(--error-color)' }}>❌ Failed to create</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {loading && (
