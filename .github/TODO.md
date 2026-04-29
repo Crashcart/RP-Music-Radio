@@ -63,6 +63,7 @@
 
 - [x] Implement Gemini Chat Assistant with Google Search grounding
 - [x] Wire up Nano Banana 2 integration for Artist Portraits and Station Logos
+- [x] Implement AI Entity Proposal (One-click UI creation for Stations/Brands/Artists from chat)
 - [ ] Implement Gemini "Flesh-Out" protocol (expand brand/station seeds into full scripts)
 - [ ] Implement Lyria 3 Pro integration for Voice DNA and procedural audio generation
 - [ ] Ensure voice consistency across multiple tracks for the same Artist

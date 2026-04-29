@@ -21,6 +21,8 @@ from fastapi import APIRouter, Depends, HTTPException  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
+logger = logging.getLogger(__name__)
+
 from app.database import get_db
 from app.models.database import (
     Artist,
@@ -568,7 +570,7 @@ CRITICAL INSTRUCTION: If the user explicitly agrees to create or finalize a new 
 ```json
 {"action": "propose", "entity": "station", "data": {"name": "Night City FM", "description": "...", "genre": "Synthwave"}}
 ```
-Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency).
+Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency)."""
 
 
 class ChatRequest(BaseModel):
