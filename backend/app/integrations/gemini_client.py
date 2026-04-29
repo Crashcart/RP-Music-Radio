@@ -77,7 +77,17 @@ class GeminiClient:
         api_key: str | None = None,
         model: str = "gemini-2.0-flash",
     ) -> None:
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        import json
+        key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        if not key:
+            for path in ["/app/data/settings.json", "../data/settings.json"]:
+                if os.path.exists(path):
+                    try:
+                        with open(path, "r") as f:
+                            key = json.load(f).get("GOOGLE_API_KEY", "")
+                            if key: break
+                    except Exception: pass
+        self.api_key = key
         self.model = model
 
         if not self.api_key:

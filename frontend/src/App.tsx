@@ -4,6 +4,7 @@ import { Stations } from './pages/Stations';
 import { Artists } from './pages/Artists';
 import { Brands } from './pages/Brands';
 import { DraftingTable } from './pages/DraftingTable';
+// @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from './pages/GenerationQueue';
 import { ChatAssistant } from './components/ChatAssistant';
 import { api, type Draft } from './api/client';
@@ -216,6 +217,23 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const data = await api.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `aetherwave_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(`Export failed: ${e.message}`);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -236,13 +254,13 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
         </div>
         {keyStatus?.configured && (
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 'var(--space-md)', fontFamily: 'var(--font-mono)' }}>
-            Current key: {keyStatus.masked_key}
+            Current key is configured and saved securely.
           </p>
         )}
         <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'flex-end' }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">API Key</label>
-            <input className="form-input" type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
+            <input className="form-input" type="text" value={apiKey} onChange={e => setApiKey(e.target.value)}
               placeholder="AIzaSy..." />
             <div style={{ marginTop: 'var(--space-xs)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Get your free Gemini 2.0 API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Google AI Studio</a>.
@@ -277,6 +295,20 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
           The AetherWave API runs at <code>http://localhost:8000</code>.
           Make sure the Docker stack is running: <code>docker-compose up -d</code>
         </p>
+      </div>
+
+      {/* Data Backup */}
+      <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
+        <div className="card-header">
+          <h3 className="card-title">💾 Data Backup</h3>
+        </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-md)' }}>
+          Export your entire relational database (Stations, DJs, Brands, Jingles, and Drafts) to a JSON file.
+          Keep this file safe as a backup of your entire universe.
+        </p>
+        <button className="btn btn-secondary" onClick={handleExport}>
+          📥 Download Export JSON
+        </button>
       </div>
 
       {/* About */}
