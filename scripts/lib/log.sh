@@ -48,6 +48,16 @@ AETHERWAVE_LOG_FILE="${AETHERWAVE_LOG_FILE:-}"
 AETHERWAVE_LOG_LEVEL="${AETHERWAVE_LOG_LEVEL:-INFO}"   # DEBUG | INFO | WARN | ERROR
 AETHERWAVE_LOG_RETENTION="${AETHERWAVE_LOG_RETENTION:-30}"
 
+# ─── Docker Compose Compatibility ──────────────────────────────────────────
+# Provide global fallback so scripts using 'docker-compose' work on modern
+# Docker v2 installations that only support 'docker compose'.
+if ! command -v docker-compose >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+  docker-compose() {
+    docker compose "$@"
+  }
+  export -f docker-compose
+fi
+
 # ─── Helpers ───────────────────────────────────────────────────────────────
 _aw_timestamp() {
   date +"%Y-%m-%dT%H:%M:%S%z"
