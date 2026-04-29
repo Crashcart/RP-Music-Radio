@@ -232,4 +232,7 @@ export const api = {
 
   checkApiKey: () =>
     request<{ configured: boolean; masked_key: string }>('/api/v1/settings/api-key'),
+
+  exportData: () =>
+    request<any>('/api/v1/settings/export'),
 };

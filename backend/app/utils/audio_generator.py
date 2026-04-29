@@ -29,8 +29,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai  # type: ignore
+    from google.genai import types  # type: ignore
+except ImportError:
+    genai = None  # type: ignore
+    types = None  # type: ignore
 
 from app.models.persona import PersonaDNA, StationStyle
 from app.utils.licensing import LicenseInfo
@@ -124,7 +128,17 @@ class AudioGenerator:
         model: str = "lyria-realtime-exp",
         output_dir: str | Path = "/app/output/audio",
     ) -> None:
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        import json
+        key = api_key or os.getenv("GOOGLE_API_KEY", "")
+        if not key:
+            for path in ["/app/data/settings.json", "../data/settings.json"]:
+                if os.path.exists(path):
+                    try:
+                        with open(path, "r") as f:
+                            key = json.load(f).get("GOOGLE_API_KEY", "")
+                            if key: break
+                    except Exception: pass
+        self.api_key = key
         self.model = model
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)

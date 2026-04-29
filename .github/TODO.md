@@ -97,7 +97,6 @@
 - [x] Create `.env.example` with all required variables
 - [x] Create installation guide in README.md
 - [ ] Test full Docker stack locally and resolve any `NODE_ENV` conflicts
-- [ ] Document setup for Synology DS918+ / Beelink S12 Pro
 - [ ] Test on target hardware (if available)
 
 ---

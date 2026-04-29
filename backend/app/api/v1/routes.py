@@ -17,9 +17,9 @@ import logging
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException  # type: ignore
+from pydantic import BaseModel  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
 
 from app.database import get_db
 from app.models.database import (
@@ -464,15 +464,30 @@ def get_task_status(task_id: str, db: Session = Depends(get_db)):
 @router.post("/settings/api-key", response_model=ApiKeyResponse)
 def set_api_key(payload: ApiKeyRequest):
     """Validate and store the Google API key."""
+    import json
     api_key = payload.api_key.strip()
     if not api_key:
         return ApiKeyResponse(valid=False, message="API key cannot be empty")
     try:
-        from google import genai
+        from google import genai  # type: ignore
         client = genai.Client(api_key=api_key)
         # Lightweight validation call
         client.models.get(model="gemini-2.0-flash")
+        
+        # Save to memory and persistent storage
         os.environ["GOOGLE_API_KEY"] = api_key
+        try:
+            settings_path = "/app/data/settings.json"
+            # Fallback to local testing path if not in docker
+            if not os.path.exists("/app/data") and os.path.exists("../data"):
+                settings_path = "../data/settings.json"
+                
+            os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+            with open(settings_path, "w") as f:
+                json.dump({"GOOGLE_API_KEY": api_key}, f)
+        except Exception as e:
+            logger.error("Failed to persist API key to disk: %s", e)
+            
         logger.info("Google API key validated and set")
         return ApiKeyResponse(valid=True, message="API key is valid")
     except Exception as exc:
@@ -483,10 +498,53 @@ def set_api_key(payload: ApiKeyRequest):
 @router.get("/settings/api-key")
 def check_api_key():
     """Check if an API key is currently configured."""
+    import json
     key = os.getenv("GOOGLE_API_KEY", "")
+    
+    # Check persistent storage if not in env
+    if not key:
+        for path in ["/app/data/settings.json", "../data/settings.json"]:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r") as f:
+                        data = json.load(f)
+                        key = data.get("GOOGLE_API_KEY", "")
+                        if key:
+                            os.environ["GOOGLE_API_KEY"] = key
+                            break
+                except Exception:
+                    pass
+
     has_key = bool(key)
     masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else ("****" if key else "")
     return {"configured": has_key, "masked_key": masked}
+
+
+@router.get("/settings/export")
+def export_data(db: Session = Depends(get_db)):
+    """Export all relational data to a JSON object."""
+    def to_dict(obj):
+        d = {}
+        for c in obj.__table__.columns:
+            val = getattr(obj, c.name)
+            if hasattr(val, "isoformat"):
+                val = val.isoformat()
+            d[c.name] = val
+        return d
+
+    data = {
+        "version": "1.0",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "data": {
+            "stations": [to_dict(x) for x in db.query(Station).all()],
+            "artists": [to_dict(x) for x in db.query(Artist).all()],
+            "brands": [to_dict(x) for x in db.query(Brand).all()],
+            "jingles": [to_dict(x) for x in db.query(Jingle).all()],
+            "drafts": [to_dict(x) for x in db.query(Draft).all()],
+            "generation_history": [to_dict(x) for x in db.query(GenerationHistory).all()],
+        }
+    }
+    return data
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -515,13 +573,29 @@ class ChatRequest(BaseModel):
 @router.post("/chat")
 def chat_assistant(payload: ChatRequest):
     """AI chat assistant for brainstorming station content."""
+    import json
     api_key = os.getenv("GOOGLE_API_KEY", "")
+    
+    # Check persistent storage if not in env
+    if not api_key:
+        for path in ["/app/data/settings.json", "../data/settings.json"]:
+            if os.path.exists(path):
+                try:
+                    with open(path, "r") as f:
+                        data = json.load(f)
+                        api_key = data.get("GOOGLE_API_KEY", "")
+                        if api_key:
+                            os.environ["GOOGLE_API_KEY"] = api_key
+                            break
+                except Exception:
+                    pass
+
     if not api_key:
         return {"reply": "Please set your Google API key in Settings first. I need it to help you brainstorm!"}
 
     try:
-        from google import genai
-        from google.genai import types
+        from google import genai  # type: ignore
+        from google.genai import types  # type: ignore
 
         client = genai.Client(api_key=api_key)
 
