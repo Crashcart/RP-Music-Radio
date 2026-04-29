@@ -119,7 +119,12 @@ log(`Node:        ${process.version}`);
 // Phase 1: Prerequisites
 header('Phase 1: Prerequisites');
 if (!has('docker')) { err('Docker not installed'); process.exit(1); }
-if (!has('docker-compose') && !has('docker')) {
+let DC_CMD = '';
+if (has('docker-compose')) {
+  DC_CMD = 'docker-compose';
+} else if (has('docker') && run('docker compose version', { silent: true, allowFail: true })) {
+  DC_CMD = 'docker compose';
+} else {
   err('docker-compose not found');
   process.exit(1);
 }
@@ -184,20 +189,20 @@ if (envContent.includes('your-api-key-here')) {
 header('Phase 6: Docker Images');
 if (BRANCH === 'dev') {
   log('Building from source (dev mode)…');
-  run('docker-compose build');
+  run(`${DC_CMD} build`);
 } else {
   log('Pulling images…');
-  const pullResult = run('docker-compose pull', { allowFail: true, silent: true });
+  const pullResult = run(`${DC_CMD} pull`, { allowFail: true, silent: true });
   if (pullResult === null) {
     warn('Pull failed; building from source');
-    run('docker-compose build');
+    run(`${DC_CMD} build`);
   }
 }
 ok('Docker images ready');
 
 // Phase 7: Validation
 header('Phase 7: Compose Validation');
-const validate = run('docker-compose config', { silent: true, allowFail: true });
+const validate = run(`${DC_CMD} config`, { silent: true, allowFail: true });
 if (validate === null) {
   err('docker-compose.yml has syntax errors');
   process.exit(1);
@@ -212,5 +217,5 @@ console.log('Project dir:   ' + C.blue + PROJECT_DIR + C.reset);
 console.log('');
 console.log('Next steps:');
 console.log('  1. Edit .env and set GOOGLE_API_KEY');
-console.log('  2. Run: ' + C.yellow + 'docker-compose up -d' + C.reset);
+console.log('  2. Run: ' + C.yellow + `${DC_CMD} up -d` + C.reset);
 console.log('  3. Open: ' + C.yellow + 'http://localhost:8080' + C.reset);

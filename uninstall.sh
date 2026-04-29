@@ -87,7 +87,10 @@ if [[ $PURGE -eq 1 ]]; then
   log "Purging generated content…"
   for dir in radio_vault persona_db market_ingest redis_data data backups; do
     if [[ -d "$PROJECT_DIR/$dir" ]]; then
-      rm -rf "$PROJECT_DIR/$dir"
+      rm -rf "$PROJECT_DIR/$dir" 2>/dev/null || \
+        sudo rm -rf "$PROJECT_DIR/$dir" 2>/dev/null || \
+        docker run --rm -v "$PROJECT_DIR:/app" alpine rm -rf "/app/$dir" 2>/dev/null || \
+        warn "Could not fully remove $dir/ (permission denied)"
       ok "Removed: $dir/"
     fi
   done
