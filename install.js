@@ -120,7 +120,7 @@ log(`Node:        ${process.version}`);
 header('Phase 1: Prerequisites');
 if (!has('docker')) { err('Docker not installed'); process.exit(1); }
 if (!has('docker-compose') && !has('docker')) {
-  err('docker-compose not found');
+  err('docker-compose or docker with compose plugin required');
   process.exit(1);
 }
 if (!has('git')) { err('git not installed'); process.exit(1); }
