@@ -40,8 +40,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8432:5173"
-    environment:
-      - VITE_API_URL=http://localhost:${API_PORT:-8433}
     depends_on:
       - aetherwave-api
     restart: unless-stopped
