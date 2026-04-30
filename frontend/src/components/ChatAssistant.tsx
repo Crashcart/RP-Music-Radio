@@ -147,11 +147,15 @@ export function ChatAssistant() {
 
       <div className="chat-input-row">
         <input
+          id="chat-input"
+          name="chat-message"
+          aria-label="Chat message"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask me about stations, DJs, brands..."
           disabled={loading}
+          autoComplete="off"
         />
         <button onClick={send} disabled={loading || !input.trim()}>
           →

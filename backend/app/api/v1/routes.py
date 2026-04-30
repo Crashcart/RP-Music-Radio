@@ -273,6 +273,7 @@ def update_brand(brand_id: str, payload: BrandUpdate, db: Session = Depends(get_
         raise HTTPException(404, "Brand not found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(brand, field, value)
+    brand.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(brand)
     return BrandOut.model_validate(brand)
