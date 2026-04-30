@@ -491,16 +491,21 @@ function DetailField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function fieldId(label: string) {
+  return label.toLowerCase().replace(/[\s*/\\]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+$/, '');
+}
+
 function FormField({ label, value, onChange, placeholder }: {
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
 }) {
+  const id = fieldId(label);
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
-      <input className="form-input" value={value} onChange={onChange} placeholder={placeholder} />
+      <label className="form-label" htmlFor={id}>{label}</label>
+      <input id={id} name={id} className="form-input" value={value} onChange={onChange} placeholder={placeholder} autoComplete="off" />
     </div>
   );
 }
@@ -511,10 +516,11 @@ function FormTextarea({ label, value, onChange, placeholder }: {
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
 }) {
+  const id = fieldId(label);
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
-      <textarea className="form-input form-textarea" value={value} onChange={onChange} placeholder={placeholder} rows={3} />
+      <label className="form-label" htmlFor={id}>{label}</label>
+      <textarea id={id} name={id} className="form-input form-textarea" value={value} onChange={onChange} placeholder={placeholder} rows={3} />
     </div>
   );
 }
@@ -525,10 +531,11 @@ function FormSelect({ label, value, onChange, options }: {
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: string[];
 }) {
+  const id = fieldId(label);
   return (
     <div className="form-group">
-      <label className="form-label">{label}</label>
-      <select className="form-input" value={value} onChange={onChange}>
+      <label className="form-label" htmlFor={id}>{label}</label>
+      <select id={id} name={id} className="form-input" value={value} onChange={onChange}>
         {options.map(o => <option key={o} value={o}>{o || '— Select —'}</option>)}
       </select>
     </div>
