@@ -1,6 +1,9 @@
 
 services:
   aetherwave-api:
+    env_file:
+      - path: .env
+        required: false
     image: aetherwave/factory-core:latest
     container_name: aetherwave_api
     build:

@@ -10,7 +10,7 @@ export function Artists() {
   const [genPortrait, setGenPortrait] = useState<string | null>(null);
 
   const refresh = () => {
-    api.listArtists().then(setArtists).catch(() => {});
+    api.listArtists().then(setArtists).catch(e => console.error('Failed to load artists:', e));
   };
 
   useEffect(() => { refresh(); }, []);
@@ -23,8 +23,8 @@ export function Artists() {
       if (selected?.id === id) {
         api.getArtist(id).then(setSelected);
       }
-    } catch {
-      alert('Portrait generation failed — check your API key');
+    } catch (e: any) {
+      alert(`Portrait generation failed: ${e.message || 'Check your API key'}`);
     } finally {
       setGenPortrait(null);
     }
