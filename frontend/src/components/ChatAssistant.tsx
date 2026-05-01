@@ -30,7 +30,7 @@ const parseApiError = (error: string): string => {
   return 'Something went wrong. Please try again.';
 };
 
-export function ChatAssistant() {
+export function ChatAssistant({ onEntityCreated }: { onEntityCreated?: () => void } = {}) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'system', content: SYSTEM_INTRO },
@@ -119,8 +119,10 @@ export function ChatAssistant() {
         copy[index].proposalStatus = 'success';
         return copy;
       });
-      // Force a full page reload so other components see the new data
-      window.location.reload();
+      // Notify parent to refresh data
+      if (onEntityCreated) {
+        onEntityCreated();
+      }
     } catch (err: any) {
       setMessages(prev => {
         const copy = [...prev];

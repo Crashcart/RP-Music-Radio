@@ -32,9 +32,13 @@ export function Artists() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this artist?')) return;
-    await api.deleteArtist(id);
-    if (selected?.id === id) setSelected(null);
-    refresh();
+    try {
+      await api.deleteArtist(id);
+      if (selected?.id === id) setSelected(null);
+      refresh();
+    } catch (e: any) {
+      alert(`Failed to delete artist: ${e.message || String(e)}`);
+    }
   };
 
   if (showCreate) {
@@ -63,7 +67,7 @@ export function Artists() {
           onSave={() => {
             setShowEdit(false);
             refresh();
-            api.getArtist(selected.id).then(setSelected);
+            api.getArtist(selected.id).then(setSelected).catch(e => console.error('Failed to reload artist:', e));
           }}
         />
       </div>

@@ -204,6 +204,9 @@ export const api = {
   createJingle: (data: { station_id: string; name: string; jingle_type?: string; description?: string }) =>
     request<Jingle>('/api/v1/jingles', { method: 'POST', body: JSON.stringify(data) }),
 
+  deleteJingle: (id: string) =>
+    request<{ deleted: string }>(`/api/v1/jingles/${id}`, { method: 'DELETE' }),
+
   // ── Drafts ────────────────────────────────────────────────────
   ingest: (rows: Array<{ station_name: string; artist_name: string; genre?: string; mood?: string; items?: string; station_id?: string; artist_id?: string; brand_id?: string }>) =>
     request<{ created: number; draft_ids: string[] }>('/api/v1/ingest', { method: 'POST', body: JSON.stringify({ rows }) }),
