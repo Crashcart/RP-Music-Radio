@@ -48,6 +48,30 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
     }
   };
 
+  const handleDelete = async (id: string, label: string) => {
+    if (!confirm(`Delete draft "${label}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteDraft(id);
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      onRefresh();
+    } catch (err: any) {
+      alert(`Couldn't delete draft: ${err.message || 'Please try again.'}`);
+    }
+  };
+
+  const handleRetry = async (id: string) => {
+    try {
+      await api.retryDraft(id);
+      onRefresh();
+    } catch (err: any) {
+      alert(`Couldn't retry draft: ${err.message || 'Please try again.'}`);
+    }
+  };
+
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       draft: 'badge-draft',
@@ -136,7 +160,15 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
                   </div>
                 )}
                 <div className="draft-card-actions">
-                  <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>Edit</button>
+                  {(draft.status === 'draft' || draft.status === 'fleshed_out') && (
+                    <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>Edit</button>
+                  )}
+                  {(draft.status === 'failed' || draft.status === 'committed') && (
+                    <button className="btn btn-sm btn-primary" onClick={() => handleRetry(draft.id)}>↻ Retry</button>
+                  )}
+                  {draft.status !== 'generating' && (
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(draft.id, draft.artist_name || draft.station_name)}>Delete</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -178,9 +210,23 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
                   </td>
                   <td>{statusBadge(draft.status)}</td>
                   <td>
-                    <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>
-                      Edit
-                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+                      {(draft.status === 'draft' || draft.status === 'fleshed_out') && (
+                        <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>
+                          Edit
+                        </button>
+                      )}
+                      {(draft.status === 'failed' || draft.status === 'committed') && (
+                        <button className="btn btn-sm btn-primary" onClick={() => handleRetry(draft.id)}>
+                          ↻ Retry
+                        </button>
+                      )}
+                      {draft.status !== 'generating' && (
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(draft.id, draft.artist_name || draft.station_name)}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
