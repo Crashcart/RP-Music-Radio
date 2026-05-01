@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+import uuid
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException  # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-
-logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models.database import (
@@ -36,11 +37,15 @@ from app.api.v1.schemas import (
     ApiKeyRequest,
     ApiKeyResponse,
     ArtistCreate,
+    ArtistDraftCreate,
+    ArtistDraftResponse,
     ArtistOut,
     ArtistUpdate,
     BrandCreate,
     BrandOut,
     BrandUpdate,
+    BulkArtistIds,
+    BulkRejectResponse,
     CommitRequest,
     CommitResponse,
     DraftListResponse,
@@ -59,6 +64,12 @@ from app.api.v1.schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
+
+# ── In-memory rate limiting counters (resets on worker restart) ──────
+# In production these should live in Redis; this is a best-effort guard.
+_rate_limit_hourly: Dict[str, List[datetime]] = defaultdict(list)   # key: created_by or "anon"
+_RATE_LIMIT_PER_HOUR = int(os.getenv("AI_STAGE_RATE_PER_HOUR", "20"))
+_RATE_LIMIT_CONCURRENT_PER_STATION = int(os.getenv("AI_STAGE_CONCURRENT_PER_STATION", "5"))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -158,11 +169,28 @@ def create_artist(payload: ArtistCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/artists", response_model=list[ArtistOut])
-def list_artists(station_id: str | None = None, db: Session = Depends(get_db)):
-    """List all artists, optionally filtered by station."""
+def list_artists(
+    station_id: str | None = None,
+    status: str | None = None,
+    created_by: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    List artists with optional filters.
+
+    When called without filters, returns only published artists (legacy behaviour).
+    Pass status=draft to retrieve staged AI-generated DJs pending review.
+    """
     query = db.query(Artist)
     if station_id:
         query = query.filter(Artist.station_id == station_id)
+    if status:
+        query = query.filter(Artist.status == status)
+    else:
+        # Default: hide drafts and pending_publish from the regular list
+        query = query.filter(Artist.status == "published")
+    if created_by:
+        query = query.filter(Artist.created_by == created_by)
     artists = query.order_by(Artist.created_at.desc()).all()
     return [ArtistOut.model_validate(a) for a in artists]
 
