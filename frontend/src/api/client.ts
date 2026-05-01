@@ -219,6 +219,12 @@ export const api = {
   updateDraft: (id: string, data: Partial<Draft>) =>
     request<Draft>(`/api/v1/drafts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
+  deleteDraft: (id: string) =>
+    request<{ deleted: string }>(`/api/v1/drafts/${id}`, { method: 'DELETE' }),
+
+  retryDraft: (id: string) =>
+    request<Draft>(`/api/v1/drafts/${id}/retry`, { method: 'POST' }),
+
   commitDrafts: (draftIds: string[]) =>
     request<{ queued: number; tasks: Array<{ draft_id: string; task_id: string }> }>('/api/v1/commit', { method: 'POST', body: JSON.stringify({ draft_ids: draftIds }) }),
 

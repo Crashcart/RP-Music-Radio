@@ -387,6 +387,44 @@ def update_draft(
     return DraftOut.model_validate(draft)
 
 
+@router.delete("/drafts/{draft_id}")
+def delete_draft(draft_id: str, db: Session = Depends(get_db)):
+    """Delete a draft. Drafts that are actively generating cannot be deleted."""
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if draft.status == "generating":
+        raise HTTPException(status_code=409, detail="Cannot delete a draft that is currently generating")
+    db.delete(draft)
+    db.commit()
+    logger.info("Deleted draft %s", draft_id)
+    return {"deleted": draft_id}
+
+
+@router.post("/drafts/{draft_id}/retry", response_model=DraftOut)
+def retry_draft(draft_id: str, db: Session = Depends(get_db)):
+    """Re-queue a failed or stuck draft for synthesis."""
+    from app.tasks.synthesis import synthesize_track
+
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if draft.status not in ("failed", "committed"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only failed or stuck drafts can be retried (current status: '{draft.status}')",
+        )
+
+    celery_task = synthesize_track.delay(draft_id)
+    draft.status = "committed"
+    draft.task_id = celery_task.id
+    draft.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(draft)
+    logger.info("Retried draft %s with task %s", draft_id, celery_task.id)
+    return DraftOut.model_validate(draft)
+
+
 @router.post("/commit", response_model=CommitResponse)
 def commit_drafts(payload: CommitRequest, db: Session = Depends(get_db)):
     """Submit drafts to the Celery synthesis queue."""
