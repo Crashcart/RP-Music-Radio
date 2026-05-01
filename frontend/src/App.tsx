@@ -338,7 +338,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
           <button className="btn btn-secondary" onClick={handleExport}>
             📥 Download Backup
           </button>
-          <label className="btn btn-secondary" style={{ cursor: 'not-allowed', margin: 0, opacity: 0.5 }} title="Coming soon">
+          <label className="btn btn-secondary" style={{ cursor: 'not-allowed', margin: 0, opacity: 0.5, pointerEvents: 'none' }} title="Coming soon" aria-disabled="true">
             📤 Import Backup
             <input
               type="file"
@@ -347,6 +347,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
               style={{ display: 'none' }}
               aria-label="Import backup file"
               disabled
+              tabIndex={-1}
             />
           </label>
         </div>

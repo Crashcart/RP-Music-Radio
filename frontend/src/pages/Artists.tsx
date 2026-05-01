@@ -37,7 +37,7 @@ export function Artists() {
       if (selected?.id === id) setSelected(null);
       refresh();
     } catch (e: any) {
-      alert(`Failed to delete artist: ${e.message}`);
+      alert(`Failed to delete artist: ${e.message || String(e)}`);
     }
   };
 
@@ -67,7 +67,7 @@ export function Artists() {
           onSave={() => {
             setShowEdit(false);
             refresh();
-            api.getArtist(selected.id).then(setSelected);
+            api.getArtist(selected.id).then(setSelected).catch(e => console.error('Failed to reload artist:', e));
           }}
         />
       </div>

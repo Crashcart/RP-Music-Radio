@@ -21,8 +21,8 @@ export function Stations({ isMobile }: Props) {
 
   useEffect(() => {
     if (selectedStation) {
-      api.listArtists(selectedStation.id).then(setStationDJs).catch(() => {});
-      api.listJingles(selectedStation.id).then(setStationJingles).catch(() => {});
+      api.listArtists(selectedStation.id).then(setStationDJs).catch(e => console.error('Failed to load station DJs:', e));
+      api.listJingles(selectedStation.id).then(setStationJingles).catch(e => console.error('Failed to load station jingles:', e));
     }
   }, [selectedStation]);
 
@@ -34,9 +34,9 @@ export function Stations({ isMobile }: Props) {
         jingles={stationJingles}
         onBack={() => setSelectedStation(null)}
         onRefresh={() => {
-          api.getStation(selectedStation.id).then(s => setSelectedStation(s));
-          api.listArtists(selectedStation.id).then(setStationDJs);
-          api.listJingles(selectedStation.id).then(setStationJingles);
+          api.getStation(selectedStation.id).then(setSelectedStation).catch(e => console.error('Failed to reload station:', e));
+          api.listArtists(selectedStation.id).then(setStationDJs).catch(e => console.error('Failed to reload DJs:', e));
+          api.listJingles(selectedStation.id).then(setStationJingles).catch(e => console.error('Failed to reload jingles:', e));
         }}
       />
     );
@@ -139,7 +139,7 @@ function StationDetail({
       await api.deleteStation(station.id);
       onBack();
     } catch (e: any) {
-      alert(`Deletion failed: ${e.message}`);
+      alert(`Deletion failed: ${e.message || String(e)}`);
     }
   };
 
@@ -283,7 +283,7 @@ function StationDetail({
                     setShowAddJingle(false);
                     onRefresh();
                   } catch (e: any) {
-                    alert(`Failed to create jingle: ${e.message}`);
+                    alert(`Failed to create jingle: ${e.message || String(e)}`);
                   }
                 }}
               >
@@ -315,7 +315,7 @@ function StationDetail({
                             await api.deleteJingle(j.id);
                             onRefresh();
                           } catch (e: any) {
-                            alert(`Failed to delete jingle: ${e.message}`);
+                            alert(`Failed to delete jingle: ${e.message || String(e)}`);
                           }
                         }}
                       >
@@ -470,7 +470,7 @@ export function ArtistForm({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.listStations().then(setStations).catch(() => {});
+    api.listStations().then(setStations).catch(e => console.error('Failed to load stations for picker:', e));
   }, []);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>

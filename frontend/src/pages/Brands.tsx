@@ -20,7 +20,7 @@ export function Brands() {
       if (selected?.id === id) setSelected(null);
       refresh();
     } catch (e: any) {
-      alert(`Failed to delete brand: ${e.message}`);
+      alert(`Failed to delete brand: ${e.message || String(e)}`);
     }
   };
 
@@ -39,7 +39,7 @@ export function Brands() {
       <div>
         <div className="page-header"><h2>🏢 Edit: {selected.name}</h2></div>
         <BrandForm existing={selected} onCancel={() => setShowEdit(false)}
-          onSave={() => { setShowEdit(false); refresh(); api.getBrand(selected.id).then(setSelected); }} />
+          onSave={() => { setShowEdit(false); refresh(); api.getBrand(selected.id).then(setSelected).catch(e => console.error('Failed to reload brand:', e)); }} />
       </div>
     );
   }
