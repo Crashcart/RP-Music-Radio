@@ -30,7 +30,7 @@ const parseApiError = (error: string): string => {
   return 'Something went wrong. Please try again.';
 };
 
-export function ChatAssistant({ onEntityCreated }: { onEntityCreated?: () => void } = {}) {
+export function ChatAssistant({ onEntityCreated }: { onEntityCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'system', content: SYSTEM_INTRO },
