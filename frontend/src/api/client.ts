@@ -66,8 +66,17 @@ export interface Artist {
   rivals: string;
   allies: string;
   total_tracks: number;
+  /** AI staging workflow status: "published" | "draft" | "pending_publish" */
+  status: string;
+  created_by: string | null;
+  expires_at: string | null;
+  undo_expires_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface BulkRejectResult {
+  deleted_count: number;
 }
 
 export interface Brand {
@@ -183,6 +192,39 @@ export const api = {
 
   generatePortrait: (id: string) =>
     request<{ portrait_path: string }>(`/api/v1/artists/${id}/portrait`, { method: 'POST' }),
+
+  // ── AI DJ Staging ─────────────────────────────────────────────
+  /** Stage an AI-generated DJ for user review (status=draft). */
+  stageArtist: (artistData: Partial<Artist>) =>
+    request<Artist>('/api/v1/artists/staged', { method: 'POST', body: JSON.stringify(artistData) }),
+
+  /** List staged (draft) artists with optional filters. */
+  listStagedArtists: (filters?: { status?: string; stationId?: string }) => {
+    const params = new URLSearchParams();
+    params.set('status', filters?.status ?? 'draft');
+    if (filters?.stationId) params.set('station_id', filters.stationId);
+    return request<Artist[]>(`/api/v1/artists?${params.toString()}`);
+  },
+
+  /** Move a draft DJ to pending_publish and start 30-second undo window. */
+  publishArtist: (artistId: string) =>
+    request<Artist>(`/api/v1/artists/${artistId}/publish`, { method: 'POST' }),
+
+  /** Revert a pending_publish DJ back to draft (must be within 30s window). */
+  undoPublish: (artistId: string) =>
+    request<Artist>(`/api/v1/artists/${artistId}/undo`, { method: 'POST' }),
+
+  /** Atomically move multiple draft DJs to pending_publish with shared undo window. */
+  bulkPublish: (artistIds: string[]) =>
+    request<Artist[]>('/api/v1/artists/bulk-publish', { method: 'POST', body: JSON.stringify({ artist_ids: artistIds }) }),
+
+  /** Hard-delete multiple draft DJs (ignores non-draft IDs). */
+  bulkReject: (artistIds: string[]) =>
+    request<BulkRejectResult>('/api/v1/artists/bulk-reject', { method: 'POST', body: JSON.stringify({ artist_ids: artistIds }) }),
+
+  /** Delete a single draft DJ by ID (only works for status=draft). */
+  rejectArtist: (artistId: string) =>
+    request<{ deleted: string }>(`/api/v1/artists/${artistId}`, { method: 'DELETE' }),
 
   // ── Brands ────────────────────────────────────────────────────
   createBrand: (data: Partial<Brand>) =>
