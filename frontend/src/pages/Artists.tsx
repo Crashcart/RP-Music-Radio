@@ -21,7 +21,7 @@ export function Artists() {
       await api.generatePortrait(id);
       refresh();
       if (selected?.id === id) {
-        api.getArtist(id).then(setSelected);
+        api.getArtist(id).then(setSelected).catch(e => console.error('Failed to reload artist after portrait:', e));
       }
     } catch (e: any) {
       alert(`Portrait generation failed: ${e.message || 'Check your API key'}`);

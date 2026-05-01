@@ -116,10 +116,13 @@ function StationDetail({
   onRefresh: () => void;
 }) {
   const [genArt, setGenArt] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [showAddDJ, setShowAddDJ] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showAddJingle, setShowAddJingle] = useState(false);
   const [jingleForm, setJingleForm] = useState({ name: '', jingle_type: 'intro' });
+  const [savingJingle, setSavingJingle] = useState(false);
+  const [deletingJingleId, setDeletingJingleId] = useState<string | null>(null);
 
   const handleGenArt = async () => {
     setGenArt(true);
@@ -135,11 +138,14 @@ function StationDetail({
 
   const handleDeleteStation = async () => {
     if (!confirm('Delete this station? This cannot be undone.')) return;
+    setDeleting(true);
     try {
       await api.deleteStation(station.id);
       onBack();
     } catch (e: any) {
       alert(`Deletion failed: ${e.message || String(e)}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -168,8 +174,8 @@ function StationDetail({
           <button className="btn btn-secondary" onClick={handleGenArt} disabled={genArt}>
             {genArt ? 'Generating...' : '🎨 Generate Art'}
           </button>
-          <button className="btn btn-ghost" style={{ color: 'var(--status-failed)' }} onClick={handleDeleteStation}>
-            Delete
+          <button className="btn btn-ghost" style={{ color: 'var(--status-failed)' }} onClick={handleDeleteStation} disabled={deleting}>
+            {deleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>
@@ -245,7 +251,10 @@ function StationDetail({
       <div style={{ marginTop: 'var(--space-xl)' }}>
         <div className="page-header" style={{ marginBottom: 'var(--space-md)' }}>
           <h3>🔔 Jingles ({jingles.length})</h3>
-          <button className="btn btn-secondary" onClick={() => setShowAddJingle(!showAddJingle)}>+ Add Jingle</button>
+          <button className="btn btn-secondary" onClick={() => {
+            if (showAddJingle) setJingleForm({ name: '', jingle_type: 'intro' });
+            setShowAddJingle(!showAddJingle);
+          }}>+ Add Jingle</button>
         </div>
         {showAddJingle && (
           <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
@@ -271,8 +280,10 @@ function StationDetail({
               </select>
               <button
                 className="btn btn-primary"
+                disabled={savingJingle}
                 onClick={async () => {
                   if (!jingleForm.name.trim()) return alert('Jingle name required');
+                  setSavingJingle(true);
                   try {
                     await api.createJingle({
                       station_id: station.id,
@@ -284,10 +295,12 @@ function StationDetail({
                     onRefresh();
                   } catch (e: any) {
                     alert(`Failed to create jingle: ${e.message || String(e)}`);
+                  } finally {
+                    setSavingJingle(false);
                   }
                 }}
               >
-                Create
+                {savingJingle ? 'Creating...' : 'Create'}
               </button>
             </div>
           </div>
@@ -309,17 +322,21 @@ function StationDetail({
                       <button
                         className="btn btn-ghost"
                         style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}
+                        disabled={deletingJingleId === j.id}
                         onClick={async () => {
                           if (!confirm('Delete this jingle?')) return;
+                          setDeletingJingleId(j.id);
                           try {
                             await api.deleteJingle(j.id);
                             onRefresh();
                           } catch (e: any) {
                             alert(`Failed to delete jingle: ${e.message || String(e)}`);
+                          } finally {
+                            setDeletingJingleId(null);
                           }
                         }}
                       >
-                        Delete
+                        {deletingJingleId === j.id ? '…' : 'Delete'}
                       </button>
                     </td>
                   </tr>
