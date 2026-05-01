@@ -505,7 +505,7 @@ function FormField({ label, value, onChange, placeholder }: {
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>{label}</label>
-      <input id={id} name={id} className="form-input" value={value} onChange={onChange} placeholder={placeholder} autoComplete="off" />
+      <input id={id} name={id} className="form-input" value={value} onChange={onChange} placeholder={placeholder} autoComplete="on" />
     </div>
   );
 }
@@ -520,7 +520,7 @@ function FormTextarea({ label, value, onChange, placeholder }: {
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>{label}</label>
-      <textarea id={id} name={id} className="form-input form-textarea" value={value} onChange={onChange} placeholder={placeholder} rows={3} />
+      <textarea id={id} name={id} className="form-input form-textarea" value={value} onChange={onChange} placeholder={placeholder} rows={3} autoComplete="on" />
     </div>
   );
 }
@@ -535,7 +535,7 @@ function FormSelect({ label, value, onChange, options }: {
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>{label}</label>
-      <select id={id} name={id} className="form-input" value={value} onChange={onChange}>
+      <select id={id} name={id} className="form-input" value={value} onChange={onChange} autoComplete="on">
         {options.map(o => <option key={o} value={o}>{o || '— Select —'}</option>)}
       </select>
     </div>

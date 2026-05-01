@@ -234,6 +234,24 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
     }
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.stations || !data.artists || !data.brands) {
+        throw new Error('Invalid backup file format');
+      }
+
+      alert('⚠️ Import support is coming soon. For now, use the export for backup and manual restoration.');
+    } catch (err: any) {
+      alert(`Import failed: ${err.message || 'Invalid file format'}`);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -260,7 +278,14 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
         <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'flex-end' }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">API Key</label>
-            <input className="form-input" type="text" value={apiKey} onChange={e => setApiKey(e.target.value)}
+            <input
+              className="form-input"
+              type="text"
+              id="api-key"
+              name="api-key"
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              autoComplete="off"
               placeholder="AIzaSy..." />
             <div style={{ marginTop: 'var(--space-xs)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Get your free Gemini 2.0 API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Google AI Studio</a>.
@@ -300,15 +325,27 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
       {/* Data Backup */}
       <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
         <div className="card-header">
-          <h3 className="card-title">💾 Data Backup</h3>
+          <h3 className="card-title">💾 Data Backup & Restore</h3>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-md)' }}>
           Export your entire relational database (Stations, DJs, Brands, Jingles, and Drafts) to a JSON file.
           Keep this file safe as a backup of your entire universe.
         </p>
-        <button className="btn btn-secondary" onClick={handleExport}>
-          📥 Download Export JSON
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExport}>
+            📥 Download Backup
+          </button>
+          <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
+            📤 Import Backup
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              style={{ display: 'none' }}
+              aria-label="Import backup file"
+            />
+          </label>
+        </div>
       </div>
 
       {/* About */}
