@@ -314,6 +314,17 @@ def list_jingles(station_id: str, db: Session = Depends(get_db)):
     return [JingleOut.model_validate(j) for j in jingles]
 
 
+@router.delete("/jingles/{jingle_id}")
+def delete_jingle(jingle_id: str, db: Session = Depends(get_db)):
+    """Delete a jingle."""
+    jingle = db.query(Jingle).filter(Jingle.id == jingle_id).first()
+    if not jingle:
+        raise HTTPException(404, "Jingle not found")
+    db.delete(jingle)
+    db.commit()
+    return {"deleted": jingle_id}
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Drafts (legacy ingest + CRUD)
 # ═══════════════════════════════════════════════════════════════════

@@ -32,9 +32,13 @@ export function Artists() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this artist?')) return;
-    await api.deleteArtist(id);
-    if (selected?.id === id) setSelected(null);
-    refresh();
+    try {
+      await api.deleteArtist(id);
+      if (selected?.id === id) setSelected(null);
+      refresh();
+    } catch (e: any) {
+      alert(`Failed to delete artist: ${e.message}`);
+    }
   };
 
   if (showCreate) {

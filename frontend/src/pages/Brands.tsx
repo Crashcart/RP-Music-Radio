@@ -15,9 +15,13 @@ export function Brands() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this brand?')) return;
-    await api.deleteBrand(id);
-    if (selected?.id === id) setSelected(null);
-    refresh();
+    try {
+      await api.deleteBrand(id);
+      if (selected?.id === id) setSelected(null);
+      refresh();
+    } catch (e: any) {
+      alert(`Failed to delete brand: ${e.message}`);
+    }
   };
 
   if (showCreate) {

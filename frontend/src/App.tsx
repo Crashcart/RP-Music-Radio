@@ -29,13 +29,16 @@ export default function App() {
   useEffect(() => {
     api.health()
       .then(() => setApiOk(true))
-      .catch(() => setApiOk(false));
+      .catch(e => {
+        console.error('API health check failed:', e);
+        setApiOk(false);
+      });
   }, []);
 
   const refreshDrafts = () => {
     api.listDrafts()
       .then(res => setDrafts(res.drafts))
-      .catch(() => {});
+      .catch(e => console.error('Failed to load drafts:', e));
   };
 
   useEffect(() => {
@@ -168,7 +171,7 @@ export default function App() {
       {/* Mobile Bottom Nav */}
       {isMobile && (
         <nav className="mobile-nav">
-          {NAV_ITEMS.slice(0, 5).map(item => (
+          {NAV_ITEMS.map(item => (
             <button
               key={item.id}
               className={`mobile-nav-item ${page === item.id ? 'active' : ''}`}
@@ -182,7 +185,7 @@ export default function App() {
       )}
 
       {/* AI Chat Assistant */}
-      <ChatAssistant />
+      <ChatAssistant onEntityCreated={refreshDrafts} />
     </div>
   );
 }
@@ -196,7 +199,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
   const [testResult, setTestResult] = useState<{ valid: boolean; message: string } | null>(null);
 
   useEffect(() => {
-    api.checkApiKey().then(setKeyStatus).catch(() => {});
+    api.checkApiKey().then(setKeyStatus).catch(e => console.error('Failed to check API key:', e));
   }, []);
 
   const handleSaveKey = async () => {
@@ -335,7 +338,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
           <button className="btn btn-secondary" onClick={handleExport}>
             📥 Download Backup
           </button>
-          <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
+          <label className="btn btn-secondary" style={{ cursor: 'not-allowed', margin: 0, opacity: 0.5 }} title="Coming soon">
             📤 Import Backup
             <input
               type="file"
@@ -343,6 +346,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
               onChange={handleImport}
               style={{ display: 'none' }}
               aria-label="Import backup file"
+              disabled
             />
           </label>
         </div>

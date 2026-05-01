@@ -118,6 +118,8 @@ function StationDetail({
   const [genArt, setGenArt] = useState(false);
   const [showAddDJ, setShowAddDJ] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showAddJingle, setShowAddJingle] = useState(false);
+  const [jingleForm, setJingleForm] = useState({ name: '', jingle_type: 'intro' });
 
   const handleGenArt = async () => {
     setGenArt(true);
@@ -128,6 +130,16 @@ function StationDetail({
       alert(`Art generation failed: ${e.message || 'Check your API key in Settings'}`);
     } finally {
       setGenArt(false);
+    }
+  };
+
+  const handleDeleteStation = async () => {
+    if (!confirm('Delete this station? This cannot be undone.')) return;
+    try {
+      await api.deleteStation(station.id);
+      onBack();
+    } catch (e: any) {
+      alert(`Deletion failed: ${e.message}`);
     }
   };
 
@@ -155,6 +167,9 @@ function StationDetail({
           <button className="btn btn-ghost" onClick={() => setShowEdit(true)}>Edit</button>
           <button className="btn btn-secondary" onClick={handleGenArt} disabled={genArt}>
             {genArt ? 'Generating...' : '🎨 Generate Art'}
+          </button>
+          <button className="btn btn-ghost" style={{ color: 'var(--status-failed)' }} onClick={handleDeleteStation}>
+            Delete
           </button>
         </div>
       </div>
@@ -230,19 +245,59 @@ function StationDetail({
       <div style={{ marginTop: 'var(--space-xl)' }}>
         <div className="page-header" style={{ marginBottom: 'var(--space-md)' }}>
           <h3>🔔 Jingles ({jingles.length})</h3>
-          <button className="btn btn-secondary" onClick={async () => {
-            const name = prompt('Jingle name:');
-            if (!name) return;
-            await api.createJingle({ station_id: station.id, name });
-            onRefresh();
-          }}>+ Add Jingle</button>
+          <button className="btn btn-secondary" onClick={() => setShowAddJingle(!showAddJingle)}>+ Add Jingle</button>
         </div>
+        {showAddJingle && (
+          <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
+              <input
+                type="text"
+                placeholder="Jingle name..."
+                value={jingleForm.name}
+                onChange={(e) => setJingleForm(f => ({ ...f, name: e.target.value }))}
+                className="form-input"
+                style={{ flex: 1 }}
+              />
+              <select
+                value={jingleForm.jingle_type}
+                onChange={(e) => setJingleForm(f => ({ ...f, jingle_type: e.target.value }))}
+                className="form-input"
+              >
+                <option value="intro">Intro</option>
+                <option value="outro">Outro</option>
+                <option value="bumper">Bumper</option>
+                <option value="sting">Sting</option>
+                <option value="transition">Transition</option>
+              </select>
+              <button
+                className="btn btn-primary"
+                onClick={async () => {
+                  if (!jingleForm.name.trim()) return alert('Jingle name required');
+                  try {
+                    await api.createJingle({
+                      station_id: station.id,
+                      name: jingleForm.name,
+                      jingle_type: jingleForm.jingle_type,
+                    });
+                    setJingleForm({ name: '', jingle_type: 'intro' });
+                    setShowAddJingle(false);
+                    onRefresh();
+                  } catch (e: any) {
+                    alert(`Failed to create jingle: ${e.message}`);
+                  }
+                }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        )}
         {jingles.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No jingles yet.</p>
         ) : (
           <div className="card">
             <table className="data-table">
-              <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Duration</th></tr></thead>
+              <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Duration</th><th></th></tr></thead>
               <tbody>
                 {jingles.map(j => (
                   <tr key={j.id}>
@@ -250,6 +305,23 @@ function StationDetail({
                     <td><span className="tag">{j.jingle_type}</span></td>
                     <td><span className={`badge badge-${j.status}`}><span className="badge-dot" />{j.status}</span></td>
                     <td>{j.duration_seconds ? `${j.duration_seconds}s` : '—'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn btn-ghost"
+                        style={{ color: 'var(--status-failed)', fontSize: '0.85rem' }}
+                        onClick={async () => {
+                          if (!confirm('Delete this jingle?')) return;
+                          try {
+                            await api.deleteJingle(j.id);
+                            onRefresh();
+                          } catch (e: any) {
+                            alert(`Failed to delete jingle: ${e.message}`);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -373,6 +445,7 @@ export function ArtistForm({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const [stations, setStations] = useState<Station[]>([]);
   const [form, setForm] = useState({
     name: existing?.name || '',
     display_name: existing?.display_name || '',
@@ -395,6 +468,10 @@ export function ArtistForm({
     allies: existing?.allies || '',
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.listStations().then(setStations).catch(() => {});
+  }, []);
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
@@ -432,6 +509,12 @@ export function ArtistForm({
         <div className="form-row">
           <FormSelect label="Type" value={form.artist_type} onChange={set('artist_type')}
             options={['dj', 'musician', 'narrator', 'host', 'caller', 'guest']} />
+          <FormSelectWithData label="Station" value={form.station_id} onChange={set('station_id')}
+            options={stations}
+            emptyLabel="— No station —"
+          />
+        </div>
+        <div className="form-row">
           <FormField label="Age" value={form.age} onChange={set('age')} placeholder="34" />
           <FormField label="Gender" value={form.gender} onChange={set('gender')} placeholder="male" />
         </div>
@@ -537,6 +620,27 @@ function FormSelect({ label, value, onChange, options }: {
       <label className="form-label" htmlFor={id}>{label}</label>
       <select id={id} name={id} className="form-input" value={value} onChange={onChange} autoComplete="on">
         {options.map(o => <option key={o} value={o}>{o || '— Select —'}</option>)}
+      </select>
+    </div>
+  );
+}
+
+interface FormSelectWithDataProps {
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: Array<{ id: string; name: string }>;
+  emptyLabel?: string;
+}
+
+function FormSelectWithData({ label, value, onChange, options, emptyLabel = '— No selection —' }: FormSelectWithDataProps) {
+  const id = fieldId(label);
+  return (
+    <div className="form-group">
+      <label className="form-label" htmlFor={id}>{label}</label>
+      <select id={id} name={id} className="form-input" value={value} onChange={onChange} autoComplete="on">
+        <option value="">{emptyLabel}</option>
+        {options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>
     </div>
   );
