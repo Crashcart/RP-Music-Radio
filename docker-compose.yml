@@ -16,6 +16,8 @@ services:
       - ./data:/app/data                 # Host mount: SQLite database
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
       - DEVICE_TYPE=${DEVICE_TYPE:-INTEL_QUICKSYNC}
       - AUTO_NAME_FORMAT=${AUTO_NAME_FORMAT:-{STATION}_{ARTIST}_{TRACK}.mp3}
       - FILLER_ENABLED=${FILLER_ENABLED:-true}
@@ -59,6 +61,8 @@ services:
       - ./data:/app/data
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
       - DEVICE_TYPE=${DEVICE_TYPE:-INTEL_QUICKSYNC}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/aetherwave.db}

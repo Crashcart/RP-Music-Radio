@@ -138,7 +138,7 @@ def generate_station_art(station_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Station art generation failed: %s", exc)
+        logger.error("Station art generation failed: %s", exc, exc_info=True)
         raise HTTPException(500, f"Art generation error: {exc}")
 
 
@@ -230,7 +230,7 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Portrait generation failed: %s", exc)
+        logger.error("Portrait generation failed: %s", exc, exc_info=True)
         raise HTTPException(500, f"Portrait generation error: {exc}")
 
 
@@ -527,7 +527,7 @@ def set_api_key(payload: ApiKeyRequest):
             with open(settings_path, "w") as f:
                 json.dump({"GOOGLE_API_KEY": api_key}, f)
         except Exception as e:
-            logger.error("Failed to persist API key to disk: %s", e)
+            logger.error("Failed to persist API key to disk: %s", e, exc_info=True)
             
         logger.info("Google API key validated and set")
         return ApiKeyResponse(valid=True, message="API key is valid")
@@ -684,6 +684,6 @@ def chat_assistant(payload: ChatRequest):
         return {"reply": reply_text, "proposal": proposal}
 
     except Exception as exc:
-        logger.error("Chat failed: %s", exc)
+        logger.error("Chat failed: %s", exc, exc_info=True)
         return {"reply": f"Sorry, I hit an error: {exc}. Check your API key in Settings."}
 
