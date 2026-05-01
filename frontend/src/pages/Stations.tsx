@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { api, type Station, type Artist, type Jingle } from '../api/client';
 
-interface Props {
-  isMobile?: boolean;
-}
-
 /** Toast notification for undo after approve. */
 interface UndoToast {
   artistId: string;
@@ -12,13 +8,12 @@ interface UndoToast {
   expiresAt: number; // epoch ms
 }
 
-export function Stations({ isMobile }: Props) {
+export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [stationDJs, setStationDJs] = useState<Artist[]>([]);
   const [stationJingles, setStationJingles] = useState<Jingle[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const refresh = () => {
     api.listStations().then(setStations).catch(e => console.error('Failed to load stations:', e));
@@ -1259,6 +1254,16 @@ function FormSelectWithData({ label, value, onChange, options, emptyLabel = '—
         {options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
       </select>
       {error && <span className="form-field-error" role="alert">{error}</span>}
+    </div>
+  );
+}
+
+/** Standalone inline validation error — renders nothing when no error. */
+export function FormFieldError({ error }: { error?: string }) {
+  if (!error) return null;
+  return (
+    <div style={{ color: 'var(--status-failed)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+      ⚠️ {error}
     </div>
   );
 }
