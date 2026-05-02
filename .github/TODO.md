@@ -224,17 +224,31 @@
 - [ ] Move rate limiting from in-memory dict to Redis
 - [ ] Implement bulk undo endpoint
 
-### Phase 3 (Next) — ChatAssistant Integration
+### Phase 3 (✅ Complete) — ChatAssistant Integration
 
-- [ ] Update ChatAssistant to inject station context into AI prompt
-- [ ] Update ChatAssistant to handle staged DJ proposals
-- [ ] Test AI DJ generation end-to-end
+**Completed (PR #20):**
+- [x] Update ChatAssistant to inject station context into AI prompt
+- [x] Update ChatAssistant to handle staged DJ proposals
+- [x] Parse DJ suggestions from Gemini DJ_SUGGESTION blocks
+- [x] Add "Stage DJ" buttons for granular control
+- [x] Integrate with Stations detail "Pending AI DJs" section
+- [x] Wire up onEntityCreated callback for auto-refresh
+- [x] Automatic X-CSRF-Token header injection
 
-### Phase 4 (Final) — Governance Update
+**Tested:**
+- [x] AI DJ generation end-to-end (Gemini → parse → stage → approve → publish)
 
-- [ ] Update PLANNING.md with all completed work (✅ DONE)
-- [ ] Update TODO.md with current status (✅ IN PROGRESS)
+### Phase 4 (Final) — Governance & Documentation Update
+
+**Completed:**
+- [x] Update PLANNING.md with Phase 3 completion notes
+- [x] Update AI_USAGE.md with PR Completion Rule
+- [x] Mark Phase 3 complete in TODO.md
+
+**Remaining (Post-Launch):**
 - [ ] Document data-field tagging contract in CLAUDE.md
+- [ ] Create comprehensive integration test suite
+- [ ] Performance benchmarking before production
 
 ---
 

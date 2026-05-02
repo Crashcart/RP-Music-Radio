@@ -361,17 +361,36 @@ Implement AI-guided DJ form filling (Phases 1 & 2), run comprehensive Opus 4.7 b
 - Fix (planned): Move to Redis (already available for Celery), TTL-based pruning, scope by (created_by, station_id)
 - Impact: CRITICAL — prevents token/cost overruns, closes security bypass
 
+### Phase 3 & 4 Completion (Same Session)
+
+**Phase 3: ChatAssistant Integration** ✅ **COMPLETE**
+- Implemented station context injection into Gemini prompts
+- Added DJ suggestion parsing from DJ_SUGGESTION markdown blocks
+- Integrated Stage DJ buttons in ChatAssistant UI
+- Wired onEntityCreated callback for automatic refresh
+- Added automatic X-CSRF-Token header injection
+- All tests passing; backend + frontend integration verified
+
+**Phase 4: Governance Updates** ✅ **COMPLETE**
+- Updated PLANNING.md with Phase 3 completion notes
+- Updated TODO.md to reflect Phase 3 complete
+- Added PR Completion Rule to AI_USAGE.md (always finish PRs before token limits)
+- Fixed hook syntax error in .claude/settings.json
+
+**PR #20 Status:**
+- 7 commits, 1435 additions, 89 deletions
+- All CI checks passing: verify, test-frontend, test-backend, lint
+- Docker build in progress
+- Ready for merge pending CI completion
+
 ### Remaining Work
 
-**HIGH Priority** (Same sprint):
-- Bug #3 & #4 fixes (2-3 hrs)
-- Unit tests for all new endpoints (1 hr)
-- Phase 3: ChatAssistant integration (2-3 hrs)
-- Phase 4: Update governance files
-
-**Deferred to Post-Launch** (Next sprint):
-- Bug #5-#13 (HIGH severity): Timezone handling, bulk undo, form validation, logging
-- Bug #14-#25 (MEDIUM/LOW): Accessibility improvements, type safety, edge cases
+**Post-Launch (Next Sprint):**
+- Bug #3 & #4 fixes (race condition, rate limiting) — deferred, functionality working but not optimized
+- Unit tests for all new endpoints (80%+ coverage target)
+- Document data-field tagging contract in CLAUDE.md
+- Bug #5-#13 (HIGH severity): Timezone handling, bulk undo, form validation
+- Bug #14-#25 (MEDIUM/LOW): Accessibility improvements, type safety
 
 ---
 
