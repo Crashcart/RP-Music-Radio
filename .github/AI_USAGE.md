@@ -135,6 +135,9 @@ Right-size AI model usage across the project: maximum capability where it matter
 - Anything in the "Always Opus" list
 - Anything matching escalation triggers from Section 2
 
+**PR Completion Rule:**
+- **Always finish a PR before running out of tokens** — Once a PR is created, see it through to completion (merged, closed, or documented for next session). If approaching token limits, prioritize: (1) auto-fix CI failures, (2) address review comments, (3) push final state even if unfinished. Never leave a PR hanging mid-implementation without committing progress and documenting next steps in a final commit message or PR comment.
+
 ---
 
 ## 5. Examples From Current Session

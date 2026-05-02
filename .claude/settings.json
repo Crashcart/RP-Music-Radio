@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path' 2>/dev/null); [ -z \"$f\" ] && exit 0; if [[ \"$f\" =~ \\.(ts|tsx|json)$ ]]; then prettier --write \"$f\" 2>/dev/null && echo \"✓ Formatted with Prettier: $(basename $f)\"; elif [[ \"$f\" =~ \\.py$ ]]; then black \"$f\" 2>/dev/null && echo \"✓ Formatted with Black: $(basename $f)\"; fi || true",
+            "command": "f=$(jq -r '.tool_response.filePath // .tool_input.file_path' 2>/dev/null); [ -z \"$f\" ] && exit 0; case \"$f\" in *.ts|*.tsx|*.json) prettier --write \"$f\" 2>/dev/null && echo \"✓ Formatted: $(basename $f)\";; *.py) black \"$f\" 2>/dev/null && echo \"✓ Formatted: $(basename $f)\";; esac || true",
             "statusMessage": "Auto-formatting code..."
           }
         ]
