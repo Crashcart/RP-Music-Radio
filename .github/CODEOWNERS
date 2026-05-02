@@ -1,0 +1,35 @@
+# Code Ownership and Review Requirements
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global default owner
+* @crashcart
+
+# Frontend - React / TypeScript
+/frontend/ @crashcart
+/frontend/src/pages/ @crashcart
+/frontend/src/components/ @crashcart
+/frontend/src/api/ @crashcart
+
+# Backend - Python / FastAPI
+/backend/ @crashcart
+/backend/app/ @crashcart
+/backend/app/api/ @crashcart
+/backend/app/models/ @crashcart
+
+# Infrastructure & Deployment
+/docker/ @crashcart
+docker-compose.yml @crashcart
+Dockerfile* @crashcart
+
+# Documentation & Configuration
+/.github/ @crashcart
+/README.md @crashcart
+.env.example @crashcart
+
+# Database & Migrations
+/backend/alembic/ @crashcart
+/backend/app/models/database.py @crashcart
+
+# Tests
+/backend/tests/ @crashcart
+/frontend/tests/ @crashcart
