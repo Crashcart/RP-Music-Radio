@@ -1048,7 +1048,6 @@ def chat_assistant(payload: ChatRequest):
             config=types.GenerateContentConfig(
                 temperature=0.9,
                 max_output_tokens=2048,
-                tools=[{"google_search": {}}],
             ),
         )
 

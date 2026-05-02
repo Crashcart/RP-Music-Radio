@@ -413,3 +413,13 @@ Implement AI-guided DJ form filling (Phases 1 & 2), run comprehensive Opus 4.7 b
 2. Google Cloud API provisioning
 3. Begin Phase 1: Backend scaffolding
 4. Set up CI/CD workflows in parallel
+
+---
+
+## Session 2: Bug Fixes & Refinement (2026-05-01)
+
+### 7. Gemini API Google Search Grounding Bug ✅
+**Decision**: Removed `google_search` tool from Gemini API calls in `/api/v1/chat`.
+**Rationale**: 
+- The `google-genai` SDK threw 500 Internal Server Errors when passing `{"google_search": {}}` directly in the `tools` array. 
+- Since the AetherWave chat assistant is meant for fictional brainstorming, web search is unnecessary and was causing complete failure of the chat endpoint.

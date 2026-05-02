@@ -61,7 +61,7 @@
 
 ### AI Integration Tasks
 
-- [x] Implement Gemini Chat Assistant with Google Search grounding
+- [x] Implement Gemini Chat Assistant (Google Search grounding removed due to 500 errors)
 - [x] Wire up Nano Banana 2 integration for Artist Portraits and Station Logos
 - [x] Implement AI Entity Proposal (One-click UI creation for Stations/Brands/Artists from chat)
 - [ ] Implement Gemini "Flesh-Out" protocol (expand brand/station seeds into full scripts)
