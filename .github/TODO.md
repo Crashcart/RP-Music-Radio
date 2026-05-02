@@ -49,6 +49,7 @@
 - [x] Build **Artists Gallery** (`Artists.tsx`) with deep-field forms (22 fields) and portrait generation
 - [x] Build **Brands Portal** (`Brands.tsx`) for fictional sponsors and ad settings
 - [x] Build **Settings Page** with secure Google API key storage and system status
+- [x] Add Premium **System Logs Viewer** to Settings Page for debugging
 - [x] Build **AI Chat Assistant** (`ChatAssistant.tsx`) floating widget
 - [x] Build real-time task queue monitor (`GenerationQueue.tsx`)
 - [x] Refactor `api/client.ts` to support all 28 API methods
