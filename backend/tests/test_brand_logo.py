@@ -23,11 +23,10 @@ def test_station(db_session):
 
 
 @pytest.fixture
-def test_brand(db_session, test_station):
+def test_brand(db_session):
     """Create a test brand."""
     brand = Brand(
         id=str(uuid.uuid4()),
-        station_id=test_station.id,
         name="Test Brand",
         color_primary="#FF5500",
     )

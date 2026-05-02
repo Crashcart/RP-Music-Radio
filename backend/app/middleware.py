@@ -55,7 +55,7 @@ _CSRF_MUTATION_METHODS: frozenset[str] = frozenset({"POST", "PATCH", "PUT", "DEL
 
 # Cookie / header names.
 _CSRF_COOKIE_NAME = "csrf_token"
-_CSRF_HEADER_NAME = "x-csrf-token"   # ASGI normalises headers to lowercase
+_CSRF_HEADER_NAME = "x-csrf-token"  # ASGI normalises headers to lowercase
 
 # Cookie TTL (seconds) — 8 hours; auto-refreshed on each GET.
 _CSRF_COOKIE_MAX_AGE = 8 * 60 * 60
@@ -138,9 +138,9 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 key=_CSRF_COOKIE_NAME,
                 value=token,
                 max_age=_CSRF_COOKIE_MAX_AGE,
-                httponly=False,   # JS must be able to read it (double-submit pattern)
-                samesite="strict",
-                secure=False,     # Set to True behind TLS in production
+                httponly=False,  # JS must be able to read it (double-submit pattern)
+                samesite="lax",  # Changed from "strict" to allow cross-port in development
+                secure=False,  # Set to True behind TLS in production
                 path="/",
             )
 
