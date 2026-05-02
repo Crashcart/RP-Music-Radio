@@ -18,6 +18,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from app.logging_config import setup_logging
 from app.middleware import CSRFMiddleware, RequestLoggingMiddleware
@@ -65,17 +67,20 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         f"http://{os.getenv('API_HOST', 'boris.local')}:8432",
     ],
-    allow_credentials=True,   # Required so the csrf_token cookie is sent cross-origin
+    allow_credentials=True,  # Required so the csrf_token cookie is sent cross-origin
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-CSRF-Token", "X-Request-Id"],
 )
+
 
 # ── Validation Error Handler ──────────────────────────────────────────
 # Convert Pydantic 422 ValidationErrors into user-readable messages so the
 # frontend (ChatAssistant staging flow) can surface them without exposing raw
 # Python type names.
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     errors = exc.errors()
     # Build a human-readable summary of the first error
     first = errors[0] if errors else {}
@@ -105,6 +110,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # ── Routes ────────────────────────────────────────────────────────────
 app.include_router(v1_router)
+
+# ── Static Files (for generated art) ───────────────────────────────────
+# Serve generated images (station art, DJ portraits, brand logos) from /output
+output_dir = Path("/app/output")
+if output_dir.exists():
+    app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
+    logger.info("Static files mounted at /output")
 
 
 @app.get("/health")

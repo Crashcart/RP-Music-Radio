@@ -700,6 +700,7 @@ def generate_brand_logo(brand_id: str, db: Session = Depends(get_db)):
         art_gen = ArtGenerator()
         # Use brand id as style seed for consistency
         brand_style = StationStyle(
+            station_id=f"brand-{brand.id}",
             display_name=brand.name,
             style_seed=brand.id or str(uuid.uuid4()),
             colors=[brand.color_primary] if brand.color_primary else [],
@@ -718,7 +719,7 @@ def generate_brand_logo(brand_id: str, db: Session = Depends(get_db)):
         )
         if art_path:
             brand.logo_path = str(art_path)
-            brand.updated_at = datetime.utcnow()
+            brand.updated_at = datetime.now(timezone.utc)
             db.commit()
             return {"logo_path": str(art_path)}
         raise HTTPException(500, "Logo generation failed")
@@ -726,7 +727,7 @@ def generate_brand_logo(brand_id: str, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Brand logo generation failed for {brand_id}: {e}", exc_info=True)
-        raise HTTPException(500, str(e))
+        raise HTTPException(500, f"Logo generation error: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════

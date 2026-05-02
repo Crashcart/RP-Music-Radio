@@ -66,10 +66,9 @@
 - [x] Wire up Nano Banana 2 integration for Artist Portraits and Station Logos
 - [x] Implement AI Entity Proposal (One-click UI creation for Stations/Brands/Artists from chat)
 - [ ] Implement Gemini "Flesh-Out" protocol (expand brand/station seeds into full scripts)
-- [ ] Implement Lyria 3 Pro integration for Voice DNA and procedural audio generation
-- [ ] Ensure voice consistency across multiple tracks for the same Artist
-- [ ] Create Celery async tasks to link generation steps together seamlessly
 - [ ] Write AI integration tests
+
+**Note**: Lyria 3 Pro audio synthesis and Celery pipeline integration tasks have moved to Phase 4 (Audio & Visual Synthesis Pipeline) to show they're part of the unified content generation workflow.
 
 ### AI Blockers
 
@@ -78,16 +77,39 @@
 
 ---
 
-## Phase 4: Persistence & Output
+## Phase 4: Audio & Visual Synthesis Pipeline
 
-### Persistence Tasks
+### Audio & Album Art Generation (Unified)
+
+**Audio Synthesis (Lyria 3 Pro):**
+- [ ] Implement Lyria 3 Pro integration for Voice DNA and procedural audio generation
+- [ ] Ensure voice consistency across multiple tracks for the same Artist
+- [ ] Create Celery async tasks to link generation steps together seamlessly
+
+**Visual Synthesis (Album Art, Station Art, DJ Portraits, Brand Logos):**
+- [x] Implement album cover generation (via Nano Banana 2 / Google Imagen)
+- [x] Implement DJ portrait generation 
+- [x] Implement station logo generation
+- [x] Implement brand logo generation
+- [ ] **Integrate album art into synthesis pipeline**: Generate album cover as part of `POST /api/v1/drafts/{id}/commit`
+- [ ] Display album art thumbnails in GenerationQueue alongside audio preview
+- [ ] Implement per-track art regeneration (allow users to re-generate if unsatisfied)
+
+**Synthesis Pipeline Integration:**
+- [ ] Wire Lyria audio output → Album art generation (both triggered by single `/commit` call)
+- [ ] Celery task: Generate audio first, then use audio metadata (mood, genre, BPM) to seed album art prompt
+- [ ] Track both audio and visual outputs in GenerationHistory
+- [ ] Write integration tests for complete audio + visual synthesis workflow
+
+---
+
+### Persistence & Output
 
 - [x] Implement enhanced Mutagen ID3v2.4 tagging (18+ tags: genre, BPM, copyright, TXXX seeds)
 - [ ] Update Lore_Ledger JSON schema to pull directly from the relational database (Artist/Brand DB)
 - [ ] Implement host volume mapping for persistent output (`./radio_vault/`)
-- [ ] Implement `POST /api/v1/commit` endpoint (Full synthesis trigger)
-- [ ] Establish new hierarchical file naming convention (e.g., `{STATION}/{ARTIST}/{TRACK}.mp3` or `{STATION}/jingles/{JINGLE_TYPE}.mp3`)
-- [ ] Write tests for MP3 generation & metadata tagging
+- [ ] Establish new hierarchical file naming convention (e.g., `{STATION}/{ARTIST}/{TRACK}.mp3` or `{STATION}/jingles/{JINGLE_TYPE}.mp3`, with parallel art paths like `{STATION}/{ARTIST}/{TRACK}.jpg`)
+- [ ] Write tests for MP3 generation, album art output, and metadata tagging
 
 ---
 
