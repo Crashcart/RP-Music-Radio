@@ -255,6 +255,11 @@ export const api = {
       method: "POST",
     }),
 
+  generateBrandLogo: (id: string) =>
+    request<{ logo_path: string }>(`/api/v1/brands/${id}/logo`, {
+      method: "POST",
+    }),
+
   listJingles: (stationId: string) =>
     request<Jingle[]>(`/api/v1/stations/${stationId}/jingles`),
 
