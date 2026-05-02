@@ -15,13 +15,14 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+import uuid
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException  # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-
-logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.models.database import (
@@ -36,11 +37,15 @@ from app.api.v1.schemas import (
     ApiKeyRequest,
     ApiKeyResponse,
     ArtistCreate,
+    ArtistDraftCreate,
+    ArtistDraftResponse,
     ArtistOut,
     ArtistUpdate,
     BrandCreate,
     BrandOut,
     BrandUpdate,
+    BulkArtistIds,
+    BulkRejectResponse,
     CommitRequest,
     CommitResponse,
     DraftListResponse,
@@ -59,6 +64,12 @@ from app.api.v1.schemas import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
+
+# ── In-memory rate limiting counters (resets on worker restart) ──────
+# In production these should live in Redis; this is a best-effort guard.
+_rate_limit_hourly: Dict[str, List[datetime]] = defaultdict(list)   # key: created_by or "anon"
+_RATE_LIMIT_PER_HOUR = int(os.getenv("AI_STAGE_RATE_PER_HOUR", "20"))
+_RATE_LIMIT_CONCURRENT_PER_STATION = int(os.getenv("AI_STAGE_CONCURRENT_PER_STATION", "5"))
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -158,11 +169,28 @@ def create_artist(payload: ArtistCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/artists", response_model=list[ArtistOut])
-def list_artists(station_id: str | None = None, db: Session = Depends(get_db)):
-    """List all artists, optionally filtered by station."""
+def list_artists(
+    station_id: str | None = None,
+    status: str | None = None,
+    created_by: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    List artists with optional filters.
+
+    When called without filters, returns only published artists (legacy behaviour).
+    Pass status=draft to retrieve staged AI-generated DJs pending review.
+    """
     query = db.query(Artist)
     if station_id:
         query = query.filter(Artist.station_id == station_id)
+    if status:
+        query = query.filter(Artist.status == status)
+    else:
+        # Default: hide drafts and pending_publish from the regular list
+        query = query.filter(Artist.status == "published")
+    if created_by:
+        query = query.filter(Artist.created_by == created_by)
     artists = query.order_by(Artist.created_at.desc()).all()
     return [ArtistOut.model_validate(a) for a in artists]
 
@@ -199,6 +227,212 @@ def delete_artist(artist_id: str, db: Session = Depends(get_db)):
     db.delete(artist)
     db.commit()
     return {"deleted": artist_id}
+
+
+@router.post("/artists/staged", response_model=ArtistDraftResponse)
+def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated DJ for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting: 5 concurrent drafts per station, 20 per hour per
+    requester (keyed by created_by or 'anon'). Returns 429 if exceeded.
+    Draft expires automatically in 7 days if not approved.
+    """
+    now = datetime.now(timezone.utc)
+    requester_key = payload.created_by or "anon"
+
+    # ── Hourly rate limit ────────────────────────────────────────────
+    hour_ago = now - timedelta(hours=1)
+    recent = [t for t in _rate_limit_hourly[requester_key] if t > hour_ago]
+    _rate_limit_hourly[requester_key] = recent
+    if len(recent) >= _RATE_LIMIT_PER_HOUR:
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key, _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged DJs per hour",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Concurrent draft limit per station ──────────────────────────
+    if payload.station_id:
+        concurrent = (
+            db.query(Artist)
+            .filter(Artist.station_id == payload.station_id, Artist.status == "draft")
+            .count()
+        )
+        if concurrent >= _RATE_LIMIT_CONCURRENT_PER_STATION:
+            logger.warning(
+                "Concurrent draft limit reached for station=%s (%d drafts)",
+                payload.station_id, concurrent,
+            )
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": f"Too many pending drafts: max {_RATE_LIMIT_CONCURRENT_PER_STATION} concurrent per station",
+                    "code": "rate_limit_concurrent",
+                },
+            )
+
+    # ── Record this creation attempt for rate limiting ───────────────
+    _rate_limit_hourly[requester_key].append(now)
+
+    # ── Create the draft artist ──────────────────────────────────────
+    artist_data = payload.model_dump()
+    artist = Artist(
+        **artist_data,
+        status="draft",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(artist)
+    db.commit()
+    db.refresh(artist)
+    logger.info(
+        "Staged AI DJ: id=%s name=%r station=%s created_by=%s",
+        artist.id, artist.name, artist.station_id, artist.created_by,
+    )
+    return ArtistDraftResponse.model_validate(artist)
+
+
+@router.post("/artists/{artist_id}/publish", response_model=ArtistDraftResponse)
+def publish_artist(artist_id: str, db: Session = Depends(get_db)):
+    """
+    Initiate publish for a draft DJ.
+
+    Moves status draft → pending_publish and starts a 30-second undo window.
+    The Celery beat job auto-promotes pending_publish → published after the
+    window expires. Users may call /undo within the window to revert.
+    """
+    correlation_id = str(uuid.uuid4())
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(404, {"error": "Artist not found", "code": "not_found"})
+    if artist.status != "draft":
+        raise HTTPException(
+            409,
+            {"error": f"Cannot publish artist with status '{artist.status}' (expected draft)", "code": "wrong_status"},
+        )
+    now = datetime.now(timezone.utc)
+    artist.status = "pending_publish"
+    artist.undo_expires_at = now + timedelta(seconds=30)
+    artist.updated_at = now
+    db.commit()
+    db.refresh(artist)
+    logger.info(
+        "Publish initiated: id=%s correlation=%s undo_expires=%s",
+        artist_id, correlation_id, artist.undo_expires_at.isoformat(),
+    )
+    return ArtistDraftResponse.model_validate(artist)
+
+
+@router.post("/artists/{artist_id}/undo", response_model=ArtistDraftResponse)
+def undo_publish(artist_id: str, db: Session = Depends(get_db)):
+    """
+    Revert a pending_publish DJ back to draft within the 30-second undo window.
+
+    Returns 400 if the undo window has expired.
+    Returns 409 if the artist is not in pending_publish status.
+    """
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(404, {"error": "Artist not found", "code": "not_found"})
+    if artist.status != "pending_publish":
+        raise HTTPException(
+            409,
+            {"error": f"Cannot undo: artist status is '{artist.status}' (expected pending_publish)", "code": "wrong_status"},
+        )
+    now = datetime.now(timezone.utc)
+    undo_deadline = artist.undo_expires_at
+    # Normalise to UTC for comparison even if stored without tzinfo
+    if undo_deadline and undo_deadline.tzinfo is None:
+        undo_deadline = undo_deadline.replace(tzinfo=timezone.utc)
+    if undo_deadline is None or now > undo_deadline:
+        raise HTTPException(
+            400,
+            {"error": "Undo window expired (30s)", "code": "undo_expired"},
+        )
+    artist.status = "draft"
+    artist.undo_expires_at = None
+    artist.updated_at = now
+    db.commit()
+    db.refresh(artist)
+    logger.info("Publish undone: id=%s reverted to draft", artist_id)
+    return ArtistDraftResponse.model_validate(artist)
+
+
+@router.post("/artists/bulk-publish", response_model=list[ArtistDraftResponse])
+def bulk_publish_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
+    """
+    Atomically move multiple draft DJs to pending_publish status.
+
+    All artists in the list receive the same undo_expires_at timestamp so
+    the frontend can show a single shared countdown. Artists with a status
+    other than 'draft' are skipped with a warning (non-fatal).
+    """
+    now = datetime.now(timezone.utc)
+    undo_at = now + timedelta(seconds=30)
+    results: list[ArtistDraftResponse] = []
+
+    for aid in payload.artist_ids:
+        artist = db.query(Artist).filter(Artist.id == aid).first()
+        if not artist:
+            logger.warning("bulk_publish: artist %s not found, skipping", aid)
+            continue
+        if artist.status != "draft":
+            logger.warning(
+                "bulk_publish: artist %s has status=%s (not draft), skipping",
+                aid, artist.status,
+            )
+            continue
+        artist.status = "pending_publish"
+        artist.undo_expires_at = undo_at
+        artist.updated_at = now
+
+    db.commit()
+
+    # Refresh after commit to return current state
+    for aid in payload.artist_ids:
+        artist = db.query(Artist).filter(Artist.id == aid).first()
+        if artist and artist.status == "pending_publish":
+            db.refresh(artist)
+            results.append(ArtistDraftResponse.model_validate(artist))
+
+    logger.info("bulk_publish: promoted %d artists, undo_expires=%s", len(results), undo_at.isoformat())
+    return results
+
+
+@router.post("/artists/bulk-reject", response_model=BulkRejectResponse)
+def bulk_reject_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
+    """
+    Hard-delete multiple draft DJs.
+
+    Only deletes artists whose status is 'draft'. Artists with any other
+    status are silently ignored so the caller doesn't need pre-filtering.
+    Returns the count of actually deleted records.
+    """
+    deleted = 0
+    for aid in payload.artist_ids:
+        artist = db.query(Artist).filter(Artist.id == aid).first()
+        if not artist:
+            logger.warning("bulk_reject: artist %s not found, skipping", aid)
+            continue
+        if artist.status != "draft":
+            logger.warning(
+                "bulk_reject: artist %s has status=%s (not draft), skipping",
+                aid, artist.status,
+            )
+            continue
+        db.delete(artist)
+        deleted += 1
+
+    db.commit()
+    logger.info("bulk_reject: deleted %d draft artists", deleted)
+    return BulkRejectResponse(deleted_count=deleted)
 
 
 @router.post("/artists/{artist_id}/portrait")

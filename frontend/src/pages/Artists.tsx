@@ -10,7 +10,7 @@ export function Artists() {
   const [genPortrait, setGenPortrait] = useState<string | null>(null);
 
   const refresh = () => {
-    api.listArtists().then(setArtists).catch(e => console.error('Failed to load artists:', e));
+    api.listArtists().then(setArtists).catch((e: Error) => console.error('Failed to load artists:', e));
   };
 
   useEffect(() => { refresh(); }, []);
@@ -21,10 +21,10 @@ export function Artists() {
       await api.generatePortrait(id);
       refresh();
       if (selected?.id === id) {
-        api.getArtist(id).then(setSelected).catch(e => console.error('Failed to reload artist after portrait:', e));
+        api.getArtist(id).then(setSelected).catch((e: Error) => console.error('Failed to reload artist after portrait:', e));
       }
-    } catch (e: any) {
-      alert(`Portrait generation failed: ${e.message || 'Check your API key'}`);
+    } catch (e: unknown) {
+      alert(`Portrait generation failed: ${e instanceof Error ? e.message : 'Check your API key'}`);
     } finally {
       setGenPortrait(null);
     }
@@ -36,8 +36,8 @@ export function Artists() {
       await api.deleteArtist(id);
       if (selected?.id === id) setSelected(null);
       refresh();
-    } catch (e: any) {
-      alert(`Failed to delete artist: ${e.message || String(e)}`);
+    } catch (e: unknown) {
+      alert(`Failed to delete artist: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -67,7 +67,7 @@ export function Artists() {
           onSave={() => {
             setShowEdit(false);
             refresh();
-            api.getArtist(selected.id).then(setSelected).catch(e => console.error('Failed to reload artist:', e));
+            api.getArtist(selected.id).then(setSelected).catch((e: Error) => console.error('Failed to reload artist:', e));
           }}
         />
       </div>

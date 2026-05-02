@@ -34,6 +34,9 @@
   --error:          hsl(0, 75%, 55%);
   --warning:        hsl(38, 90%, 55%);
   --info:           hsl(210, 70%, 55%);
+  /* Semantic status aliases */
+  --status-failed:    hsl(0, 75%, 55%);
+  --status-completed: hsl(145, 65%, 45%);
 
   /* Text */
   --text-primary:   hsl(220, 15%, 90%);
@@ -62,6 +65,7 @@
   --space-lg:  1.5rem;
   --space-xl:  2rem;
   --space-2xl: 3rem;
+  --space-xxl: 4rem;
 
   /* Radius */
   --radius-sm:  6px;
@@ -463,6 +467,18 @@ code, pre {
   background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--accent-border);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border);
 }
 
 .btn-danger {
@@ -1373,4 +1389,227 @@ textarea.input {
 .chat-input-row button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   AI DJ Staging — Phase 1 / Phase 2 additions
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── AI-filled form fields (subtle amber tint) ──────────────────── */
+
+.form-ai-filled {
+  background: hsla(38, 95%, 55%, 0.06) !important;
+  border-color: hsla(38, 95%, 55%, 0.35) !important;
+}
+
+.form-ai-filled:focus {
+  border-color: var(--amber) !important;
+  box-shadow: 0 0 0 3px var(--amber-glow) !important;
+}
+
+/* When .form-ai-filled is applied to the wrapper div, style child inputs */
+div.form-ai-filled {
+  background: hsl(30, 60%, 10%);
+  border: 1px solid hsl(30, 80%, 40%);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+}
+
+div.form-ai-filled .form-input {
+  background: hsl(30, 40%, 8%);
+  border-color: hsl(30, 80%, 35%);
+}
+
+/* ── Field-level validation error ──────────────────────────────── */
+
+.form-input-error {
+  border-color: var(--error) !important;
+}
+
+.form-input-error:focus {
+  box-shadow: 0 0 0 3px hsla(0, 75%, 55%, 0.15) !important;
+}
+
+.form-field-error {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--error);
+  margin-top: var(--space-xs);
+}
+
+/* ── AI review banner ───────────────────────────────────────────── */
+
+.ai-review-banner {
+  background: var(--amber-glow);
+  border: 1px solid hsla(38, 95%, 55%, 0.4);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--amber);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--space-md);
+}
+
+/* ── Slide-in animation (used by undo toast) ────────────────────── */
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ── Undo toast notification ────────────────────────────────────── */
+
+.undo-toast {
+  position: fixed;
+  bottom: calc(var(--space-xl) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-sm) var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 2000;
+  animation: slideUp var(--duration-fast) var(--ease-out);
+  white-space: nowrap;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.undo-toast-countdown {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--amber);
+  min-width: 24px;
+  text-align: right;
+}
+
+/* ── Pending DJs desktop grid (≥768px) ──────────────────────────── */
+
+.pending-djs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-md);
+}
+
+.pending-dj-card {
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--amber);
+}
+
+/* Mobile accordion (hidden on desktop) */
+.pending-djs-accordion {
+  display: none;
+}
+
+/* ── Add DJ mode dropdown ────────────────────────────────────────── */
+
+.dj-mode-menu {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dj-mode-menu .btn {
+  border-radius: 0;
+  justify-content: flex-start;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.dj-mode-menu .btn:last-child {
+  border-bottom: none;
+}
+
+.dj-mode-menu .btn:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Mobile: accordion layout + hide desktop grid ───────────────── */
+
+@media (max-width: 767px) {
+  .pending-djs-grid {
+    display: none;
+  }
+
+  .pending-djs-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .accordion-item {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .accordion-item:last-child {
+    border-bottom: none;
+  }
+
+  .accordion-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--bg-card);
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    min-height: 44px;
+    transition: background var(--duration-fast) var(--ease-out);
+  }
+
+  .accordion-trigger:hover,
+  .accordion-trigger[aria-expanded="true"] {
+    background: var(--bg-hover);
+  }
+
+  .accordion-chevron {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .accordion-body {
+    padding: var(--space-md);
+    background: var(--bg-deep);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .undo-toast {
+    left: var(--space-md);
+    right: var(--space-md);
+    bottom: 76px; /* above mobile bottom nav */
+    transform: none;
+    white-space: normal;
+    border-radius: var(--radius-md);
+    flex-wrap: wrap;
+  }
 }
