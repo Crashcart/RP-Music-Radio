@@ -9,9 +9,9 @@ These are the shapes that flow over HTTP — distinct from the ORM models
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -125,6 +125,8 @@ class ArtistUpdate(BaseModel):
 
 
 class ArtistOut(BaseModel):
+    """Full artist response including staging workflow fields."""
+
     id: str
     name: str
     display_name: str
@@ -148,10 +150,138 @@ class ArtistOut(BaseModel):
     rivals: str
     allies: str
     total_tracks: int
+    # AI staging workflow fields
+    status: str = "published"
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Artist Staging (AI DJ workflow)
+# ═══════════════════════════════════════════════════════════════════
+
+_VALID_ARTIST_TYPES = {"dj", "musician", "narrator", "host", "caller", "guest"}
+
+
+class ArtistDraftCreate(BaseModel):
+    """
+    Schema for staging an AI-generated DJ.
+
+    Accepts partial data (AI may not fill all fields), but requires
+    at minimum a name and artist_type. All fields are validated before
+    any database write to prevent malformed AI output from persisting.
+    """
+
+    name: str = Field(..., min_length=1, max_length=200, description="DJ real name (required)")
+    display_name: str = Field(default="", max_length=200)
+    artist_type: str = Field(default="dj")
+    station_id: Optional[str] = Field(default=None)
+    bio: str = Field(default="", max_length=5000)
+    personality: str = Field(default="", max_length=3000)
+    catchphrases: str = Field(default="", max_length=1000, description="Pipe-separated catchphrases")
+    quirks: str = Field(default="", max_length=1000)
+    speaking_style: str = Field(default="", max_length=200)
+    accent: str = Field(default="", max_length=200)
+    age: str = Field(default="", max_length=50)
+    gender: str = Field(default="", max_length=100)
+    voice_description: str = Field(default="", max_length=2000)
+    appearance: str = Field(default="", max_length=3000)
+    genre: str = Field(default="", max_length=200)
+    influences: str = Field(default="", max_length=500)
+    signature_sound: str = Field(default="", max_length=500)
+    rivals: str = Field(default="", max_length=500)
+    allies: str = Field(default="", max_length=500)
+    # Optional: caller identity for audit trail (future multi-user)
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+    @field_validator("artist_type")
+    @classmethod
+    def validate_artist_type(cls, v: str) -> str:
+        """Reject unknown artist types to prevent garbage data."""
+        if v not in _VALID_ARTIST_TYPES:
+            raise ValueError(f"artist_type must be one of: {sorted(_VALID_ARTIST_TYPES)}")
+        return v
+
+    @field_validator("name")
+    @classmethod
+    def validate_name_not_blank(cls, v: str) -> str:
+        """Name must contain visible characters, not just whitespace."""
+        if not v.strip():
+            raise ValueError("name cannot be blank")
+        return v.strip()
+
+
+class ArtistDraftResponse(BaseModel):
+    """
+    Response returned after successfully staging an AI-generated DJ.
+
+    Extends ArtistOut with staging-specific metadata that the frontend
+    needs to render the review UI and countdown timer.
+    """
+
+    id: str
+    name: str
+    display_name: str
+    artist_type: str
+    station_id: Optional[str] = None
+    bio: str
+    personality: str
+    catchphrases: str
+    quirks: str
+    speaking_style: str
+    accent: str
+    age: str
+    gender: str
+    voice_seed: str
+    voice_description: str
+    portrait_path: Optional[str] = None
+    appearance: str
+    genre: str
+    influences: str
+    signature_sound: str
+    rivals: str
+    allies: str
+    total_tracks: int
+    status: str
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BulkArtistIds(BaseModel):
+    """Request body for bulk publish/reject operations."""
+
+    artist_ids: List[str] = Field(..., min_length=1, description="List of artist IDs to act on")
+
+    @field_validator("artist_ids")
+    @classmethod
+    def validate_non_empty_ids(cls, v: List[str]) -> List[str]:
+        """All provided IDs must be non-empty strings."""
+        for aid in v:
+            if not aid or not aid.strip():
+                raise ValueError("artist_ids must not contain blank strings")
+        return v
+
+
+class BulkRejectResponse(BaseModel):
+    """Response for bulk-reject operation."""
+
+    deleted_count: int
+
+
+class BulkUndoResponse(BaseModel):
+    """Response for bulk-undo operation."""
+
+    reverted_count: int
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -7,11 +7,22 @@ and API serialization).
 
 Tables:
   stations            — Radio stations with branding, genre, mood
-  artists             — Independent artists/DJs with voice DNA
+  artists             — Independent artists/DJs with voice DNA (status workflow)
   brands              — Fictional in-universe companies/sponsors
   jingles             — Short audio clips tied to stations
   drafts              — User-staged content awaiting commitment
   generation_history  — Completed synthesis runs with metadata
+
+Artist Status Workflow (added for AI DJ staging):
+  draft            → AI-generated, pending user review (expires in 7 days)
+  pending_publish  → Approved, in 30-second undo window
+  published        → Live, visible to end-users (default for manual creation)
+
+Migration note (for DevOps):
+  ALTER TABLE artists ADD COLUMN status VARCHAR DEFAULT 'published';
+  ALTER TABLE artists ADD COLUMN created_by VARCHAR;
+  ALTER TABLE artists ADD COLUMN expires_at DATETIME;
+  (created_at already exists)
 """
 
 from __future__ import annotations
@@ -83,6 +94,11 @@ class Artist(Base):
     """
     An independent artist or DJ persona with persistent voice DNA.
     Artists can be linked to stations (as DJs) or exist standalone.
+
+    Status lifecycle for AI-generated DJs:
+      draft            — AI-created, pending user review; expires after 7 days
+      pending_publish  — User approved, in 30-second undo window
+      published        — Live and visible; default for manually created artists
     """
 
     __tablename__ = "artists"
@@ -126,6 +142,16 @@ class Artist(Base):
 
     # Stats
     total_tracks = Column(Integer, default=0)
+
+    # AI staging workflow — added for AI DJ generation feature
+    # Values: "published" (default/manual), "draft" (AI-staged), "pending_publish" (in undo window)
+    status = Column(String, default="published")
+    # Nullable: set by AI generation flow; None for manually created artists
+    created_by = Column(String, nullable=True)        # Future multi-user: who initiated the AI generation
+    # TTL for draft records — drafts expire 7 days after creation
+    expires_at = Column(DateTime, nullable=True)
+    # Set when status moves to pending_publish; used to enforce the 30s undo window
+    undo_expires_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
