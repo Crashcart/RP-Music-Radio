@@ -461,3 +461,9 @@ Implement AI-guided DJ form filling (Phases 1 & 2), run comprehensive Opus 4.7 b
 **Decision**: Enforced a strict rule across the codebase and AI prompts: "DJs (Artists) MUST be linked to stations. All other topics (Brands, etc.) MUST NOT be linked to a station."
 **Rationale**: 
 - Fixes issues where the AI or data models were incorrectly attempting to link global entities (like Brands) to specific stations. Added this rule to `copilot-instructions.md`, `REPO_CONFIG.md`, and the Chat Assistant System Prompt.
+
+### 10. Chat Assistant UX & Stability Fixes (2026-05-01) ✅
+**Decision**: Refactored `ChatAssistant.tsx` with premium CSS classes and added an error boundary to `SystemLogsViewer` in `App.tsx`.
+**Rationale**: 
+- The Settings page crashed (blank screen) if the logs endpoint returned a non-string response. Added strict type checks to fix it.
+- Improved the Gemini Chat Assistant UX by adding quick-action prompt chips and dedicated Accept/Reject icon buttons for AI proposals, moving inline styles to `index.css`.
