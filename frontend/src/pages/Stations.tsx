@@ -3,12 +3,23 @@ import { api, type Station, type Artist, type Jingle } from '../api/client';
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
+  /** Single artist ID, or 'bulk' for a multi-DJ approval. */
   artistId: string;
   artistName: string;
   expiresAt: number; // epoch ms
+  /** IDs of all artists involved (populated for bulk approvals). */
+  bulkIds?: string[];
 }
 
-export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
+export function Stations({
+  isMobile: _isMobile,
+  onStationSelect,
+}: {
+  isMobile?: boolean;
+  /** Called whenever the user enters or leaves a station detail view.
+   *  Parent (App.tsx) uses this to inject station context into ChatAssistant. */
+  onStationSelect?: (station: Station | null) => void;
+}) {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -28,15 +39,21 @@ export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
     }
   }, [selectedStation]);
 
+  /** Set selected station and notify parent (App.tsx) for ChatAssistant context. */
+  const selectStation = (station: Station | null) => {
+    setSelectedStation(station);
+    onStationSelect?.(station);
+  };
+
   if (selectedStation) {
     return (
       <StationDetail
         station={selectedStation}
         djs={stationDJs}
         jingles={stationJingles}
-        onBack={() => setSelectedStation(null)}
+        onBack={() => selectStation(null)}
         onRefresh={() => {
-          api.getStation(selectedStation.id).then(setSelectedStation).catch(e => console.error('Failed to reload station:', e));
+          api.getStation(selectedStation.id).then(updated => selectStation(updated)).catch(e => console.error('Failed to reload station:', e));
           api.listArtists(selectedStation.id).then(setStationDJs).catch(e => console.error('Failed to reload DJs:', e));
           api.listJingles(selectedStation.id).then(setStationJingles).catch(e => console.error('Failed to reload jingles:', e));
         }}
@@ -79,7 +96,7 @@ export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
       ) : (
         <div className="entity-grid">
           {stations.map(s => (
-            <div key={s.id} className="card entity-card" onClick={() => setSelectedStation(s)}>
+            <div key={s.id} className="card entity-card" onClick={() => selectStation(s)}>
               <div className="entity-card-art">
                 {s.art_path ? (
                   <img src={s.art_path} alt={s.name} />
@@ -208,6 +225,8 @@ function StationDetail({
           artistId: 'bulk',
           artistName: `${results.length} DJs`,
           expiresAt: new Date(results[0].undo_expires_at).getTime(),
+          // Track the approved IDs so bulk undo can revert them precisely.
+          bulkIds: results.map(r => r.id),
         });
       }
     } catch (e: unknown) {
@@ -233,11 +252,23 @@ function StationDetail({
     setUndoToast(null);
     try {
       if (targetId === 'bulk') {
-        // For bulk undo we'd need individual IDs; approximate by listing pending_publish
-        alert('Bulk undo not yet supported — please undo each DJ individually from the DJs list.');
-        return;
+        // Use the stored bulkIds to call the dedicated bulk-undo endpoint.
+        const ids = undoToast.bulkIds ?? [];
+        if (ids.length === 0) {
+          alert('No artist IDs to undo — the undo window may have already expired.');
+          return;
+        }
+        const result = await api.bulkUndo(ids);
+        const skipped = ids.length - result.reverted_count;
+        if (skipped > 0) {
+          alert(
+            `Reverted ${result.reverted_count} of ${ids.length} DJs. ` +
+            `${skipped} could not be undone (undo window may have expired for those).`
+          );
+        }
+      } else {
+        await api.undoPublish(targetId);
       }
-      await api.undoPublish(targetId);
       refreshPendingDJs();
       onRefresh();
     } catch (e: unknown) {
@@ -510,11 +541,14 @@ function StationDetail({
                   className="btn btn-ghost"
                   role="menuitem"
                   onClick={() => {
-                    setAddDJMode('ai');
-                    // Placeholder: opens AI flow (Phase 3 — ChatAssistant integration)
-                    alert('AI generation is coming in Phase 3. Use the Chat Assistant to generate DJs and they will appear here.');
                     setShowAddDJ(false);
                     setAddDJMode(null);
+                    // Scroll the chat toggle into view and open a hint overlay
+                    const chatToggle = document.querySelector<HTMLElement>('.chat-toggle');
+                    if (chatToggle) {
+                      chatToggle.click();
+                      chatToggle.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                   }}
                 >
                   Ask AI to Generate

@@ -1,17 +1,62 @@
 /**
  * AetherWave API Client — typed fetch wrapper for all endpoints.
+ *
+ * CSRF protection (double-submit cookie pattern):
+ *   1. On the first GET the backend sets a `csrf_token` cookie (HttpOnly=false).
+ *   2. On every state-mutating request (POST/PATCH/PUT/DELETE) this client reads
+ *      the cookie value and sends it back as the `X-CSRF-Token` header.
+ *   3. The CSRFMiddleware validates that cookie == header before processing the
+ *      request.  A cross-origin attacker's page cannot read the cookie (same-
+ *      origin policy), so cannot forge the header even with CORS credentials.
  */
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
+/** HTTP methods that mutate state and therefore require the CSRF header. */
+const CSRF_MUTATION_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+/**
+ * Read a named cookie from `document.cookie`.
+ * Returns an empty string when the cookie is absent or when running in an
+ * environment where `document` is not available (e.g. SSR/tests).
+ */
+function getCookie(name: string): string {
+  if (typeof document === 'undefined') return '';
+  const match = document.cookie
+    .split(';')
+    .map(c => c.trim())
+    .find(c => c.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : '';
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const method = (options?.method ?? 'GET').toUpperCase();
+
+  // Build headers — start with Content-Type, then inject CSRF token when needed.
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> | undefined),
+  };
+
+  if (CSRF_MUTATION_METHODS.has(method)) {
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    // If token is absent the backend will return 403; the user needs to reload.
+    // This should be rare: the token is set on the first GET to any endpoint.
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    // credentials:'include' ensures the csrf_token cookie is sent cross-origin
+    // (required when API and frontend run on different ports in development).
+    credentials: 'include',
+    headers,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `HTTP ${res.status}`);
+    throw new Error(body.detail || body.error || `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -75,8 +120,39 @@ export interface Artist {
   updated_at: string;
 }
 
+/**
+ * Stage multiple AI-generated DJs for a specific station in parallel.
+ * Each DJ is staged individually so partial failures don't block others.
+ * Requires at least `name` in each artist record; `artist_type` defaults to "dj".
+ *
+ * @param artists  - Array of partial artist records from ChatAssistant
+ * @param stationId - The station to associate all DJs with
+ * @returns Array of successfully staged Artist records (throws on first error)
+ */
+export const stageBulkArtistsFromChat = async (
+  artists: Array<Partial<Artist>>,
+  stationId: string,
+): Promise<Artist[]> => {
+  return Promise.all(
+    artists.map(artist =>
+      request<Artist>('/api/v1/artists/staged', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...artist,
+          station_id: stationId,
+          artist_type: artist.artist_type || 'dj',
+        }),
+      }),
+    ),
+  );
+};
+
 export interface BulkRejectResult {
   deleted_count: number;
+}
+
+export interface BulkUndoResult {
+  reverted_count: number;
 }
 
 export interface Brand {
@@ -221,6 +297,14 @@ export const api = {
   /** Hard-delete multiple draft DJs (ignores non-draft IDs). */
   bulkReject: (artistIds: string[]) =>
     request<BulkRejectResult>('/api/v1/artists/bulk-reject', { method: 'POST', body: JSON.stringify({ artist_ids: artistIds }) }),
+
+  /**
+   * Revert multiple pending_publish DJs back to draft within the undo window.
+   * Only artists that are still in status='pending_publish' AND within their
+   * undo_expires_at window are reverted; others are silently skipped.
+   */
+  bulkUndo: (artistIds: string[]) =>
+    request<BulkUndoResult>('/api/v1/artists/bulk-undo', { method: 'POST', body: JSON.stringify({ artist_ids: artistIds }) }),
 
   /** Delete a single draft DJ by ID (only works for status=draft). */
   rejectArtist: (artistId: string) =>

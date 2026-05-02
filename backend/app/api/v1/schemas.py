@@ -278,6 +278,12 @@ class BulkRejectResponse(BaseModel):
     deleted_count: int
 
 
+class BulkUndoResponse(BaseModel):
+    """Response for bulk-undo operation."""
+
+    reverted_count: int
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Brand
 # ═══════════════════════════════════════════════════════════════════

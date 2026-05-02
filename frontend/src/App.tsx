@@ -7,7 +7,7 @@ import { DraftingTable } from './pages/DraftingTable';
 // @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from './pages/GenerationQueue';
 import { ChatAssistant } from './components/ChatAssistant';
-import { api, type Draft } from './api/client';
+import { api, type Draft, type Station } from './api/client';
 
 type Page = 'stations' | 'artists' | 'brands' | 'drafts' | 'queue' | 'settings';
 
@@ -25,6 +25,11 @@ export default function App() {
   const [page, setPage] = useState<Page>('stations');
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
+  /**
+   * Currently selected station — set by Stations page via context callback.
+   * ChatAssistant uses this to inject station-aware prompts.
+   */
+  const [activeStation, setActiveStation] = useState<Station | null>(null);
 
   useEffect(() => {
     api.health()
@@ -57,7 +62,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'stations':
-        return <Stations isMobile={isMobile} />;
+        return <Stations isMobile={isMobile} onStationSelect={setActiveStation} />;
       case 'artists':
         return <Artists />;
       case 'brands':
@@ -184,8 +189,12 @@ export default function App() {
         </nav>
       )}
 
-      {/* AI Chat Assistant */}
-      <ChatAssistant onEntityCreated={refreshDrafts} />
+      {/* AI Chat Assistant — receives station context when user is in a station detail view */}
+      <ChatAssistant
+        onEntityCreated={refreshDrafts}
+        currentStationId={activeStation?.id}
+        selectedStation={activeStation}
+      />
     </div>
   );
 }
