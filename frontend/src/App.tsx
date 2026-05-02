@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
