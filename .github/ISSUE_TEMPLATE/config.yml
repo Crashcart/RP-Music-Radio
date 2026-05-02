@@ -1,0 +1,15 @@
+# GitHub Issue Template Configuration
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-template-selection
+
+blank_issues_enabled: true
+
+contact_links:
+  - name: Discussions
+    url: https://github.com/crashcart/rp-music-radio/discussions
+    about: Ask questions or share ideas in discussions
+  - name: Branch Strategy
+    url: .github/BRANCH_STRATEGY.md
+    about: Understand the alpha → beta → main workflow
+  - name: Code Audit
+    url: .github/CODE_AUDIT_2026_05_02.md
+    about: Review codebase quality and findings
