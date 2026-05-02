@@ -354,7 +354,78 @@
 
 ---
 
+## Session: Art System Implementation (2026-05-02) ✅
+
+### Phase 1: Station Art + DJ Portraits (✅ Complete)
+
+**Backend**:
+- [x] Verified Gemini working (fixed API key optional logging)
+- [x] Station art: `POST /api/v1/stations/{id}/art` endpoint
+- [x] DJ portrait: `POST /api/v1/artists/{id}/portrait` endpoint
+- [x] Nano Banana 2 integration for image generation
+
+**Frontend**:
+- [x] Station Art card display (full-width, min-height 200px)
+- [x] Station Art regenerate button (🔄 with ⏳ loading state)
+- [x] DJ Portrait grid layout (2-4 columns responsive)
+- [x] DJ Portrait regenerate button (hover-over 🔄, semi-transparent)
+- [x] Per-item loading state tracking (doesn't block other items)
+
+**UX & Accessibility**:
+- [x] Responsive mobile layout (<768px, ≥768px)
+- [x] 44px min tap targets (WCAG AA)
+- [x] Keyboard navigation (Tab, Enter)
+- [x] Screen reader support (aria-labels)
+- [x] Color contrast validation
+- [x] Placeholder messages when no art exists
+- [x] Error handling with user-friendly messages
+
+**Documentation**:
+- [x] ART_SYSTEM.md — Complete art hierarchy + API status
+- [x] UX_CHECKLIST.md — 60+ point accessibility/UX audit
+- [x] PLANNING.md — Session 4 completion log
+- [x] CLAUDE.md — Form field tagging contract
+- [x] GEMINI_SETUP.md — API key setup guide
+
+**Status**: Ready for UAT (User Acceptance Testing)
+- Blockers: None (API fallback to no-regenerate state)
+- User Ready: Yes — Can create stations & DJs, regenerate art if key set
+
+---
+
 ## Immediate Actions (Next Session)
+
+### Phase 2: Brand Logos & Album Art (🔄 In Progress — PR #27)
+
+**Backend Tasks**:
+- [ ] Add `POST /api/v1/brands/{brand_id}/logo` endpoint
+- [ ] Extend Brand model with `logo_path` field
+- [ ] Integrate album art into synthesis pipeline (POST /api/v1/drafts/{id}/commit)
+- [ ] Add `GenerationHistory.art_path` field
+- [ ] Implement rate limiting (5 brand/day, 10 album art/day)
+
+**Frontend Tasks**:
+- [ ] Update Artists.tsx with brand logo display + regenerate
+- [ ] Update GenerationQueue.tsx with album art thumbnails (80x80px)
+- [ ] Per-track art regeneration workflow
+- [ ] Fallback emoji (💿) for missing/generating art
+
+**Testing**:
+- [ ] End-to-end brand logo generation
+- [ ] Album art generation during synthesis
+- [ ] Per-track art regeneration
+- [ ] Mobile responsive layout
+- [ ] Keyboard navigation + screen reader support
+
+**Documentation**:
+- [ ] Update ART_SYSTEM.md (brand logo + album art endpoints)
+- [ ] Update UX_CHECKLIST.md (gallery/completed tracks)
+- [ ] Update PLANNING.md (Phase 2 decisions)
+
+**Timeline**: 2-3 days  
+**Branch**: `claude/brand-logos-album-art-w1KTY` (PR #27)
+
+---
 
 ### Environment & Configuration  
 - [x] Make `GOOGLE_API_KEY` optional at startup (no more warnings during boot)
