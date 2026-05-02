@@ -48,6 +48,30 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
     }
   };
 
+  const handleDelete = async (id: string, label: string) => {
+    if (!confirm(`Delete draft "${label}"? This cannot be undone.`)) return;
+    try {
+      await api.deleteDraft(id);
+      setSelected(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      onRefresh();
+    } catch (err: any) {
+      alert(`Couldn't delete draft: ${err.message || 'Please try again.'}`);
+    }
+  };
+
+  const handleRetry = async (id: string) => {
+    try {
+      await api.retryDraft(id);
+      onRefresh();
+    } catch (err: any) {
+      alert(`Couldn't retry draft: ${err.message || 'Please try again.'}`);
+    }
+  };
+
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
       draft: 'badge-draft',
@@ -136,7 +160,15 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
                   </div>
                 )}
                 <div className="draft-card-actions">
-                  <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>Edit</button>
+                  {(draft.status === 'draft' || draft.status === 'fleshed_out') && (
+                    <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>Edit</button>
+                  )}
+                  {(draft.status === 'failed' || draft.status === 'committed') && (
+                    <button className="btn btn-sm btn-primary" onClick={() => handleRetry(draft.id)}>↻ Retry</button>
+                  )}
+                  {draft.status !== 'generating' && (
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(draft.id, draft.artist_name || draft.station_name)}>Delete</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -178,9 +210,23 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
                   </td>
                   <td>{statusBadge(draft.status)}</td>
                   <td>
-                    <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>
-                      Edit
-                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+                      {(draft.status === 'draft' || draft.status === 'fleshed_out') && (
+                        <button className="btn btn-sm btn-secondary" onClick={() => setEditingId(draft.id)}>
+                          Edit
+                        </button>
+                      )}
+                      {(draft.status === 'failed' || draft.status === 'committed') && (
+                        <button className="btn btn-sm btn-primary" onClick={() => handleRetry(draft.id)}>
+                          ↻ Retry
+                        </button>
+                      )}
+                      {draft.status !== 'generating' && (
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(draft.id, draft.artist_name || draft.station_name)}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -259,25 +305,25 @@ function IngestModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
               <div className="form-group">
-                <label className="form-label">Station Name *</label>
-                <input className="input" placeholder="Nebula FM 99.8" value={row.station_name} onChange={e => updateRow(i, 'station_name', e.target.value)} />
+                <label className="form-label" htmlFor={`station-name-${i}`}>Station Name *</label>
+                <input id={`station-name-${i}`} name={`station_name_${i}`} aria-label="Station Name" className="input" placeholder="Nebula FM 99.8" value={row.station_name} onChange={e => updateRow(i, 'station_name', e.target.value)} autoComplete="off" />
               </div>
               <div className="form-group">
-                <label className="form-label">Artist / DJ *</label>
-                <input className="input" placeholder="Vance Rikard" value={row.artist_name} onChange={e => updateRow(i, 'artist_name', e.target.value)} />
+                <label className="form-label" htmlFor={`artist-name-${i}`}>Artist / DJ *</label>
+                <input id={`artist-name-${i}`} name={`artist_name_${i}`} aria-label="Artist / DJ" className="input" placeholder="Vance Rikard" value={row.artist_name} onChange={e => updateRow(i, 'artist_name', e.target.value)} autoComplete="off" />
               </div>
               <div className="form-group">
-                <label className="form-label">Genre</label>
-                <input className="input" placeholder="synthwave" value={row.genre} onChange={e => updateRow(i, 'genre', e.target.value)} />
+                <label className="form-label" htmlFor={`genre-${i}`}>Genre</label>
+                <input id={`genre-${i}`} name={`genre_${i}`} aria-label="Genre" className="input" placeholder="synthwave" value={row.genre} onChange={e => updateRow(i, 'genre', e.target.value)} autoComplete="off" />
               </div>
               <div className="form-group">
-                <label className="form-label">Mood</label>
-                <input className="input" placeholder="energetic" value={row.mood} onChange={e => updateRow(i, 'mood', e.target.value)} />
+                <label className="form-label" htmlFor={`mood-${i}`}>Mood</label>
+                <input id={`mood-${i}`} name={`mood_${i}`} aria-label="Mood" className="input" placeholder="energetic" value={row.mood} onChange={e => updateRow(i, 'mood', e.target.value)} autoComplete="off" />
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label">Items (pipe-separated)</label>
-              <input className="input" placeholder="Fusion Core|Med-Kit|Ammo" value={row.items} onChange={e => updateRow(i, 'items', e.target.value)} />
+              <label className="form-label" htmlFor={`items-${i}`}>Items (pipe-separated)</label>
+              <input id={`items-${i}`} name={`items_${i}`} aria-label="Items" className="input" placeholder="Fusion Core|Med-Kit|Ammo" value={row.items} onChange={e => updateRow(i, 'items', e.target.value)} autoComplete="off" />
             </div>
           </div>
         ))}
@@ -331,38 +377,38 @@ function EditModal({ draft, onClose, onSave }: { draft: Draft; onClose: () => vo
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
           <div className="form-group">
-            <label className="form-label">Station</label>
-            <input className="input" value={form.station_name} onChange={e => setForm({ ...form, station_name: e.target.value })} />
+            <label className="form-label" htmlFor="edit-station">Station</label>
+            <input id="edit-station" name="station_name" aria-label="Station" className="input" value={form.station_name} onChange={e => setForm({ ...form, station_name: e.target.value })} autoComplete="off" />
           </div>
           <div className="form-group">
-            <label className="form-label">Artist / DJ</label>
-            <input className="input" value={form.artist_name} onChange={e => setForm({ ...form, artist_name: e.target.value })} />
+            <label className="form-label" htmlFor="edit-artist">Artist / DJ</label>
+            <input id="edit-artist" name="artist_name" aria-label="Artist / DJ" className="input" value={form.artist_name} onChange={e => setForm({ ...form, artist_name: e.target.value })} autoComplete="off" />
           </div>
           <div className="form-group">
-            <label className="form-label">Genre</label>
-            <input className="input" value={form.genre} onChange={e => setForm({ ...form, genre: e.target.value })} />
+            <label className="form-label" htmlFor="edit-genre">Genre</label>
+            <input id="edit-genre" name="genre" aria-label="Genre" className="input" value={form.genre} onChange={e => setForm({ ...form, genre: e.target.value })} autoComplete="off" />
           </div>
           <div className="form-group">
-            <label className="form-label">Mood</label>
-            <input className="input" value={form.mood} onChange={e => setForm({ ...form, mood: e.target.value })} />
+            <label className="form-label" htmlFor="edit-mood">Mood</label>
+            <input id="edit-mood" name="mood" aria-label="Mood" className="input" value={form.mood} onChange={e => setForm({ ...form, mood: e.target.value })} autoComplete="off" />
           </div>
         </div>
 
         <div className="form-group">
-          <label className="form-label">Items</label>
-          <input className="input" value={form.items} onChange={e => setForm({ ...form, items: e.target.value })} />
+          <label className="form-label" htmlFor="edit-items">Items</label>
+          <input id="edit-items" name="items" aria-label="Items" className="input" value={form.items} onChange={e => setForm({ ...form, items: e.target.value })} autoComplete="off" />
         </div>
         <div className="form-group">
-          <label className="form-label">Script</label>
-          <textarea className="input" rows={6} value={form.script} onChange={e => setForm({ ...form, script: e.target.value })} placeholder="AI-generated or hand-written DJ script..." />
+          <label className="form-label" htmlFor="edit-script">Script</label>
+          <textarea id="edit-script" name="script" aria-label="Script" className="input" rows={6} value={form.script} onChange={e => setForm({ ...form, script: e.target.value })} placeholder="AI-generated or hand-written DJ script..." />
         </div>
         <div className="form-group">
-          <label className="form-label">Backstory</label>
-          <textarea className="input" rows={3} value={form.backstory} onChange={e => setForm({ ...form, backstory: e.target.value })} placeholder="Character backstory..." />
+          <label className="form-label" htmlFor="edit-backstory">Backstory</label>
+          <textarea id="edit-backstory" name="backstory" aria-label="Backstory" className="input" rows={3} value={form.backstory} onChange={e => setForm({ ...form, backstory: e.target.value })} placeholder="Character backstory..." />
         </div>
         <div className="form-group">
-          <label className="form-label">Market Research</label>
-          <textarea className="input" rows={2} value={form.market_research} onChange={e => setForm({ ...form, market_research: e.target.value })} placeholder="In-universe ad copy..." />
+          <label className="form-label" htmlFor="edit-market-research">Market Research</label>
+          <textarea id="edit-market-research" name="market_research" aria-label="Market Research" className="input" rows={2} value={form.market_research} onChange={e => setForm({ ...form, market_research: e.target.value })} placeholder="In-universe ad copy..." />
         </div>
 
         <div className="modal-actions">

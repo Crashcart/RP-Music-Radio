@@ -135,9 +135,9 @@ fi
 if [[ -d "$PROJECT_DIR/logs" ]]; then
   mkdir -p "$TMPDIR/aetherwave-logs"
   # Grab the latest log per script (last 30 days only to keep bundle small)
-  find "$PROJECT_DIR/logs" -name "*.log" -mtime -30 -type f 2>/dev/null | while read -r f; do
+  while IFS= read -r f; do
     cp "$f" "$TMPDIR/aetherwave-logs/" 2>/dev/null || true
-  done
+  done < <(find "$PROJECT_DIR/logs" -name "*.log" -mtime -30 -type f 2>/dev/null)
   COUNT=$(ls -1 "$TMPDIR/aetherwave-logs/" 2>/dev/null | wc -l | tr -d ' ')
   ok "Centralized logs included: $COUNT file(s)"
 
