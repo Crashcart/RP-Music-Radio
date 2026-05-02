@@ -206,11 +206,8 @@ export function ChatAssistant({
       setMessages(prev => [...prev, newMsg]);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Connection failed';
-      let userFriendlyMsg = 'Connection failed. Please check your internet connection.';
-      if (message.includes('fetch')) {
-        userFriendlyMsg = 'Cannot reach the AI service. Make sure the API is running.';
-      }
+      const errorMsg = err instanceof Error ? err.message : 'Connection failed';
+      const userFriendlyMsg = parseApiError(errorMsg);
       setMessages(prev => [
         ...prev,
         { role: 'assistant', content: `⚠️ ${userFriendlyMsg}` },

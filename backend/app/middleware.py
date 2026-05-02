@@ -64,6 +64,14 @@ _CSRF_COOKIE_MAX_AGE = 8 * 60 * 60
 # cookie transport is observed.  Rotate by changing CSRF_SECRET env var.
 _CSRF_SECRET: str = os.getenv("CSRF_SECRET", secrets.token_hex(32))
 
+# Cookie security settings — environment-configurable for production.
+# Defaults are development-friendly; set to appropriate values for production.
+_CSRF_COOKIE_SECURE: bool = os.getenv("CSRF_COOKIE_SECURE", "false").lower() in (
+    "true",
+    "1",
+)
+_CSRF_COOKIE_SAMESITE: str = os.getenv("CSRF_COOKIE_SAMESITE", "lax")
+
 
 def _generate_csrf_token() -> str:
     """Generate a cryptographically secure CSRF token."""
@@ -139,8 +147,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 value=token,
                 max_age=_CSRF_COOKIE_MAX_AGE,
                 httponly=False,  # JS must be able to read it (double-submit pattern)
-                samesite="lax",  # Changed from strict for dev cross-port support
-                secure=False,  # Set to True behind TLS in production
+                samesite=_CSRF_COOKIE_SAMESITE,
+                secure=_CSRF_COOKIE_SECURE,
                 path="/",
             )
 
