@@ -588,7 +588,8 @@ CRITICAL INSTRUCTION: If the user explicitly agrees to create or finalize a new 
 ```json
 {"action": "propose", "entity": "station", "data": {"name": "Night City FM", "description": "...", "genre": "Synthwave"}}
 ```
-Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency)."""
+Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency).
+RULE: DJs (Artists) MUST be linked to stations (using a `station_id` field if known). All other topics (Brands, Stations) MUST NOT contain a `station_id` or be linked to the station."""
 
 
 class ChatRequest(BaseModel):

@@ -291,3 +291,8 @@ Establish governance framework and document AetherWave technical architecture to
 **Rationale**: 
 - Necessary to quickly diagnose backend issues (like the Gemini 500 error) without needing terminal access to the Docker container.
 - Provides immediate developer feedback directly within the web app's Settings page.
+
+### 9. Entity Relationship Constraints (2026-05-01) ✅
+**Decision**: Enforced a strict rule across the codebase and AI prompts: "DJs (Artists) MUST be linked to stations. All other topics (Brands, etc.) MUST NOT be linked to a station."
+**Rationale**: 
+- Fixes issues where the AI or data models were incorrectly attempting to link global entities (like Brands) to specific stations. Added this rule to `copilot-instructions.md`, `REPO_CONFIG.md`, and the Chat Assistant System Prompt.
