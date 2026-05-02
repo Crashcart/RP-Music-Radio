@@ -467,3 +467,102 @@ Implement AI-guided DJ form filling (Phases 1 & 2), run comprehensive Opus 4.7 b
 **Rationale**: 
 - The Settings page crashed (blank screen) if the logs endpoint returned a non-string response. Added strict type checks to fix it.
 - Improved the Gemini Chat Assistant UX by adding quick-action prompt chips and dedicated Accept/Reject icon buttons for AI proposals, moving inline styles to `index.css`.
+
+---
+
+## Session 4: Art System Implementation (2026-05-02)
+
+### 11. Optional API Key at Startup ✅
+**Decision**: Made `GOOGLE_API_KEY` optional at app startup; only required when user launches chat/generation features.
+**Changes**:
+- Changed logger.warning → logger.debug in `gemini_client.py`, `audio_generator.py`, `art_generator.py`
+- API key checked only when features are actually used
+- Users can now start app and configure key via Settings page afterward
+- Created `GEMINI_SETUP.md` with 3 setup methods (env var, Settings page, manual JSON)
+
+**Rationale**:
+- Cleaner startup logs (no warnings about missing keys before user needs them)
+- Better first-time user experience (launch app first, configure later)
+- No blocking on optional dependencies
+
+### 12. Station Art Display & Regeneration ✅
+**Decision**: Implemented prominent station art display with regenerate UI pattern.
+**Changes**:
+- Station Art card: Full-width image display on Station Detail page
+- "🔄 Regenerate" button with loading state ("⏳ Generating...")
+- Button disabled during generation (prevents double-clicks)
+- Placeholder message when no art exists ("No station art yet...")
+- Auto-refresh on success
+
+**API**: `POST /api/v1/stations/{station_id}/art` (already existed, now fully exposed in UI)
+
+**Rationale**:
+- Station art is a key visual identity element
+- Regeneration without re-data entry improves UX
+- Users can try multiple art generations until satisfied
+
+### 13. DJ/Artist Portrait Display & Regeneration ✅
+**Decision**: Added portrait regeneration to DJ card UI (hover-over button pattern).
+**Changes**:
+- DJ cards show portrait_path image or 🎙️ placeholder
+- Hover-over reveals 🔄 regenerate button (top-right corner)
+- Button shows ⏳ during generation
+- Per-DJ state tracking (one DJ generating doesn't block others)
+- Min height 44px on mobile for accessible tap targets
+
+**API**: `POST /api/v1/artists/{artist_id}/portrait` (already existed)
+
+**State**: Added `generatingPortrait: string | null` to track which DJ is regenerating
+
+**Rationale**:
+- Portraits are critical for visual character identity
+- Hover-only button keeps card clean (not cluttered with always-visible button)
+- Per-DJ state allows regenerating one portrait without blocking the others
+
+### 14. Art System Documentation ✅
+**Files Created**:
+- `ART_SYSTEM.md`: Comprehensive art hierarchy (Station, DJ, Brand, Album), API status, parameters
+- `.github/UX_CHECKLIST.md`: Complete UX review (display, regeneration, mobile, A11y, performance)
+
+**Covers**:
+- ✅ Implemented: Station art, DJ portraits
+- 📋 Pending: Brand logos, album art (API endpoints needed)
+- Future enhancements (Phase 2+): Art style selector, custom uploads, gallery views
+
+### 15. Governance Updates ✅
+**Decision**: Follow `.github/` governance rules for all changes.
+**Changes**:
+- Updated `.github/TODO.md`: Marked GOOGLE_API_KEY as optional
+- Updated `.github/AI_USAGE.md`: Governance File Update Rule added
+- Created new governance docs: `.github/UX_CHECKLIST.md`
+- All commits include governance context and session tracking
+
+**Models Used**:
+- Haiku 4.5: Art UI components, regeneration handlers
+- Sonnet 4.6: UX review, accessibility audit, documentation
+
+---
+
+### Session 4 Summary
+
+**✅ Completed**:
+- API key now optional at startup (no boot-time warnings)
+- Station art display + full regeneration UI
+- DJ portrait display + regeneration (hover-over pattern)
+- Mobile responsive layout (44px buttons, touch-friendly)
+- A11y compliance (keyboard nav, screen readers, contrast)
+- Comprehensive documentation (ART_SYSTEM.md, UX_CHECKLIST.md)
+
+**📋 Pending**:
+- Brand logo API endpoint
+- Album art generation in synthesis pipeline
+- Album art display in GenerationQueue
+- Brand logo UI regeneration
+- Retry logic for failed art generation
+
+**🎯 Next Session**:
+1. Implement `POST /api/v1/brands/{brand_id}/logo` endpoint
+2. Wire up Brand logo regeneration in UI
+3. Add album art to synthesis task pipeline
+4. Display album art in GenerationQueue completed tracks
+5. UAT testing with real Google API key
