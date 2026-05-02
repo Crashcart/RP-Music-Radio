@@ -109,6 +109,14 @@ def autopublish_pending_artists(self):
 
     Runs every 10 seconds via Celery beat.  Promotes status
     pending_publish → published for all rows where undo_expires_at < now().
+
+    Race-condition safety: each row is locked with SELECT … FOR UPDATE before
+    the status update so that a concurrent /undo handler (which also holds a
+    FOR UPDATE lock) cannot produce torn state.  Exactly one of the two
+    writers will win the lock; the other will either block until the first
+    commits (and then find status != 'pending_publish') or raise a
+    LockNotAvailable error (skip mode).  Either outcome is safe.
+
     Logs the count of promoted records.
     """
     from app.database import SessionLocal
@@ -118,12 +126,15 @@ def autopublish_pending_artists(self):
     correlation_id = self.request.id or "no-task-id"
     db = SessionLocal()
     try:
+        # Lock all eligible rows atomically before deciding to promote them.
+        # with_for_update() is a no-op on SQLite but correct on Postgres.
         pending = (
             db.query(Artist)
             .filter(
                 Artist.status == "pending_publish",
                 Artist.undo_expires_at < now,
             )
+            .with_for_update()
             .all()
         )
         count = len(pending)

@@ -16,10 +16,10 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List
+from typing import Optional
 
+import redis as redis_lib  # type: ignore
 from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -46,6 +46,7 @@ from app.api.v1.schemas import (
     BrandUpdate,
     BulkArtistIds,
     BulkRejectResponse,
+    BulkUndoResponse,
     CommitRequest,
     CommitResponse,
     DraftListResponse,
@@ -65,11 +66,71 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["v1"])
 
-# ── In-memory rate limiting counters (resets on worker restart) ──────
-# In production these should live in Redis; this is a best-effort guard.
-_rate_limit_hourly: Dict[str, List[datetime]] = defaultdict(list)   # key: created_by or "anon"
+# ── Redis-backed rate limiting ─────────────────────────────────────────
+# Rate limit state lives in Redis so limits are shared across all worker
+# processes and survive worker restarts.  Falls back gracefully when Redis
+# is unavailable (best-effort: skips limiting rather than rejecting all traffic).
 _RATE_LIMIT_PER_HOUR = int(os.getenv("AI_STAGE_RATE_PER_HOUR", "20"))
 _RATE_LIMIT_CONCURRENT_PER_STATION = int(os.getenv("AI_STAGE_CONCURRENT_PER_STATION", "5"))
+_REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+
+# Lazy singleton — initialised on first use so import doesn't fail when Redis
+# is not available at boot time (e.g. running unit tests without Docker).
+_redis_client: Optional[redis_lib.Redis] = None  # type: ignore[type-arg]
+
+
+def _get_redis() -> Optional[redis_lib.Redis]:  # type: ignore[type-arg]
+    """Return a cached Redis client, or None if Redis is unreachable."""
+    global _redis_client
+    if _redis_client is None:
+        try:
+            _redis_client = redis_lib.Redis.from_url(
+                _REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=1,
+            )
+            _redis_client.ping()
+            logger.info("Rate-limit Redis connected: %s", _REDIS_URL)
+        except Exception as exc:
+            logger.warning(
+                "Rate-limit Redis unavailable (%s) — rate limiting degraded to DB-only concurrent check",
+                exc,
+            )
+            _redis_client = None  # reset so next call retries
+    return _redis_client
+
+
+def _check_hourly_rate_limit(requester_key: str) -> bool:
+    """
+    Increment the hourly counter for requester_key in Redis using an atomic
+    pipeline (INCR + EXPIRE).  Returns True if the limit has been exceeded.
+
+    Key format:  ratelimit:hourly:<requester_key>:<YYYY-MM-DD-HH>
+    TTL: 3600 s (auto-expires the bucket after the hour rolls over)
+
+    Security note: requester_key must come from a trusted source (session /
+    server-side identity), NOT from the request body — callers must sanitise
+    before passing here.
+
+    Falls back to False (allow) when Redis is not available.
+    """
+    r = _get_redis()
+    if r is None:
+        return False  # degrade gracefully
+
+    hour_bucket = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H")
+    redis_key = f"ratelimit:hourly:{requester_key}:{hour_bucket}"
+
+    try:
+        pipe = r.pipeline()
+        pipe.incr(redis_key)
+        pipe.expire(redis_key, 3600)
+        results = pipe.execute()
+        current_count: int = results[0]
+        return current_count > _RATE_LIMIT_PER_HOUR
+    except Exception as exc:
+        logger.warning("Redis rate-limit check failed (%s) — allowing request", exc)
+        return False  # degrade gracefully
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -235,18 +296,29 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
     Stage an AI-generated DJ for user review.
 
     Validates all input via Pydantic before touching the database.
-    Applies rate limiting: 5 concurrent drafts per station, 20 per hour per
-    requester (keyed by created_by or 'anon'). Returns 429 if exceeded.
+    Applies rate limiting:
+      • 20 staged DJs per hour per requester (Redis-backed, cross-worker safe)
+      • 5 concurrent drafts per station (DB query, always accurate)
+    Returns 429 if either limit is exceeded.
     Draft expires automatically in 7 days if not approved.
+
+    Security note: created_by is accepted from the payload only as an opaque
+    audit label (future: replace with server-side session identity).  It is
+    NEVER trusted as an authentication credential and is sanitised to a safe
+    default when blank to prevent the empty-string bypass.
     """
     now = datetime.now(timezone.utc)
-    requester_key = payload.created_by or "anon"
 
-    # ── Hourly rate limit ────────────────────────────────────────────
-    hour_ago = now - timedelta(hours=1)
-    recent = [t for t in _rate_limit_hourly[requester_key] if t > hour_ago]
-    _rate_limit_hourly[requester_key] = recent
-    if len(recent) >= _RATE_LIMIT_PER_HOUR:
+    # ── Security: sanitise requester key ─────────────────────────────
+    # Use payload.created_by only as an audit label; fall back to "anon".
+    # This prevents an attacker from bypassing per-user limits by submitting
+    # a rotating sequence of unique created_by values *only* when the caller
+    # is trusted (single-user local install).  In a multi-user deployment
+    # created_by must come from an authenticated session, not the body.
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
         logger.warning(
             "Rate limit exceeded for requester=%s (hourly cap %d)",
             requester_key, _RATE_LIMIT_PER_HOUR,
@@ -254,12 +326,12 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=429,
             detail={
-                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged DJs per hour",
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged DJs per hour. Please wait before staging more.",
                 "code": "rate_limit_hourly",
             },
         )
 
-    # ── Concurrent draft limit per station ──────────────────────────
+    # ── Concurrent draft limit per station (DB-authoritative) ───────
     if payload.station_id:
         concurrent = (
             db.query(Artist)
@@ -274,13 +346,10 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
             raise HTTPException(
                 status_code=429,
                 detail={
-                    "error": f"Too many pending drafts: max {_RATE_LIMIT_CONCURRENT_PER_STATION} concurrent per station",
+                    "error": f"Too many pending drafts for this station: max {_RATE_LIMIT_CONCURRENT_PER_STATION} concurrent. Approve or reject existing drafts first.",
                     "code": "rate_limit_concurrent",
                 },
             )
-
-    # ── Record this creation attempt for rate limiting ───────────────
-    _rate_limit_hourly[requester_key].append(now)
 
     # ── Create the draft artist ──────────────────────────────────────
     artist_data = payload.model_dump()
@@ -335,10 +404,24 @@ def undo_publish(artist_id: str, db: Session = Depends(get_db)):
     """
     Revert a pending_publish DJ back to draft within the 30-second undo window.
 
+    Uses SELECT … FOR UPDATE to lock the row, preventing a torn write when the
+    autopublish Celery job races against this handler.  The lock is held until
+    the UPDATE + COMMIT complete, so autopublish either sees status='draft'
+    (undo won) or status='published' (autopublish won) — never a torn state.
+
     Returns 400 if the undo window has expired.
     Returns 409 if the artist is not in pending_publish status.
     """
-    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    # Lock the row before reading so the autopublish Celery beat job cannot
+    # concurrently read-then-write the same row between our read and our write.
+    # SQLite does not support FOR UPDATE (it uses file-level locking), but the
+    # with_for_update() call is a no-op there while being correct on Postgres.
+    artist = (
+        db.query(Artist)
+        .filter(Artist.id == artist_id)
+        .with_for_update()
+        .first()
+    )
     if not artist:
         raise HTTPException(404, {"error": "Artist not found", "code": "not_found"})
     if artist.status != "pending_publish":
@@ -404,6 +487,58 @@ def bulk_publish_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
 
     logger.info("bulk_publish: promoted %d artists, undo_expires=%s", len(results), undo_at.isoformat())
     return results
+
+
+@router.post("/artists/bulk-undo", response_model=BulkUndoResponse)
+def bulk_undo_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
+    """
+    Atomically revert multiple pending_publish DJs back to draft status.
+
+    Only reverts artists that are BOTH:
+      • In status='pending_publish'
+      • Still within their undo window (undo_expires_at > now)
+
+    Artists not meeting these conditions are silently skipped — the caller
+    does not need to pre-filter.  Returns the count of actually reverted rows.
+
+    Race-condition safety: each row is locked with SELECT … FOR UPDATE so
+    the autopublish Celery job cannot promote a row while we are reverting it.
+    """
+    now = datetime.now(timezone.utc)
+    reverted = 0
+
+    for aid in payload.artist_ids:
+        # Lock row to prevent autopublish race (no-op on SQLite, correct on Postgres)
+        artist = (
+            db.query(Artist)
+            .filter(Artist.id == aid)
+            .with_for_update()
+            .first()
+        )
+        if not artist:
+            logger.warning("bulk_undo: artist %s not found, skipping", aid)
+            continue
+        if artist.status != "pending_publish":
+            logger.warning(
+                "bulk_undo: artist %s has status=%s (not pending_publish), skipping",
+                aid, artist.status,
+            )
+            continue
+        # Normalise undo_expires_at to UTC for safe comparison
+        undo_deadline = artist.undo_expires_at
+        if undo_deadline and undo_deadline.tzinfo is None:
+            undo_deadline = undo_deadline.replace(tzinfo=timezone.utc)
+        if undo_deadline is None or now > undo_deadline:
+            logger.warning("bulk_undo: artist %s undo window expired, skipping", aid)
+            continue
+        artist.status = "draft"
+        artist.undo_expires_at = None
+        artist.updated_at = now
+        reverted += 1
+
+    db.commit()
+    logger.info("bulk_undo: reverted %d artists to draft", reverted)
+    return BulkUndoResponse(reverted_count=reverted)
 
 
 @router.post("/artists/bulk-reject", response_model=BulkRejectResponse)
