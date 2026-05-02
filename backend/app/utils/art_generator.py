@@ -225,8 +225,6 @@ class ArtGenerator:
         persona: PersonaDNA | None = None,
         track_title: str = "",
         genre: str = "",
-        brand: "BrandStyle" | None = None,
-        slogan: str = "",
     ) -> Path | None:
         """
         Generate an image and save it to disk with licensing metadata.

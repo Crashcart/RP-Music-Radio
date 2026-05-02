@@ -23,18 +23,21 @@ export function Brands() {
     setGenLogo(id);
     try {
       await api.generateBrandLogo(id);
-      refresh();
-      if (selected?.id === id) {
-        api
-          .getBrand(id)
-          .then(setSelected)
-          .catch((e: Error) =>
-            console.error("Failed to reload brand after logo:", e),
-          );
+      // Refresh list and reload selected brand in parallel
+      const [updated] = await Promise.all([
+        api.getBrand(id).catch((e: Error) => {
+          console.error("Failed to reload brand after logo:", e);
+          return null;
+        }),
+        refresh(),
+      ]);
+      if (selected?.id === id && updated) {
+        setSelected(updated);
       }
     } catch (e: unknown) {
-      alert(
-        `Logo generation failed: ${e instanceof Error ? e.message : "Check your API key"}`,
+      console.error(
+        "Logo generation failed:",
+        e instanceof Error ? e.message : String(e),
       );
     } finally {
       setGenLogo(null);
