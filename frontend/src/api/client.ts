@@ -120,6 +120,33 @@ export interface Artist {
   updated_at: string;
 }
 
+/**
+ * Stage multiple AI-generated DJs for a specific station in parallel.
+ * Each DJ is staged individually so partial failures don't block others.
+ * Requires at least `name` in each artist record; `artist_type` defaults to "dj".
+ *
+ * @param artists  - Array of partial artist records from ChatAssistant
+ * @param stationId - The station to associate all DJs with
+ * @returns Array of successfully staged Artist records (throws on first error)
+ */
+export const stageBulkArtistsFromChat = async (
+  artists: Array<Partial<Artist>>,
+  stationId: string,
+): Promise<Artist[]> => {
+  return Promise.all(
+    artists.map(artist =>
+      request<Artist>('/api/v1/artists/staged', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...artist,
+          station_id: stationId,
+          artist_type: artist.artist_type || 'dj',
+        }),
+      }),
+    ),
+  );
+};
+
 export interface BulkRejectResult {
   deleted_count: number;
 }

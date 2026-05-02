@@ -364,6 +364,7 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
     logger.info(
         "Staged AI DJ: id=%s name=%r station=%s created_by=%s",
         artist.id, artist.name, artist.station_id, artist.created_by,
+        extra={"artist_id": artist.id},
     )
     return ArtistDraftResponse.model_validate(artist)
 
@@ -995,6 +996,7 @@ Valid entities are "station", "brand", and "artist". Provide as much relevant da
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []
+    system_prompt: Optional[str] = None
 
 
 @router.post("/chat")
@@ -1002,7 +1004,7 @@ def chat_assistant(payload: ChatRequest):
     """AI chat assistant for brainstorming station content."""
     import json
     api_key = os.getenv("GOOGLE_API_KEY", "")
-    
+
     # Check persistent storage if not in env
     if not api_key:
         for path in ["/app/data/settings.json", "../data/settings.json"]:
@@ -1026,8 +1028,12 @@ def chat_assistant(payload: ChatRequest):
 
         client = genai.Client(api_key=api_key)
 
+        # Use the frontend-supplied system prompt when provided (station-aware context
+        # injected by buildSystemPrompt()); fall back to the generic system prompt.
+        effective_system = payload.system_prompt.strip() if payload.system_prompt and payload.system_prompt.strip() else _CHAT_SYSTEM
+
         # Build conversation history
-        contents = [types.Content(role="user", parts=[types.Part(text=_CHAT_SYSTEM)])]
+        contents = [types.Content(role="user", parts=[types.Part(text=effective_system)])]
         contents.append(types.Content(role="model", parts=[types.Part(text="Understood! I'm ready to help you build your radio universe. What would you like to create?")]))
 
         for msg in payload.history[-10:]:  # Keep last 10 messages for context

@@ -14,8 +14,10 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from app.logging_config import setup_logging
 from app.middleware import CSRFMiddleware, RequestLoggingMiddleware
@@ -67,6 +69,39 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-CSRF-Token", "X-Request-Id"],
 )
+
+# ── Validation Error Handler ──────────────────────────────────────────
+# Convert Pydantic 422 ValidationErrors into user-readable messages so the
+# frontend (ChatAssistant staging flow) can surface them without exposing raw
+# Python type names.
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    errors = exc.errors()
+    # Build a human-readable summary of the first error
+    first = errors[0] if errors else {}
+    loc = first.get("loc", [])
+    field = str(loc[-1]) if loc else "field"
+    raw_msg = first.get("msg", "invalid value")
+
+    # Map common Pydantic messages to friendlier versions
+    friendly_map = {
+        "field required": f"{field} is required",
+        "value is not a valid string": f"{field} must be text",
+        "ensure this value has at least 1 characters": f"{field} cannot be blank",
+    }
+    friendly_msg = friendly_map.get(raw_msg, f"{field}: {raw_msg}")
+
+    logger.warning(
+        "Validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        errors,
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"error": friendly_msg, "code": "validation_error", "details": errors},
+    )
+
 
 # ── Routes ────────────────────────────────────────────────────────────
 app.include_router(v1_router)

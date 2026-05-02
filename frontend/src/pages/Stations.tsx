@@ -11,7 +11,15 @@ interface UndoToast {
   bulkIds?: string[];
 }
 
-export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
+export function Stations({
+  isMobile: _isMobile,
+  onStationSelect,
+}: {
+  isMobile?: boolean;
+  /** Called whenever the user enters or leaves a station detail view.
+   *  Parent (App.tsx) uses this to inject station context into ChatAssistant. */
+  onStationSelect?: (station: Station | null) => void;
+}) {
   const [stations, setStations] = useState<Station[]>([]);
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -31,15 +39,21 @@ export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
     }
   }, [selectedStation]);
 
+  /** Set selected station and notify parent (App.tsx) for ChatAssistant context. */
+  const selectStation = (station: Station | null) => {
+    setSelectedStation(station);
+    onStationSelect?.(station);
+  };
+
   if (selectedStation) {
     return (
       <StationDetail
         station={selectedStation}
         djs={stationDJs}
         jingles={stationJingles}
-        onBack={() => setSelectedStation(null)}
+        onBack={() => selectStation(null)}
         onRefresh={() => {
-          api.getStation(selectedStation.id).then(setSelectedStation).catch(e => console.error('Failed to reload station:', e));
+          api.getStation(selectedStation.id).then(updated => selectStation(updated)).catch(e => console.error('Failed to reload station:', e));
           api.listArtists(selectedStation.id).then(setStationDJs).catch(e => console.error('Failed to reload DJs:', e));
           api.listJingles(selectedStation.id).then(setStationJingles).catch(e => console.error('Failed to reload jingles:', e));
         }}
@@ -82,7 +96,7 @@ export function Stations({ isMobile: _isMobile }: { isMobile?: boolean }) {
       ) : (
         <div className="entity-grid">
           {stations.map(s => (
-            <div key={s.id} className="card entity-card" onClick={() => setSelectedStation(s)}>
+            <div key={s.id} className="card entity-card" onClick={() => selectStation(s)}>
               <div className="entity-card-art">
                 {s.art_path ? (
                   <img src={s.art_path} alt={s.name} />
@@ -527,11 +541,14 @@ function StationDetail({
                   className="btn btn-ghost"
                   role="menuitem"
                   onClick={() => {
-                    setAddDJMode('ai');
-                    // Placeholder: opens AI flow (Phase 3 — ChatAssistant integration)
-                    alert('AI generation is coming in Phase 3. Use the Chat Assistant to generate DJs and they will appear here.');
                     setShowAddDJ(false);
                     setAddDJMode(null);
+                    // Scroll the chat toggle into view and open a hint overlay
+                    const chatToggle = document.querySelector<HTMLElement>('.chat-toggle');
+                    if (chatToggle) {
+                      chatToggle.click();
+                      chatToggle.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
                   }}
                 >
                   Ask AI to Generate
