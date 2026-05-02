@@ -443,7 +443,7 @@ export const api = {
       reply: string;
       proposal?: {
         action: string;
-        entity: string;
+        entity: "station" | "brand" | "artist";
         data: Record<string, string>;
       };
     }>("/api/v1/chat", {
