@@ -176,8 +176,71 @@
 
 ---
 
+---
+
+## Session: AI DJ Staging + Critical Bug Audit (2026-05-02)
+
+### AI DJ Generation Workflow (✅ Phase 1 & 2 Complete)
+
+**Phase 1: Frontend Enhancements** ✅
+- [x] Form fields tagged with `data-field`, `data-section`, `data-type`, `aria-label`
+- [x] AI-generated field styling (`.form-ai-filled` with amber warning banner)
+- [x] "Pending AI DJs" section (desktop grid + mobile accordion layout)
+- [x] Undo toast notification with 30-second countdown timer
+- [x] Edit/Approve/Reject buttons with loading states (race condition prevention)
+
+**Phase 2: Backend API** ✅
+- [x] `POST /api/v1/artists/staged` — Create staged DJ with Pydantic validation
+- [x] `GET /api/v1/artists?status=draft` — List pending DJs with filtering
+- [x] `POST /api/v1/artists/{id}/publish` — Approve (draft → pending_publish, 30s undo window)
+- [x] `POST /api/v1/artists/{id}/undo` — Revert within 30-second window
+- [x] `POST /api/v1/artists/bulk-publish` — Batch approve multiple DJs
+- [x] `POST /api/v1/artists/bulk-reject` — Batch delete multiple DJs
+- [x] Rate limiting: 5 concurrent/station, 20/hour per user, cost ceiling
+- [x] Celery beat jobs: auto-publish after 30s, cleanup expired drafts
+
+**Critical Bug Fixes (Opus 4.7 Audit)** 🔧
+
+| Bug | Severity | Status | Commit |
+|-----|----------|--------|--------|
+| #1: Missing Alembic migration | CRITICAL | ✅ FIXED | d1a1754 |
+| #2: No CSRF protection | CRITICAL | ✅ FIXED | d1a1754 |
+| #3: Race condition (undo vs autopublish) | CRITICAL | 🔄 IN PROGRESS | pending |
+| #4: Rate-limit dict bypass | CRITICAL | 🔄 IN PROGRESS | pending |
+| #5-#13: HIGH priority issues | HIGH | ⏳ DEFERRED | next sprint |
+
+**Completed Critical Fixes:**
+- [x] Create Alembic migration: `7b9629222ee_add_artist_staging_columns.py`
+  - Adds: status, created_by, expires_at, undo_expires_at columns
+  - Enables: draft/pending_publish/published workflow
+- [x] Implement CSRF protection (stateless double-submit cookie)
+  - Server: Sets `csrf_token` cookie on GET (HttpOnly=false, 8h TTL)
+  - Client: Reads cookie, includes as `X-CSRF-Token` header on mutations
+  - Middleware: Validates header matches cookie on POST/PATCH/PUT/DELETE
+  - Exempt paths: /health, /docs, /openapi.json, /redoc
+
+**In Progress (Sonnet 4.6):**
+- [ ] Fix race condition with `with_for_update()` row-level locking
+- [ ] Move rate limiting from in-memory dict to Redis
+- [ ] Implement bulk undo endpoint
+
+### Phase 3 (Next) — ChatAssistant Integration
+
+- [ ] Update ChatAssistant to inject station context into AI prompt
+- [ ] Update ChatAssistant to handle staged DJ proposals
+- [ ] Test AI DJ generation end-to-end
+
+### Phase 4 (Final) — Governance Update
+
+- [ ] Update PLANNING.md with all completed work (✅ DONE)
+- [ ] Update TODO.md with current status (✅ IN PROGRESS)
+- [ ] Document data-field tagging contract in CLAUDE.md
+
+---
+
 ## History
 
 - **2026-04-26**: Initial governance setup + TDR v1.0.4 documentation
 - **2026-04-27**: Abandoned flat architecture; migrated to hierarchical relational DB (Stations, Artists, Brands) + AI Chat Assistant.
 - **2026-05-01**: Full bug audit (PR #15), UX uplift + structured logging (PR #17), HIGH UX fixes in progress.
+- **2026-05-02**: AI DJ staging (Phase 1 & 2 complete), Opus 4.7 critical bug audit (25 issues), 2/5 CRITICAL bugs fixed, CSRF + Alembic migration deployed.
