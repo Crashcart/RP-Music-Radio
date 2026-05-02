@@ -23,10 +23,8 @@ source "$PROJECT_DIR/scripts/lib/log.sh"
 log_init "install-full"
 trap log_finalize EXIT
 
-# Capture ALL output (including child processes like docker, git) into the log
-# in addition to the structured messages from log/ok/warn/err.
-exec > >(tee -a "$AETHERWAVE_LOG_FILE")
-exec 2>&1
+# Note: log.sh handles file logging via _aw_write(). Avoid exec redirection
+# to prevent duplicate log entries.
 
 # ─── Defaults ──────────────────────────────────────────────────────────────
 BRANCH="main"
