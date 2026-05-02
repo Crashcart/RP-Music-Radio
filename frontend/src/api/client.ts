@@ -433,6 +433,24 @@ export const api = {
   // ── Tasks ─────────────────────────────────────────────────────
   getTask: (taskId: string) => request<TaskStatus>(`/api/v1/tasks/${taskId}`),
 
+  // ── Chat ──────────────────────────────────────────────────────
+  chat: (params: {
+    message: string;
+    system_prompt: string;
+    history: Array<{ role: "user" | "assistant"; content: string }>;
+  }) =>
+    request<{
+      reply: string;
+      proposal?: {
+        action: string;
+        entity: string;
+        data: Record<string, string>;
+      };
+    }>("/api/v1/chat", {
+      method: "POST",
+      body: JSON.stringify(params),
+    }),
+
   // ── Settings ──────────────────────────────────────────────────
   setApiKey: (apiKey: string) =>
     request<{ valid: boolean; message: string }>("/api/v1/settings/api-key", {
