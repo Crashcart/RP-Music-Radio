@@ -159,7 +159,7 @@ done
 # ─── Phase 8: Optional Repo Removal ────────────────────────────────────────
 if [[ $REMOVE_REPO -eq 1 ]]; then
   header "Phase 8: Remove Git Repository"
-  # Always require explicit confirmation for repository deletion (safety check)
+  # Always require explicit confirmation — never skip even in non-interactive mode
   read -rp "Really delete $PROJECT_DIR? [y/N]: " CONFIRM_REPO
   CONFIRM_REPO="${CONFIRM_REPO:-N}"
   if [[ ! "$CONFIRM_REPO" =~ ^[Yy]$ ]]; then

@@ -24,7 +24,7 @@ log_init "install-full"
 trap log_finalize EXIT
 
 # Note: log.sh handles file logging via _aw_write(). Avoid exec redirection
-# to prevent duplicate log entries. Structured logging is sufficient.
+# to prevent duplicate log entries.
 
 # ─── Defaults ──────────────────────────────────────────────────────────────
 BRANCH="main"

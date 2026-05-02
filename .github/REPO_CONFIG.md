@@ -133,6 +133,7 @@ These files are frequently edited. Check `PLANNING.md` before modifying.
 - **Host Volume**: `./radio_vault/` — generated MP3s with full lore imprinted
 - **Persona DB**: `./persona_db/` — Voice DNA seeds for consistent AI voices
 - **Redis**: In-memory queue for Celery task management
+- **Entity Linkage Rule**: DJs (Artists) should be linked to stations. All other topics (Brands, etc.) MUST NOT be linked to the station.
 
 ### ID3v2.4 Lore-Shard Schema
 All MP3s are "lore containers" with these tags:

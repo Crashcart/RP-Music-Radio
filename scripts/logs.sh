@@ -119,7 +119,6 @@ cmd_docker() {
   else
     compose_cmd="docker compose"
   fi
-
   if [[ -z "$service" ]]; then
     header "All Container Logs"
     $compose_cmd -f "$PROJECT_DIR/docker-compose.yml" logs --tail=100

@@ -168,11 +168,11 @@ class ArtGenerator:
                 ),
             )
         except Exception as exc:
-            logger.error("Imagen API call failed: %s", exc)
+            logger.error("Imagen API call failed: %s", exc, exc_info=True)
             return None
 
         if not response.generated_images:
-            logger.error("Imagen returned no images")
+            logger.error("Imagen returned no images", exc_info=True)
             return None
 
         image_bytes = response.generated_images[0].image.image_bytes

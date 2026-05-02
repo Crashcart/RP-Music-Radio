@@ -7,7 +7,7 @@ import { DraftingTable } from './pages/DraftingTable';
 // @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from './pages/GenerationQueue';
 import { ChatAssistant } from './components/ChatAssistant';
-import { api, type Draft } from './api/client';
+import { api, type Draft, type Station } from './api/client';
 
 type Page = 'stations' | 'artists' | 'brands' | 'drafts' | 'queue' | 'settings';
 
@@ -25,17 +25,25 @@ export default function App() {
   const [page, setPage] = useState<Page>('stations');
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
+  /**
+   * Currently selected station — set by Stations page via context callback.
+   * ChatAssistant uses this to inject station-aware prompts.
+   */
+  const [activeStation, setActiveStation] = useState<Station | null>(null);
 
   useEffect(() => {
     api.health()
       .then(() => setApiOk(true))
-      .catch(() => setApiOk(false));
+      .catch(e => {
+        console.error('API health check failed:', e);
+        setApiOk(false);
+      });
   }, []);
 
   const refreshDrafts = () => {
     api.listDrafts()
       .then(res => setDrafts(res.drafts))
-      .catch(() => {});
+      .catch(e => console.error('Failed to load drafts:', e));
   };
 
   useEffect(() => {
@@ -54,7 +62,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'stations':
-        return <Stations isMobile={isMobile} />;
+        return <Stations isMobile={isMobile} onStationSelect={setActiveStation} />;
       case 'artists':
         return <Artists />;
       case 'brands':
@@ -168,7 +176,7 @@ export default function App() {
       {/* Mobile Bottom Nav */}
       {isMobile && (
         <nav className="mobile-nav">
-          {NAV_ITEMS.slice(0, 5).map(item => (
+          {NAV_ITEMS.map(item => (
             <button
               key={item.id}
               className={`mobile-nav-item ${page === item.id ? 'active' : ''}`}
@@ -181,8 +189,12 @@ export default function App() {
         </nav>
       )}
 
-      {/* AI Chat Assistant */}
-      <ChatAssistant />
+      {/* AI Chat Assistant — receives station context when user is in a station detail view */}
+      <ChatAssistant
+        onEntityCreated={refreshDrafts}
+        currentStationId={activeStation?.id}
+        selectedStation={activeStation}
+      />
     </div>
   );
 }
@@ -196,7 +208,7 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
   const [testResult, setTestResult] = useState<{ valid: boolean; message: string } | null>(null);
 
   useEffect(() => {
-    api.checkApiKey().then(setKeyStatus).catch(() => {});
+    api.checkApiKey().then(setKeyStatus).catch(e => console.error('Failed to check API key:', e));
   }, []);
 
   const handleSaveKey = async () => {
@@ -234,6 +246,24 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
     }
   };
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.stations || !data.artists || !data.brands) {
+        throw new Error('Invalid backup file format');
+      }
+
+      alert('⚠️ Import support is coming soon. For now, use the export for backup and manual restoration.');
+    } catch (err: any) {
+      alert(`Import failed: ${err.message || 'Invalid file format'}`);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -260,7 +290,14 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
         <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'flex-end' }}>
           <div className="form-group" style={{ flex: 1 }}>
             <label className="form-label">API Key</label>
-            <input className="form-input" type="text" value={apiKey} onChange={e => setApiKey(e.target.value)}
+            <input
+              className="form-input"
+              type="text"
+              id="api-key"
+              name="api-key"
+              value={apiKey}
+              onChange={e => setApiKey(e.target.value)}
+              autoComplete="off"
               placeholder="AIzaSy..." />
             <div style={{ marginTop: 'var(--space-xs)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
               Get your free Gemini 2.0 API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Google AI Studio</a>.
@@ -300,15 +337,29 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
       {/* Data Backup */}
       <div className="card" style={{ marginBottom: 'var(--space-md)' }}>
         <div className="card-header">
-          <h3 className="card-title">💾 Data Backup</h3>
+          <h3 className="card-title">💾 Data Backup & Restore</h3>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-md)' }}>
           Export your entire relational database (Stations, DJs, Brands, Jingles, and Drafts) to a JSON file.
           Keep this file safe as a backup of your entire universe.
         </p>
-        <button className="btn btn-secondary" onClick={handleExport}>
-          📥 Download Export JSON
-        </button>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExport}>
+            📥 Download Backup
+          </button>
+          <label className="btn btn-secondary" style={{ cursor: 'not-allowed', margin: 0, opacity: 0.5, pointerEvents: 'none' }} title="Coming soon" aria-disabled="true">
+            📤 Import Backup
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImport}
+              style={{ display: 'none' }}
+              aria-label="Import backup file"
+              disabled
+              tabIndex={-1}
+            />
+          </label>
+        </div>
       </div>
 
       {/* About */}
