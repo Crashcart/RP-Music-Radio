@@ -145,8 +145,9 @@ class AudioGenerator:
 
         if not self.api_key:
             logger.warning("GOOGLE_API_KEY not set — audio generation will fail")
-
-        self.client = genai.Client(api_key=self.api_key)
+            self.client = None
+        else:
+            self.client = genai.Client(api_key=self.api_key)
 
     def generate(
         self,
@@ -166,6 +167,10 @@ class AudioGenerator:
         The LicenseInfo is static — it captures the exact generation
         parameters and cannot be modified after creation.
         """
+        if not self.client:
+            logger.error("No API key configured for audio generation")
+            return None, license_info
+
         # Build the frozen license BEFORE generation so the timestamp
         # reflects the request time, not the completion time.
         license_info = LicenseInfo.for_generated_audio(

@@ -133,8 +133,9 @@ class ArtGenerator:
 
         if not self.api_key:
             logger.warning("GOOGLE_API_KEY not set — art generation will fail")
-
-        self.client = genai.Client(api_key=self.api_key)
+            self.client = None
+        else:
+            self.client = genai.Client(api_key=self.api_key)
 
     def generate(
         self,
@@ -150,6 +151,10 @@ class ArtGenerator:
 
         Returns the path to the saved JPEG, or None on failure.
         """
+        if not self.client:
+            logger.error("No API key configured for art generation")
+            return None
+
         prompt = self._build_prompt(
             art_type,
             station=station,

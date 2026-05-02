@@ -308,3 +308,10 @@ Establish governance framework and document AetherWave technical architecture to
 **Rationale**: 
 - The AI agent is operating in a sandboxed Windows environment where direct execution of `git` via terminal is blocked. Therefore, the agent cannot autonomously run `git pull origin main` to check for remote conflicts before creating PRs.
 - To abide by `.github` rules while acknowledging technical limitations, the AI is now explicitly responsible for guiding the human user to perform conflict detection and resolution via the CLI.
+
+### 12. Deep Debugging Pass & Stability Fixes (2026-05-01) ✅
+**Decision**: Executed a comprehensive bug hunt across frontend and backend, resolving critical crashes.
+**Rationale**: 
+- **API Key Null Crashes**: In `audio_generator.py`, `art_generator.py`, and `gemini_client.py`, if the API key was unset, passing an empty string to `genai.Client(api_key="")` caused a fatal initialization crash, bringing down the Celery worker. Updated logic gracefully disables the client, logs an error, and returns `None` so the task fails gracefully.
+- **Vite/React Syntax Corruption**: The previous AI left extraneous brackets and a syntax error (`}n>`) at the very end of `ChatAssistant.tsx`. This completely broke Vite's HMR and crashed the React tree. Removed the malformed syntax.
+- **VSCode Workspace Path**: Fixed `python.defaultInterpreterPath` in `.vscode/settings.json` to point correctly to the root `.venv` instead of a non-existent `backend/.venv`, fixing unresolved import warnings.

@@ -182,8 +182,4 @@ export function ChatAssistant() {
       </div>
     </div>
   );
-}n>
-      </div>
-    </div>
-  );
 }

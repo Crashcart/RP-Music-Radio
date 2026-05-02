@@ -92,8 +92,9 @@ class GeminiClient:
 
         if not self.api_key:
             logger.warning("GOOGLE_API_KEY not set — Gemini calls will fail")
-
-        self.client = genai.Client(api_key=self.api_key)
+            self.client = None
+        else:
+            self.client = genai.Client(api_key=self.api_key)
 
     def generate_script(
         self,
@@ -113,6 +114,17 @@ class GeminiClient:
         Returns a dict with keys: track_title, script, backstory,
         market_research, ad_reads, personality_notes.
         """
+        if not self.client:
+            logger.error("No API key configured for script generation")
+            return {
+                "track_title": f"{station_name} - {artist_name}",
+                "script": "",
+                "backstory": backstory,
+                "market_research": "",
+                "ad_reads": [],
+                "personality_notes": [],
+            }
+
         prompt = _SCRIPT_PROMPT.format(
             station_name=station_name or "Unknown Station",
             artist_name=artist_name or "Unknown DJ",
