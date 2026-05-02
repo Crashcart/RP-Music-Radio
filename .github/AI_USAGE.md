@@ -138,6 +138,9 @@ Right-size AI model usage across the project: maximum capability where it matter
 **PR Completion Rule:**
 - **Always finish a PR before running out of tokens** — Once a PR is created, see it through to completion (merged, closed, or documented for next session). If approaching token limits, prioritize: (1) auto-fix CI failures, (2) address review comments, (3) push final state even if unfinished. Never leave a PR hanging mid-implementation without committing progress and documenting next steps in a final commit message or PR comment.
 
+**Governance File Update Rule:**
+- **Always update `.github/` files before token exhaustion** — Governance files (`.github/PLANNING.md`, `.github/TODO.md`, `.github/AI_USAGE.md`, `.github/copilot-instructions.md`, `.github/ARCHITECTURE.md`) must be kept in sync with actual implementation state. If approaching token limits, prioritize: (1) commit any outstanding `.github/` changes, (2) push to branch, (3) document incomplete work in `PLANNING.md` for next session. This ensures continuity across sessions and prevents governance drift.
+
 ---
 
 ## 5. Examples From Current Session
