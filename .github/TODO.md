@@ -238,6 +238,81 @@
 
 ---
 
+## AI-Friendly Design Checklist
+
+**Goal**: Make the website easy for AI agents (ChatAssistant, automation tools, screen readers) to understand and navigate.
+
+**Principle**: "Design as if a blind person were using a screen reader." If it passes accessibility, AI will understand it perfectly.
+
+### Semantic HTML & Accessibility
+
+- [x] Use semantic HTML tags instead of generic `<div>` / `<span>`
+  - [x] Use `<button>` or `<input type="submit">` for clickable elements (not `<div onclick>`)
+  - [x] Use `<label>` tags for all input fields
+  - [x] Use `<section>` or `<article>` for content regions (e.g., `<section aria-label="Pending AI DJs">`)
+
+- [x] Explicitly link labels to inputs using `for` and `id` attributes
+  ```html
+  <label for="brand-name">Brand Name</label>
+  <input id="brand-name" type="text">
+  ```
+
+- [x] Use descriptive, human-readable ID and name attributes
+  - [x] Not: `id="fld_123"` or `id="input-af82"`
+  - [x] Yes: `id="brand-name"`, `id="company-description"`, `name="email_address"`
+
+- [x] Use standard input types for correct format hints
+  - [x] `type="email"` for email addresses
+  - [x] `type="date"` for dates
+  - [x] `type="tel"` for phone numbers
+  - [x] `type="number"` for numeric values
+
+- [x] Add ARIA labels and attributes for custom components
+  ```html
+  <div role="button" aria-label="Approve DJ" aria-pressed="false">...</div>
+  <section aria-live="polite" aria-label="Pending AI DJs">...</section>
+  ```
+
+### Form Field Contract (AI-Targeting)
+
+- [x] All form fields tagged with data attributes:
+  - [x] `data-field="field-name"` — Maps to database column/API field
+  - [x] `data-section="section-name"` — Groups related fields (identity, music, lore, etc.)
+  - [x] `data-type="entity-type"` — Entity being edited (artist, brand, station)
+  - [x] `aria-label="human-readable"` — What the field is (mirrored from label text)
+
+- [x] Example field tagging:
+  ```html
+  <label for="personality">Personality</label>
+  <textarea 
+    id="personality" 
+    name="personality"
+    data-field="personality"
+    data-section="personality"
+    data-type="artist"
+    aria-label="Personality traits and quirks of the artist"
+    placeholder="3-4 sentences describing..."
+  ></textarea>
+  ```
+
+### Anti-Patterns (Avoid These)
+
+- [ ] Shadow DOM for critical form elements — keeps them hidden from some AI tools
+- [ ] Dynamic ID generation that changes on refresh (e.g., `id="input-{random}"`)
+- [ ] Cryptic form field names (e.g., `name="f1"`, `name="x"`)
+- [ ] Missing `<label>` tags or disconnected labels
+- [ ] Using `<div onclick>` instead of `<button>`
+- [ ] Form elements not wrapped in semantic containers
+
+### Testing
+
+- [ ] Verify all form pages pass accessibility audit (Axe, WAVE, Lighthouse)
+- [ ] Test with screen reader: VoiceOver (Mac), NVDA (Windows), JAWS (Enterprise)
+- [ ] Verify ChatAssistant can fill all forms using data-field attributes
+- [ ] Test that UI elements are reachable via keyboard only (Tab, Enter, Arrow keys)
+
+---
+
 ## History
 
 - **2026-04-26**: Initial governance setup + TDR v1.0.4 documentation
