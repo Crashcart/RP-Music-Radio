@@ -129,6 +129,7 @@ class AudioGenerator:
         output_dir: str | Path = "/app/output/audio",
     ) -> None:
         import json
+
         key = api_key or os.getenv("GOOGLE_API_KEY", "")
         if not key:
             for path in ["/app/data/settings.json", "../data/settings.json"]:
@@ -136,17 +137,24 @@ class AudioGenerator:
                     try:
                         with open(path, "r") as f:
                             key = json.load(f).get("GOOGLE_API_KEY", "")
-                            if key: break
-                    except Exception: pass
+                            if key:
+                                break
+                    except Exception:
+                        pass
         self.api_key = key
         self.model = model
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        if not self.api_key:
-            logger.warning("GOOGLE_API_KEY not set — audio generation will fail")
+        # Note: API key is optional at init; checked when actually making calls
+        if self.api_key:
+            logger.debug("Audio generator initialized with API key")
+        else:
+            logger.debug(
+                "Audio generator initialized without API key (will be needed for audio synthesis)"
+            )
 
-        self.client = genai.Client(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key or "")
 
     def generate(
         self,
@@ -219,8 +227,9 @@ class AudioGenerator:
         filename = self._make_filename(audio_type, station, persona, track_title)
         out_path = self.output_dir / filename
         out_path.write_bytes(audio_data)
-        logger.info("Saved %s audio: %s (%d bytes)",
-                     audio_type.value, out_path, len(audio_data))
+        logger.info(
+            "Saved %s audio: %s (%d bytes)", audio_type.value, out_path, len(audio_data)
+        )
 
         return out_path, license_info
 
@@ -255,6 +264,7 @@ class AudioGenerator:
         track_title: str,
     ) -> str:
         import re
+
         safe = lambda s: re.sub(r"[^a-z0-9]+", "_", s.lower().strip()).strip("_")
 
         station_slug = safe(station.display_name)

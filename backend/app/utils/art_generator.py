@@ -117,6 +117,7 @@ class ArtGenerator:
         output_dir: str | Path = "/app/output/art",
     ) -> None:
         import json
+
         key = api_key or os.getenv("GOOGLE_API_KEY", "")
         if not key:
             for path in ["/app/data/settings.json", "../data/settings.json"]:
@@ -124,17 +125,24 @@ class ArtGenerator:
                     try:
                         with open(path, "r") as f:
                             key = json.load(f).get("GOOGLE_API_KEY", "")
-                            if key: break
-                    except Exception: pass
+                            if key:
+                                break
+                    except Exception:
+                        pass
         self.api_key = key
         self.model = model
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        if not self.api_key:
-            logger.warning("GOOGLE_API_KEY not set — art generation will fail")
+        # Note: API key is optional at init; checked when actually making calls
+        if self.api_key:
+            logger.debug("Art generator initialized with API key")
+        else:
+            logger.debug(
+                "Art generator initialized without API key (will be needed for image generation)"
+            )
 
-        self.client = genai.Client(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key or "")
 
     def generate(
         self,
@@ -226,6 +234,7 @@ class ArtGenerator:
         track_title: str,
     ) -> str:
         import re
+
         safe = lambda s: re.sub(r"[^a-z0-9]+", "_", s.lower().strip()).strip("_")
 
         station_slug = safe(station.display_name)

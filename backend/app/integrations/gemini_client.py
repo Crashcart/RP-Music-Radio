@@ -78,6 +78,7 @@ class GeminiClient:
         model: str = "gemini-2.0-flash",
     ) -> None:
         import json
+
         key = api_key or os.getenv("GOOGLE_API_KEY", "")
         if not key:
             for path in ["/app/data/settings.json", "../data/settings.json"]:
@@ -85,15 +86,22 @@ class GeminiClient:
                     try:
                         with open(path, "r") as f:
                             key = json.load(f).get("GOOGLE_API_KEY", "")
-                            if key: break
-                    except Exception: pass
+                            if key:
+                                break
+                    except Exception:
+                        pass
         self.api_key = key
         self.model = model
 
-        if not self.api_key:
-            logger.warning("GOOGLE_API_KEY not set — Gemini calls will fail")
+        # Note: API key is optional at init; checked when actually making calls
+        if self.api_key:
+            logger.debug("Gemini client initialized with API key")
+        else:
+            logger.debug(
+                "Gemini client initialized without API key (will be needed for chat/generation)"
+            )
 
-        self.client = genai.Client(api_key=self.api_key)
+        self.client = genai.Client(api_key=self.api_key or "")
 
     def generate_script(
         self,
@@ -153,7 +161,7 @@ class GeminiClient:
             # Return a minimal fallback
             return {
                 "track_title": f"{station_name} - {artist_name}",
-                "script": response.text if 'response' in dir() else "",
+                "script": response.text if "response" in dir() else "",
                 "backstory": backstory,
                 "market_research": "",
                 "ad_reads": [],
