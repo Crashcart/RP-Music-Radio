@@ -334,8 +334,10 @@
 
 ## Immediate Actions (Next Session)
 
-### Environment & Configuration
-- [ ] Set `GOOGLE_API_KEY` environment variable (currently unset, causes warnings)
-  - Check `.env.example` and `.env` files
-  - Ensure Google Cloud API key is configured before running services
-  - Update Docker Compose and installation scripts to warn if key is missing
+### Environment & Configuration  
+- [x] Make `GOOGLE_API_KEY` optional at startup (no more warnings during boot)
+  - Changed logger.warning → logger.debug in all generators
+  - API key now only checked when features actually launched
+  - Users can start app and configure key via Settings page
+  - Created GEMINI_SETUP.md with setup instructions
+- [ ] First-time user onboarding flow (Settings → "Please add API key to continue")
