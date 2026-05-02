@@ -98,10 +98,22 @@ export function ChatAssistant() {
     }
   };
 
+  const rejectProposal = (index: number) => {
+    setMessages(prev => {
+      const copy = [...prev];
+      copy[index].proposalStatus = 'error';
+      return copy;
+    });
+  };
+
+  const insertPrompt = (prompt: string) => {
+    setInput(prompt);
+  };
+
   if (!open) {
     return (
       <button className="chat-toggle" onClick={() => setOpen(true)} title="AI Assistant">
-        💬
+        ✨
       </button>
     );
   }
@@ -118,20 +130,25 @@ export function ChatAssistant() {
           <div key={i} className={`chat-message ${msg.role}`}>
             {msg.content}
             {msg.proposal && (
-              <div style={{ marginTop: 'var(--space-md)', padding: 'var(--space-sm)', background: 'rgba(255,255,255,0.05)', borderRadius: 'var(--radius-sm)' }}>
-                <p style={{ margin: '0 0 var(--space-sm) 0', fontSize: '0.9em', color: 'var(--text-secondary)' }}>
+              <div className="proposal-card">
+                <p className="proposal-title">
                   ✨ AI proposes a new {msg.proposal.entity}: <strong>{msg.proposal.data.name}</strong>
                 </p>
                 {msg.proposalStatus === 'pending' && (
-                  <button className="btn btn-primary" onClick={() => confirmProposal(i, msg.proposal!)}>
-                    Confirm & Create {msg.proposal.entity.charAt(0).toUpperCase() + msg.proposal.entity.slice(1)}
-                  </button>
+                  <div className="proposal-actions">
+                    <button className="btn btn-primary proposal-btn-accept" onClick={() => confirmProposal(i, msg.proposal!)}>
+                      ✅ Accept
+                    </button>
+                    <button className="btn btn-secondary proposal-btn-reject" onClick={() => rejectProposal(i)}>
+                      ❌ Reject
+                    </button>
+                  </div>
                 )}
                 {msg.proposalStatus === 'success' && (
-                  <span style={{ color: 'var(--success-color)' }}>✅ Created successfully!</span>
+                  <span className="proposal-status success">✅ Entity saved to database</span>
                 )}
                 {msg.proposalStatus === 'error' && (
-                  <span style={{ color: 'var(--error-color)' }}>❌ Failed to create</span>
+                  <span className="proposal-status error">❌ Proposal rejected or failed</span>
                 )}
               </div>
             )}
@@ -145,17 +162,27 @@ export function ChatAssistant() {
         <div ref={messagesEndRef} />
       </div>
 
+      <div className="chat-prompts">
+        <button className="chat-chip" onClick={() => insertPrompt("📻 Propose a new Station")}>📻 Station</button>
+        <button className="chat-chip" onClick={() => insertPrompt("🎤 Propose a new DJ")}>🎤 DJ</button>
+        <button className="chat-chip" onClick={() => insertPrompt("🏢 Propose a new Brand")}>🏢 Brand</button>
+      </div>
+
       <div className="chat-input-row">
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask me about stations, DJs, brands..."
+          placeholder="Ask me to generate something..."
           disabled={loading}
         />
         <button onClick={send} disabled={loading || !input.trim()}>
-          →
+          🚀
         </button>
+      </div>
+    </div>
+  );
+}n>
       </div>
     </div>
   );

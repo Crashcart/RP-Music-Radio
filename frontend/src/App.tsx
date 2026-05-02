@@ -344,7 +344,13 @@ function SystemLogsViewer() {
     setLoading(true);
     try {
       const data = await api.getLogs();
-      setLogs(data.logs || 'No logs available.');
+      if (typeof data.logs === 'string') {
+        setLogs(data.logs);
+      } else if (data && typeof data === 'object') {
+        setLogs(JSON.stringify(data, null, 2));
+      } else {
+        setLogs(String(data) || 'No logs available.');
+      }
     } catch (err: any) {
       setLogs(`Failed to fetch logs: ${err.message}`);
     } finally {
@@ -358,12 +364,16 @@ function SystemLogsViewer() {
 
   useEffect(() => {
     if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      try {
+        logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      } catch (e) {
+        // ignore scroll error
+      }
     }
   }, [logs]);
 
-  const formatLogLine = (line: string, i: number) => {
-    if (!line.trim()) return null;
+  const formatLogLine = (line: any, i: number) => {
+    if (typeof line !== 'string' || !line.trim()) return null;
     let className = 'log-line';
     if (line.includes('ERROR') || line.includes('Exception') || line.includes('Failed')) {
       className += ' log-error';
@@ -373,6 +383,17 @@ function SystemLogsViewer() {
       className += ' log-info';
     }
     return <div key={i} className={className}>{line}</div>;
+  };
+
+  const renderLogs = () => {
+    try {
+      if (typeof logs !== 'string') {
+        return <div className="log-error">Logs format error: Expected string, got {typeof logs}</div>;
+      }
+      return logs.split('\n').map((line, i) => formatLogLine(line, i));
+    } catch (e: any) {
+      return <div className="log-error">Render error: {e.message}</div>;
+    }
   };
 
   return (
@@ -387,7 +408,7 @@ function SystemLogsViewer() {
         Real-time backend console output for debugging and monitoring.
       </p>
       <div className="log-terminal">
-        {logs.split('\n').map((line, i) => formatLogLine(line, i))}
+        {renderLogs()}
         <div ref={logsEndRef} />
       </div>
     </div>
