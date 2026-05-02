@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.logging_config import setup_logging
-from app.middleware import RequestLoggingMiddleware
+from app.middleware import CSRFMiddleware, RequestLoggingMiddleware
 from app.database import init_db
 from app.api.v1.routes import router as v1_router
 
@@ -43,7 +43,17 @@ app = FastAPI(
 )
 
 # ── Middleware (order matters — outermost first) ───────────────────────
+# RequestLoggingMiddleware wraps everything so all requests are logged.
 app.add_middleware(RequestLoggingMiddleware)
+
+# CSRFMiddleware validates X-CSRF-Token on all mutating requests (POST/PATCH/PUT/DELETE).
+# Must sit inside the CORS middleware so that preflight OPTIONS requests (from CORS)
+# are NOT blocked by CSRF validation.
+app.add_middleware(CSRFMiddleware)
+
+# CORS: restrict to known frontend origins only.
+# allow_credentials=False — this is an API-only backend; no cookie-based auth.
+# X-CSRF-Token is a custom header and is explicitly allowed.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -53,9 +63,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         f"http://{os.getenv('API_HOST', 'boris.local')}:8432",
     ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,   # Required so the csrf_token cookie is sent cross-origin
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "X-Request-Id"],
 )
 
 # ── Routes ────────────────────────────────────────────────────────────
