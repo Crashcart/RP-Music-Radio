@@ -41,6 +41,7 @@ class ArtType(str, Enum):
     ALBUM_COVER = "album_cover"
     DJ_PORTRAIT = "dj_portrait"
     STATION_LOGO = "station_logo"
+    BRAND_LOGO = "brand_logo"
 
 
 # ── Prompt templates ──────────────────────────────────────────────────
@@ -97,10 +98,27 @@ Requirements:
 - Professional broadcast media quality
 """.strip()
 
+_BRAND_LOGO_PROMPT = """
+Create a corporate logo for a fictional in-universe brand/company.
+Brand name: {brand_name}
+Slogan: {slogan}
+Industry: {industry}
+Tone: {tone}
+
+Requirements:
+- Corporate logo design for fictional company
+- Clean, memorable, professional aesthetic
+- No real-world logos or trademarks
+- Fictional typography and design language
+- Should work at any scale (large billboard to small icon)
+- Convey brand personality and industry
+""".strip()
+
 _PROMPTS = {
     ArtType.ALBUM_COVER: _ALBUM_COVER_PROMPT,
     ArtType.DJ_PORTRAIT: _DJ_PORTRAIT_PROMPT,
     ArtType.STATION_LOGO: _STATION_LOGO_PROMPT,
+    ArtType.BRAND_LOGO: _BRAND_LOGO_PROMPT,
 }
 
 
@@ -144,14 +162,71 @@ class ArtGenerator:
 
         self.client = genai.Client(api_key=self.api_key or "")
 
+    def generate_brand_logo(
+        self,
+        brand_data: dict,
+        brand_style: StationStyle,
+    ) -> Path | None:
+        """Generate a brand logo from brand metadata."""
+        template = _BRAND_LOGO_PROMPT
+        prompt = template.format(
+            brand_name=brand_data.get("brand_name", "Unknown"),
+            slogan=brand_data.get("slogan", ""),
+            industry=brand_data.get("industry", ""),
+            tone=brand_data.get("tone", ""),
+        )
+
+        try:
+            response = self.client.models.generate_images(
+                model=self.model,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/jpeg",
+                ),
+            )
+        except Exception as exc:
+            logger.error("Imagen API call failed: %s", exc, exc_info=True)
+            return None
+
+        if not response.generated_images:
+            logger.error("Imagen returned no images", exc_info=True)
+            return None
+
+        image_bytes = response.generated_images[0].image.image_bytes
+
+        # Determine filename
+        import re
+
+        safe = lambda s: re.sub(r"[^a-z0-9]+", "_", s.lower().strip()).strip("_")
+        brand_slug = safe(brand_data.get("brand_name", "unknown"))
+        filename = f"logo_brand_{brand_slug}.jpg"
+        out_path = self.output_dir / filename
+
+        out_path.write_bytes(image_bytes)
+        logger.info("Saved brand logo: %s", out_path)
+
+        # Stamp licensing metadata
+        license_info = LicenseInfo.for_generated_art(
+            art_type="brand_logo",
+            station_name=brand_style.display_name,
+            artist_name="",
+            style_seed=brand_style.style_seed,
+        )
+        stamp_license_metadata(out_path, license_info)
+
+        return out_path
+
     def generate(
         self,
         art_type: ArtType,
         *,
-        station: StationStyle,
+        station: StationStyle | None = None,
         persona: PersonaDNA | None = None,
         track_title: str = "",
         genre: str = "",
+        brand: "BrandStyle" | None = None,
+        slogan: str = "",
     ) -> Path | None:
         """
         Generate an image and save it to disk with licensing metadata.
