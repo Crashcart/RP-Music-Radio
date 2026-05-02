@@ -76,6 +76,26 @@ services:
           cpus: '2'
           memory: 4G
 
+  aetherwave-beat:
+    image: aetherwave/factory-worker:latest
+    container_name: aetherwave_beat
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    command: celery -A app.celery beat --loglevel=info
+    volumes:
+      - ./data:/app/data
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/aetherwave.db}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - redis
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: aetherwave_redis
