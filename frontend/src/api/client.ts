@@ -204,6 +204,9 @@ export const api = {
   createJingle: (data: { station_id: string; name: string; jingle_type?: string; description?: string }) =>
     request<Jingle>('/api/v1/jingles', { method: 'POST', body: JSON.stringify(data) }),
 
+  deleteJingle: (id: string) =>
+    request<{ deleted: string }>(`/api/v1/jingles/${id}`, { method: 'DELETE' }),
+
   // ── Drafts ────────────────────────────────────────────────────
   ingest: (rows: Array<{ station_name: string; artist_name: string; genre?: string; mood?: string; items?: string; station_id?: string; artist_id?: string; brand_id?: string }>) =>
     request<{ created: number; draft_ids: string[] }>('/api/v1/ingest', { method: 'POST', body: JSON.stringify({ rows }) }),
@@ -218,6 +221,12 @@ export const api = {
 
   updateDraft: (id: string, data: Partial<Draft>) =>
     request<Draft>(`/api/v1/drafts/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteDraft: (id: string) =>
+    request<{ deleted: string }>(`/api/v1/drafts/${id}`, { method: 'DELETE' }),
+
+  retryDraft: (id: string) =>
+    request<Draft>(`/api/v1/drafts/${id}/retry`, { method: 'POST' }),
 
   commitDrafts: (draftIds: string[]) =>
     request<{ queued: number; tasks: Array<{ draft_id: string; task_id: string }> }>('/api/v1/commit', { method: 'POST', body: JSON.stringify({ draft_ids: draftIds }) }),

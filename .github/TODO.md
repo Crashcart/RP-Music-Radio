@@ -127,7 +127,58 @@
 
 ---
 
+---
+
+## Session: Bug Fixes, UX & Logging Uplift (2026-05-01)
+
+### Critical Bug Fixes (✅ Completed — PR #15)
+- [x] Brand `updated_at` not set on PATCH
+- [x] `docker-compose` vs `docker compose` plugin detection in scripts
+- [x] `collect-logs.sh` subshell variable loss in pipe-to-while loop
+- [x] `uninstall-full.sh` repo deletion skippable in non-interactive mode
+- [x] All form fields missing `id`/`name`/`aria-label` for AI automation
+- [x] Silent `.catch(() => {})` on API failures replaced with `console.error`
+- [x] Art/portrait generation showed generic error instead of actual message
+
+### UX & Feature Additions (✅ Completed — PR #17)
+- [x] Chat error messages — human-readable (quota, auth, network, timeouts)
+- [x] Draft lifecycle — `DELETE /drafts/{id}` and `POST /drafts/{id}/retry`
+- [x] AetherWave favicon (radio wave SVG) in browser tab
+- [x] Form autofill enabled site-wide (`autoComplete="on"`)
+- [x] Import/Export UI in Settings (export works; import staged)
+- [x] Structured logging with Google Cloud Logging support
+- [x] `LOG_LEVEL` env var now actually used by uvicorn and Celery
+- [x] Request correlation IDs via `RequestLoggingMiddleware`
+- [x] All `logger.error()` calls include `exc_info=True`
+
+### HIGH Priority UX Fixes (🔄 In Progress — fix/clean-pr-branch)
+- [x] Station delete button added to StationDetail
+- [x] Jingle creation replaced with proper inline form (no more `prompt()`)
+- [x] Jingle delete action added per row
+- [x] Artist station picker added to ArtistForm
+- [x] Silent catches replaced with `console.error` in App.tsx, Artists, Brands
+- [x] `api.deleteArtist`/`api.deleteBrand` wrapped in try/catch
+- [x] `window.location.reload()` replaced with `onEntityCreated` callback
+- [x] Mobile nav updated to show all 6 items (Settings no longer hidden)
+- [x] Settings import button disabled with "Coming soon" tooltip
+- [ ] Sonnet 4.6 code review of HIGH UX fixes
+- [ ] Commit and push HIGH UX fixes
+
+### Pending (Next Sprint)
+- [ ] Styled confirmation modal (replace all `confirm()`/`alert()` with component)
+- [ ] Client-side form validation with field-level error messages
+- [ ] Keyboard accessibility for entity cards and nav items (`role="button"`)
+- [ ] Station draft/content history in detail view
+- [ ] Artist station relationship shown in detail view
+- [ ] GenerationQueue cancel/retry/download controls
+- [ ] DraftingTable search and filter bar
+- [ ] Chat auto-scroll only when user is near bottom
+- [ ] Unit tests for all new endpoints
+
+---
+
 ## History
 
 - **2026-04-26**: Initial governance setup + TDR v1.0.4 documentation
 - **2026-04-27**: Abandoned flat architecture; migrated to hierarchical relational DB (Stations, Artists, Brands) + AI Chat Assistant.
+- **2026-05-01**: Full bug audit (PR #15), UX uplift + structured logging (PR #17), HIGH UX fixes in progress.

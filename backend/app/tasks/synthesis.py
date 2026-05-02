@@ -175,7 +175,7 @@ def synthesize_track(self, draft_id: str) -> dict:
         }
 
     except Exception as exc:
-        logger.error("Synthesis failed for draft %s: %s", draft_id, exc)
+        logger.error("Synthesis failed for draft %s: %s", draft_id, exc, exc_info=True)
 
         # Update records to reflect failure
         try:

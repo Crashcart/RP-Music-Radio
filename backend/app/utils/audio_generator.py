@@ -200,7 +200,7 @@ class AudioGenerator:
                 ),
             )
         except Exception as exc:
-            logger.error("Lyria API call failed: %s", exc)
+            logger.error("Lyria API call failed: %s", exc, exc_info=True)
             return None, license_info
 
         # Extract audio data from the response
@@ -212,7 +212,7 @@ class AudioGenerator:
                     break
 
         if audio_data is None:
-            logger.error("Lyria returned no audio data")
+            logger.error("Lyria returned no audio data", exc_info=True)
             return None, license_info
 
         # ── Save to disk ──────────────────────────────────────────

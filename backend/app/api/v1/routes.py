@@ -138,7 +138,7 @@ def generate_station_art(station_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Station art generation failed: %s", exc)
+        logger.error("Station art generation failed: %s", exc, exc_info=True)
         raise HTTPException(500, f"Art generation error: {exc}")
 
 
@@ -230,7 +230,7 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as exc:
-        logger.error("Portrait generation failed: %s", exc)
+        logger.error("Portrait generation failed: %s", exc, exc_info=True)
         raise HTTPException(500, f"Portrait generation error: {exc}")
 
 
@@ -273,6 +273,7 @@ def update_brand(brand_id: str, payload: BrandUpdate, db: Session = Depends(get_
         raise HTTPException(404, "Brand not found")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(brand, field, value)
+    brand.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(brand)
     return BrandOut.model_validate(brand)
@@ -311,6 +312,17 @@ def list_jingles(station_id: str, db: Session = Depends(get_db)):
     """List jingles for a station."""
     jingles = db.query(Jingle).filter(Jingle.station_id == station_id).order_by(Jingle.created_at.desc()).all()
     return [JingleOut.model_validate(j) for j in jingles]
+
+
+@router.delete("/jingles/{jingle_id}")
+def delete_jingle(jingle_id: str, db: Session = Depends(get_db)):
+    """Delete a jingle."""
+    jingle = db.query(Jingle).filter(Jingle.id == jingle_id).first()
+    if not jingle:
+        raise HTTPException(404, "Jingle not found")
+    db.delete(jingle)
+    db.commit()
+    return {"deleted": jingle_id}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -383,6 +395,44 @@ def update_draft(
     draft.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(draft)
+    return DraftOut.model_validate(draft)
+
+
+@router.delete("/drafts/{draft_id}")
+def delete_draft(draft_id: str, db: Session = Depends(get_db)):
+    """Delete a draft. Drafts that are actively generating cannot be deleted."""
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if draft.status == "generating":
+        raise HTTPException(status_code=409, detail="Cannot delete a draft that is currently generating")
+    db.delete(draft)
+    db.commit()
+    logger.info("Deleted draft %s", draft_id)
+    return {"deleted": draft_id}
+
+
+@router.post("/drafts/{draft_id}/retry", response_model=DraftOut)
+def retry_draft(draft_id: str, db: Session = Depends(get_db)):
+    """Re-queue a failed or stuck draft for synthesis."""
+    from app.tasks.synthesis import synthesize_track
+
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if draft is None:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if draft.status not in ("failed", "committed"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only failed or stuck drafts can be retried (current status: '{draft.status}')",
+        )
+
+    celery_task = synthesize_track.delay(draft_id)
+    draft.status = "committed"
+    draft.task_id = celery_task.id
+    draft.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(draft)
+    logger.info("Retried draft %s with task %s", draft_id, celery_task.id)
     return DraftOut.model_validate(draft)
 
 
@@ -488,7 +538,7 @@ def set_api_key(payload: ApiKeyRequest):
             with open(settings_path, "w") as f:
                 json.dump({"GOOGLE_API_KEY": api_key}, f)
         except Exception as e:
-            logger.error("Failed to persist API key to disk: %s", e)
+            logger.error("Failed to persist API key to disk: %s", e, exc_info=True)
             
         logger.info("Google API key validated and set")
         return ApiKeyResponse(valid=True, message="API key is valid")
@@ -662,6 +712,6 @@ def chat_assistant(payload: ChatRequest):
         return {"reply": reply_text, "proposal": proposal}
 
     except Exception as exc:
-        logger.error("Chat failed: %s", exc)
+        logger.error("Chat failed: %s", exc, exc_info=True)
         return {"reply": f"Sorry, I hit an error: {exc}. Check your API key in Settings."}
 

@@ -256,7 +256,48 @@ Establish governance framework and document AetherWave technical architecture to
 
 ---
 
-## Session Summary
+---
+
+## Session: Bug Fixes, UX & Logging Uplift (2026-05-01)
+
+### Objective
+Comprehensive bug audit → UX uplift → structured logging → HIGH-priority UX fixes identified by Opus 4.7 audit.
+
+### Key Decisions
+
+**Structured Logging Strategy**
+- Decision: JSON-to-stdout (Cloud Logging compatible) with optional Google Cloud Logging client
+- Rationale: Containers write structured JSON; GCP's Fluentd agent forwards automatically. No client needed unless GOOGLE_CLOUD_PROJECT is set.
+- Fallback: `python-json-logger` for non-GCP environments.
+
+**Draft Lifecycle**
+- Decision: Allow delete on any non-generating draft; allow retry on failed/stuck-committed drafts.
+- Rationale: Users had no recovery path when synthesis failed. Hard delete is acceptable since MP3s live in `radio_vault/` independently.
+
+**Chat Entity Proposal Flow**
+- Decision: Replace `window.location.reload()` with `onEntityCreated` callback prop.
+- Rationale: Hard reload destroys chat history. Targeted refresh via parent `refreshDrafts()` is sufficient.
+
+**Mobile Nav**
+- Decision: Show all 6 nav items on mobile (removed `.slice(0, 5)`).
+- Rationale: Settings was invisible on mobile, blocking API key configuration.
+
+**Import/Export**
+- Decision: Export works fully; Import UI staged with "disabled + coming soon" tooltip.
+- Rationale: Backend import endpoint not yet implemented. Better to show disabled state than misleading affordance.
+
+### Blockers
+- Google API free-tier quota exhausted during testing (429 RESOURCE_EXHAUSTED) — user needs paid billing.
+- GitHub OAuth flow for MCP tools returned unexpected redirect to non-Anthropic URL (possible phishing/DNS issue on user's network).
+
+### PR History
+- PR #15: Critical bug fixes (brand timestamp, docker-compose compat, subshell scoping, form accessibility)
+- PR #17: UX uplift + structured logging + draft lifecycle + favicon + autofill
+- PR #18 (pending): HIGH-priority UX fixes from Opus 4.7 audit (station delete, jingle form, station picker, error handling, mobile nav)
+
+---
+
+## Session Summary (Original — 2026-04-26)
 
 ✅ **Completed**:
 - Governance framework established (10 rules + 4-phase workflow)

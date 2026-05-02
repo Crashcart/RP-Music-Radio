@@ -14,7 +14,23 @@ interface ChatMessage {
 
 const SYSTEM_INTRO = "Hi! I'm AetherWave's AI assistant. I can help you brainstorm station concepts, create DJ personas, design fictional brands, and build your radio universe. What would you like to create?";
 
-export function ChatAssistant() {
+const parseApiError = (error: string): string => {
+  if (error.includes('RESOURCE_EXHAUSTED') || error.includes('quota')) {
+    return 'Google API quota exceeded. Try again in a few moments, or upgrade your plan.';
+  }
+  if (error.includes('API key') || error.includes('401') || error.includes('unauthorized')) {
+    return 'API key is missing or invalid. Check your API key in Settings.';
+  }
+  if (error.includes('timeout')) {
+    return 'Request timed out. Try again in a moment.';
+  }
+  if (error.includes('rate limit')) {
+    return 'Too many requests. Please wait a moment before trying again.';
+  }
+  return 'Something went wrong. Please try again.';
+};
+
+export function ChatAssistant({ onEntityCreated }: { onEntityCreated?: () => void } = {}) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'system', content: SYSTEM_INTRO },
@@ -48,16 +64,33 @@ export function ChatAssistant() {
         }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: data.reply,
-        proposal: data.proposal,
-        proposalStatus: data.proposal ? 'pending' : undefined
-      }]);
-    } catch {
+
+      if (!res.ok) {
+        const errorMsg = data.error?.message || data.message || 'Unknown error';
+        const userFriendlyMsg = parseApiError(errorMsg);
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `⚠️ ${userFriendlyMsg}`,
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.reply,
+          proposal: data.proposal,
+          proposalStatus: data.proposal ? 'pending' : undefined
+        }]);
+      }
+    } catch (err: any) {
+      const message = err.message || 'Connection failed';
+      let userFriendlyMsg = 'Connection failed. Please check your internet connection.';
+
+      if (message.includes('fetch')) {
+        userFriendlyMsg = 'Cannot reach the AI service. Make sure the API is running.';
+      }
+
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: "Sorry, I couldn't connect to the AI. Make sure your Google API key is set in Settings.",
+        content: `⚠️ ${userFriendlyMsg}`,
       }]);
     } finally {
       setLoading(false);
@@ -80,21 +113,35 @@ export function ChatAssistant() {
       } else if (proposal.entity === 'artist') {
         await api.createArtist(proposal.data);
       }
-      
+
       setMessages(prev => {
         const copy = [...prev];
         copy[index].proposalStatus = 'success';
         return copy;
       });
-      // Force a full page reload so other components see the new data
-      window.location.reload();
+      // Notify parent to refresh data
+      if (onEntityCreated) {
+        onEntityCreated();
+      }
     } catch (err: any) {
       setMessages(prev => {
         const copy = [...prev];
         copy[index].proposalStatus = 'error';
         return copy;
       });
-      alert(`Failed to create ${proposal.entity}: ${err.message}`);
+
+      const entityName = proposal.entity.charAt(0).toUpperCase() + proposal.entity.slice(1);
+      let message = `Couldn't create the ${entityName}.`;
+
+      if (err.message?.includes('Network')) {
+        message = `Network error. Check your connection and try again.`;
+      } else if (err.message?.includes('429') || err.message?.includes('quota')) {
+        message = `API quota exceeded. Wait a moment and try again.`;
+      } else if (err.message?.includes('409') || err.message?.includes('already exists')) {
+        message = `A ${proposal.entity} with this name already exists.`;
+      }
+
+      alert(message);
     }
   };
 
@@ -131,7 +178,7 @@ export function ChatAssistant() {
                   <span style={{ color: 'var(--success-color)' }}>✅ Created successfully!</span>
                 )}
                 {msg.proposalStatus === 'error' && (
-                  <span style={{ color: 'var(--error-color)' }}>❌ Failed to create</span>
+                  <span style={{ color: 'var(--error-color)' }}>❌ Creation failed — see the alert for details</span>
                 )}
               </div>
             )}
@@ -139,7 +186,7 @@ export function ChatAssistant() {
         ))}
         {loading && (
           <div className="chat-message assistant" style={{ opacity: 0.6 }}>
-            Thinking...
+            ✨ Thinking...
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -147,11 +194,15 @@ export function ChatAssistant() {
 
       <div className="chat-input-row">
         <input
+          id="chat-input"
+          name="chat-message"
+          aria-label="Chat message"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Ask me about stations, DJs, brands..."
           disabled={loading}
+          autoComplete="off"
         />
         <button onClick={send} disabled={loading || !input.trim()}>
           →
