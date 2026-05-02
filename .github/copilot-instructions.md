@@ -58,6 +58,7 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **REQUIREMENT**: After pushing, verify via `git pull origin <branch>` that no remote conflicts exist
 - **ENFORCEMENT**: Automated conflict detection in `code-review-gate.yml`
 - **CONSEQUENCE**: Must resolve before next action
+- **AI AGENT EXCEPTION (Windows Sandbox)**: If the AI agent is running in a local environment where terminal access is blocked or sandboxed (e.g., `run_command` fails), the AI MUST explicitly request the USER to fetch, pull, and identify conflicts. The AI is exempt from running `git` commands directly but remains responsible for guiding the user through conflict resolution.
 
 ### Rule 8: Never Ignore Pre-Commit Hooks
 - **REQUIREMENT**: Git hooks (ESLint, Prettier, conventional commits) must pass
