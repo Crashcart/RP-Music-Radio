@@ -548,6 +548,24 @@ def export_data(db: Session = Depends(get_db)):
     }
     return data
 
+@router.get("/settings/logs")
+def get_system_logs(lines: int = 500):
+    """Retrieve the last N lines of the backend log."""
+    try:
+        import os
+        log_path = "logs/backend.log"
+        if not os.path.exists(log_path):
+            return {"logs": "Log file not found. System is waiting for the first error or log entry."}
+        
+        # Read the last N lines safely
+        with open(log_path, "r", encoding="utf-8") as f:
+            all_lines = f.readlines()
+            return {"logs": "".join(all_lines[-lines:])}
+    except Exception as exc:
+        logger.error("Failed to read logs: %s", exc)
+        return {"logs": f"Error reading logs: {exc}"}
+
+
 
 # ═══════════════════════════════════════════════════════════════════
 #  Chat Assistant

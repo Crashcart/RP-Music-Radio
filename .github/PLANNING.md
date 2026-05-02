@@ -285,3 +285,9 @@ Establish governance framework and document AetherWave technical architecture to
 **Rationale**: 
 - The `google-genai` SDK threw 500 Internal Server Errors when passing `{"google_search": {}}` directly in the `tools` array. 
 - Since the AetherWave chat assistant is meant for fictional brainstorming, web search is unnecessary and was causing complete failure of the chat endpoint.
+
+### 8. System Logs Viewer & Endpoint (2026-05-01) ✅
+**Decision**: Built a `/api/v1/settings/logs` endpoint and a premium frontend terminal UI to view `backend.log`.
+**Rationale**: 
+- Necessary to quickly diagnose backend issues (like the Gemini 500 error) without needing terminal access to the Docker container.
+- Provides immediate developer feedback directly within the web app's Settings page.

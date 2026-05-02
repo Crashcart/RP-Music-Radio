@@ -9,20 +9,36 @@ Wires up:
 """
 
 from contextlib import asynccontextmanager
+import logging
+import os
+import traceback
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
 from app.api.v1.routes import router as v1_router
 
+# ── Logging Configuration ──────────────────────────────────────────────
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("logs/backend.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create database tables on startup."""
+    logger.info("Starting up AetherWave API...")
     init_db()
     yield
-
+    logger.info("Shutting down AetherWave API...")
 
 app = FastAPI(
     title="AetherWave API",
@@ -44,6 +60,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled Exception on {request.method} {request.url}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error_message": str(exc)},
+    )
 
 # ── Routes ────────────────────────────────────────────────────────────
 app.include_router(v1_router)

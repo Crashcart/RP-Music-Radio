@@ -235,4 +235,7 @@ export const api = {
 
   exportData: () =>
     request<any>('/api/v1/settings/export'),
+
+  getLogs: (lines: number = 500) =>
+    request<{ logs: string }>(`/api/v1/settings/logs?lines=${lines}`),
 };

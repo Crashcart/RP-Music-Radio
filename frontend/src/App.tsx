@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useIsMobile } from './hooks/useIsMobile';
 import { Stations } from './pages/Stations';
 import { Artists } from './pages/Artists';
@@ -325,6 +325,70 @@ function SettingsPage({ apiOk }: { apiOk: boolean | null }) {
         <div style={{ marginTop: 'var(--space-md)', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           Version 1.0.4 • Built with FastAPI, React, and Google Cloud AI
         </div>
+      </div>
+
+      {/* System Logs */}
+      <SystemLogsViewer />
+    </div>
+  );
+}
+
+/* ── System Logs Viewer ────────────────────────────────────────────── */
+
+function SystemLogsViewer() {
+  const [logs, setLogs] = useState<string>('Loading logs...');
+  const [loading, setLoading] = useState(false);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getLogs();
+      setLogs(data.logs || 'No logs available.');
+    } catch (err: any) {
+      setLogs(`Failed to fetch logs: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  useEffect(() => {
+    if (logsEndRef.current) {
+      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs]);
+
+  const formatLogLine = (line: string, i: number) => {
+    if (!line.trim()) return null;
+    let className = 'log-line';
+    if (line.includes('ERROR') || line.includes('Exception') || line.includes('Failed')) {
+      className += ' log-error';
+    } else if (line.includes('WARNING')) {
+      className += ' log-warning';
+    } else if (line.includes('INFO')) {
+      className += ' log-info';
+    }
+    return <div key={i} className={className}>{line}</div>;
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
+      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 className="card-title">🖥️ System Logs</h3>
+        <button className="btn btn-secondary" onClick={fetchLogs} disabled={loading} style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
+          {loading ? 'Refreshing...' : '🔄 Refresh'}
+        </button>
+      </div>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-md)' }}>
+        Real-time backend console output for debugging and monitoring.
+      </p>
+      <div className="log-terminal">
+        {logs.split('\n').map((line, i) => formatLogLine(line, i))}
+        <div ref={logsEndRef} />
       </div>
     </div>
   );
