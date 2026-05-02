@@ -330,7 +330,12 @@
 
 ## History
 
-- **2026-04-26**: Initial governance setup + TDR v1.0.4 documentation
-- **2026-04-27**: Abandoned flat architecture; migrated to hierarchical relational DB (Stations, Artists, Brands) + AI Chat Assistant.
-- **2026-05-01**: Full bug audit (PR #15), UX uplift + structured logging (PR #17), HIGH UX fixes in progress.
-- **2026-05-02**: AI DJ staging (Phase 1 & 2 complete), Opus 4.7 critical bug audit (25 issues), 2/5 CRITICAL bugs fixed, CSRF + Alembic migration deployed.
+---
+
+## Immediate Actions (Next Session)
+
+### Environment & Configuration
+- [ ] Set `GOOGLE_API_KEY` environment variable (currently unset, causes warnings)
+  - Check `.env.example` and `.env` files
+  - Ensure Google Cloud API key is configured before running services
+  - Update Docker Compose and installation scripts to warn if key is missing
