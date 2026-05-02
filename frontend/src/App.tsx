@@ -6,6 +6,7 @@ import { Brands } from "./pages/Brands";
 import { DraftingTable } from "./pages/DraftingTable";
 // @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from "./pages/GenerationQueue";
+import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { api, type Draft, type Station } from "./api/client";
 
