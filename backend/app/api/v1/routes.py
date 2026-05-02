@@ -71,7 +71,9 @@ router = APIRouter(prefix="/api/v1", tags=["v1"])
 # processes and survive worker restarts.  Falls back gracefully when Redis
 # is unavailable (best-effort: skips limiting rather than rejecting all traffic).
 _RATE_LIMIT_PER_HOUR = int(os.getenv("AI_STAGE_RATE_PER_HOUR", "20"))
-_RATE_LIMIT_CONCURRENT_PER_STATION = int(os.getenv("AI_STAGE_CONCURRENT_PER_STATION", "5"))
+_RATE_LIMIT_CONCURRENT_PER_STATION = int(
+    os.getenv("AI_STAGE_CONCURRENT_PER_STATION", "5")
+)
 _REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 # Lazy singleton — initialised on first use so import doesn't fail when Redis
@@ -137,6 +139,7 @@ def _check_hourly_rate_limit(requester_key: str) -> bool:
 #  Stations
 # ═══════════════════════════════════════════════════════════════════
 
+
 @router.post("/stations", response_model=StationOut)
 def create_station(payload: StationCreate, db: Session = Depends(get_db)):
     """Create a new radio station."""
@@ -165,7 +168,9 @@ def get_station(station_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/stations/{station_id}", response_model=StationOut)
-def update_station(station_id: str, payload: StationUpdate, db: Session = Depends(get_db)):
+def update_station(
+    station_id: str, payload: StationUpdate, db: Session = Depends(get_db)
+):
     """Update a station's details."""
     station = db.query(Station).filter(Station.id == station_id).first()
     if not station:
@@ -198,6 +203,7 @@ def generate_station_art(station_id: str, db: Session = Depends(get_db)):
     try:
         from app.utils.art_generator import ArtGenerator, ArtType
         from app.utils.dna_manager import DNAManager
+
         dna = DNAManager()
         station_style = dna.get_or_create_station(station.name, mood=station.mood)
         art_gen = ArtGenerator()
@@ -217,6 +223,7 @@ def generate_station_art(station_id: str, db: Session = Depends(get_db)):
 # ═══════════════════════════════════════════════════════════════════
 #  Artists / DJs
 # ═══════════════════════════════════════════════════════════════════
+
 
 @router.post("/artists", response_model=ArtistOut)
 def create_artist(payload: ArtistCreate, db: Session = Depends(get_db)):
@@ -321,7 +328,8 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
     if _check_hourly_rate_limit(requester_key):
         logger.warning(
             "Rate limit exceeded for requester=%s (hourly cap %d)",
-            requester_key, _RATE_LIMIT_PER_HOUR,
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
         )
         raise HTTPException(
             status_code=429,
@@ -341,7 +349,8 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
         if concurrent >= _RATE_LIMIT_CONCURRENT_PER_STATION:
             logger.warning(
                 "Concurrent draft limit reached for station=%s (%d drafts)",
-                payload.station_id, concurrent,
+                payload.station_id,
+                concurrent,
             )
             raise HTTPException(
                 status_code=429,
@@ -363,7 +372,10 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
     db.refresh(artist)
     logger.info(
         "Staged AI DJ: id=%s name=%r station=%s created_by=%s",
-        artist.id, artist.name, artist.station_id, artist.created_by,
+        artist.id,
+        artist.name,
+        artist.station_id,
+        artist.created_by,
         extra={"artist_id": artist.id},
     )
     return ArtistDraftResponse.model_validate(artist)
@@ -385,7 +397,10 @@ def publish_artist(artist_id: str, db: Session = Depends(get_db)):
     if artist.status != "draft":
         raise HTTPException(
             409,
-            {"error": f"Cannot publish artist with status '{artist.status}' (expected draft)", "code": "wrong_status"},
+            {
+                "error": f"Cannot publish artist with status '{artist.status}' (expected draft)",
+                "code": "wrong_status",
+            },
         )
     now = datetime.now(timezone.utc)
     artist.status = "pending_publish"
@@ -395,7 +410,9 @@ def publish_artist(artist_id: str, db: Session = Depends(get_db)):
     db.refresh(artist)
     logger.info(
         "Publish initiated: id=%s correlation=%s undo_expires=%s",
-        artist_id, correlation_id, artist.undo_expires_at.isoformat(),
+        artist_id,
+        correlation_id,
+        artist.undo_expires_at.isoformat(),
     )
     return ArtistDraftResponse.model_validate(artist)
 
@@ -417,18 +434,16 @@ def undo_publish(artist_id: str, db: Session = Depends(get_db)):
     # concurrently read-then-write the same row between our read and our write.
     # SQLite does not support FOR UPDATE (it uses file-level locking), but the
     # with_for_update() call is a no-op there while being correct on Postgres.
-    artist = (
-        db.query(Artist)
-        .filter(Artist.id == artist_id)
-        .with_for_update()
-        .first()
-    )
+    artist = db.query(Artist).filter(Artist.id == artist_id).with_for_update().first()
     if not artist:
         raise HTTPException(404, {"error": "Artist not found", "code": "not_found"})
     if artist.status != "pending_publish":
         raise HTTPException(
             409,
-            {"error": f"Cannot undo: artist status is '{artist.status}' (expected pending_publish)", "code": "wrong_status"},
+            {
+                "error": f"Cannot undo: artist status is '{artist.status}' (expected pending_publish)",
+                "code": "wrong_status",
+            },
         )
     now = datetime.now(timezone.utc)
     undo_deadline = artist.undo_expires_at
@@ -470,7 +485,8 @@ def bulk_publish_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
         if artist.status != "draft":
             logger.warning(
                 "bulk_publish: artist %s has status=%s (not draft), skipping",
-                aid, artist.status,
+                aid,
+                artist.status,
             )
             continue
         artist.status = "pending_publish"
@@ -486,7 +502,11 @@ def bulk_publish_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
             db.refresh(artist)
             results.append(ArtistDraftResponse.model_validate(artist))
 
-    logger.info("bulk_publish: promoted %d artists, undo_expires=%s", len(results), undo_at.isoformat())
+    logger.info(
+        "bulk_publish: promoted %d artists, undo_expires=%s",
+        len(results),
+        undo_at.isoformat(),
+    )
     return results
 
 
@@ -510,19 +530,15 @@ def bulk_undo_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
 
     for aid in payload.artist_ids:
         # Lock row to prevent autopublish race (no-op on SQLite, correct on Postgres)
-        artist = (
-            db.query(Artist)
-            .filter(Artist.id == aid)
-            .with_for_update()
-            .first()
-        )
+        artist = db.query(Artist).filter(Artist.id == aid).with_for_update().first()
         if not artist:
             logger.warning("bulk_undo: artist %s not found, skipping", aid)
             continue
         if artist.status != "pending_publish":
             logger.warning(
                 "bulk_undo: artist %s has status=%s (not pending_publish), skipping",
-                aid, artist.status,
+                aid,
+                artist.status,
             )
             continue
         # Normalise undo_expires_at to UTC for safe comparison
@@ -560,7 +576,8 @@ def bulk_reject_artists(payload: BulkArtistIds, db: Session = Depends(get_db)):
         if artist.status != "draft":
             logger.warning(
                 "bulk_reject: artist %s has status=%s (not draft), skipping",
-                aid, artist.status,
+                aid,
+                artist.status,
             )
             continue
         db.delete(artist)
@@ -580,6 +597,7 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
     try:
         from app.utils.art_generator import ArtGenerator, ArtType
         from app.utils.dna_manager import DNAManager
+
         dna = DNAManager()
         persona = dna.get_or_create_persona(artist.name)
         persona.backstory = artist.bio
@@ -587,11 +605,18 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
         # Use station style if linked, otherwise create a generic one
         if artist.station_id:
             station = db.query(Station).filter(Station.id == artist.station_id).first()
-            station_style = dna.get_or_create_station(station.name if station else "Independent")
+            station_style = dna.get_or_create_station(
+                station.name if station else "Independent"
+            )
         else:
             station_style = dna.get_or_create_station("Independent")
         art_gen = ArtGenerator()
-        art_path = art_gen.generate(ArtType.DJ_PORTRAIT, station=station_style, persona=persona, genre=artist.genre)
+        art_path = art_gen.generate(
+            ArtType.DJ_PORTRAIT,
+            station=station_style,
+            persona=persona,
+            genre=artist.genre,
+        )
         if art_path:
             artist.portrait_path = str(art_path)
             db.commit()
@@ -607,6 +632,7 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
 # ═══════════════════════════════════════════════════════════════════
 #  Brands
 # ═══════════════════════════════════════════════════════════════════
+
 
 @router.post("/brands", response_model=BrandOut)
 def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
@@ -664,6 +690,7 @@ def delete_brand(brand_id: str, db: Session = Depends(get_db)):
 #  Jingles
 # ═══════════════════════════════════════════════════════════════════
 
+
 @router.post("/jingles", response_model=JingleOut)
 def create_jingle(payload: JingleCreate, db: Session = Depends(get_db)):
     """Create a jingle entry (audio generated async)."""
@@ -680,7 +707,12 @@ def create_jingle(payload: JingleCreate, db: Session = Depends(get_db)):
 @router.get("/stations/{station_id}/jingles", response_model=list[JingleOut])
 def list_jingles(station_id: str, db: Session = Depends(get_db)):
     """List jingles for a station."""
-    jingles = db.query(Jingle).filter(Jingle.station_id == station_id).order_by(Jingle.created_at.desc()).all()
+    jingles = (
+        db.query(Jingle)
+        .filter(Jingle.station_id == station_id)
+        .order_by(Jingle.created_at.desc())
+        .all()
+    )
     return [JingleOut.model_validate(j) for j in jingles]
 
 
@@ -698,6 +730,7 @@ def delete_jingle(jingle_id: str, db: Session = Depends(get_db)):
 # ═══════════════════════════════════════════════════════════════════
 #  Drafts (legacy ingest + CRUD)
 # ═══════════════════════════════════════════════════════════════════
+
 
 @router.post("/ingest", response_model=IngestResponse)
 def ingest_seeds(payload: IngestRequest, db: Session = Depends(get_db)):
@@ -758,7 +791,9 @@ def update_draft(
     if draft is None:
         raise HTTPException(status_code=404, detail="Draft not found")
     if draft.status in ("committed", "generating", "completed"):
-        raise HTTPException(status_code=409, detail=f"Cannot edit draft in '{draft.status}' status")
+        raise HTTPException(
+            status_code=409, detail=f"Cannot edit draft in '{draft.status}' status"
+        )
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(draft, field, value)
@@ -775,7 +810,9 @@ def delete_draft(draft_id: str, db: Session = Depends(get_db)):
     if draft is None:
         raise HTTPException(status_code=404, detail="Draft not found")
     if draft.status == "generating":
-        raise HTTPException(status_code=409, detail="Cannot delete a draft that is currently generating")
+        raise HTTPException(
+            status_code=409, detail="Cannot delete a draft that is currently generating"
+        )
     db.delete(draft)
     db.commit()
     logger.info("Deleted draft %s", draft_id)
@@ -817,7 +854,10 @@ def commit_drafts(payload: CommitRequest, db: Session = Depends(get_db)):
         if draft is None:
             raise HTTPException(status_code=404, detail=f"Draft {draft_id} not found")
         if draft.status in ("committed", "generating", "completed"):
-            raise HTTPException(status_code=409, detail=f"Draft {draft_id} already in '{draft.status}' state")
+            raise HTTPException(
+                status_code=409,
+                detail=f"Draft {draft_id} already in '{draft.status}' state",
+            )
         celery_task = synthesize_track.delay(draft_id)
         draft.status = "committed"
         draft.task_id = celery_task.id
@@ -832,6 +872,7 @@ def commit_drafts(payload: CommitRequest, db: Session = Depends(get_db)):
 #  Tasks
 # ═══════════════════════════════════════════════════════════════════
 
+
 @router.get("/tasks/{task_id}", response_model=TaskStatus)
 def get_task_status(task_id: str, db: Session = Depends(get_db)):
     """Poll the status of a generation task."""
@@ -840,62 +881,85 @@ def get_task_status(task_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found")
 
     history = (
-        db.query(GenerationHistory)
-        .filter(GenerationHistory.task_id == task_id)
-        .first()
+        db.query(GenerationHistory).filter(GenerationHistory.task_id == task_id).first()
     )
 
     if history and history.status == "completed":
         return TaskStatus(
-            task_id=task_id, draft_id=draft.id, status="completed",
-            progress=100, output_file=history.output_path,
+            task_id=task_id,
+            draft_id=draft.id,
+            status="completed",
+            progress=100,
+            output_file=history.output_path,
         )
 
     if history and history.status == "failed":
         return TaskStatus(
-            task_id=task_id, draft_id=draft.id, status="failed",
-            progress=0, error=history.error_message,
+            task_id=task_id,
+            draft_id=draft.id,
+            status="failed",
+            progress=0,
+            error=history.error_message,
         )
 
     try:
         from app.tasks.synthesis import celery_app
+
         result = celery_app.AsyncResult(task_id)
         celery_state = result.state
         progress_map = {
-            "PENDING": 0, "STARTED": 10, "SUCCESS": 100, "FAILURE": 0,
-            "PROGRESS": result.info.get("progress", 50) if isinstance(result.info, dict) else 50,
+            "PENDING": 0,
+            "STARTED": 10,
+            "SUCCESS": 100,
+            "FAILURE": 0,
+            "PROGRESS": (
+                result.info.get("progress", 50) if isinstance(result.info, dict) else 50
+            ),
         }
         status_map = {
-            "PENDING": "queued", "STARTED": "generating_script", "SUCCESS": "completed", "FAILURE": "failed",
-            "PROGRESS": result.info.get("stage", "generating") if isinstance(result.info, dict) else "generating",
+            "PENDING": "queued",
+            "STARTED": "generating_script",
+            "SUCCESS": "completed",
+            "FAILURE": "failed",
+            "PROGRESS": (
+                result.info.get("stage", "generating")
+                if isinstance(result.info, dict)
+                else "generating"
+            ),
         }
         return TaskStatus(
-            task_id=task_id, draft_id=draft.id,
+            task_id=task_id,
+            draft_id=draft.id,
             status=status_map.get(celery_state, "queued"),
             progress=progress_map.get(celery_state, 0),
             error=str(result.info) if celery_state == "FAILURE" else None,
         )
     except Exception:
-        return TaskStatus(task_id=task_id, draft_id=draft.id, status=draft.status, progress=0)
+        return TaskStatus(
+            task_id=task_id, draft_id=draft.id, status=draft.status, progress=0
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════
 #  Settings
 # ═══════════════════════════════════════════════════════════════════
 
+
 @router.post("/settings/api-key", response_model=ApiKeyResponse)
 def set_api_key(payload: ApiKeyRequest):
     """Validate and store the Google API key."""
     import json
+
     api_key = payload.api_key.strip()
     if not api_key:
         return ApiKeyResponse(valid=False, message="API key cannot be empty")
     try:
         from google import genai  # type: ignore
+
         client = genai.Client(api_key=api_key)
         # Lightweight validation call
         client.models.get(model="gemini-2.0-flash")
-        
+
         # Save to memory and persistent storage
         os.environ["GOOGLE_API_KEY"] = api_key
         try:
@@ -903,13 +967,13 @@ def set_api_key(payload: ApiKeyRequest):
             # Fallback to local testing path if not in docker
             if not os.path.exists("/app/data") and os.path.exists("../data"):
                 settings_path = "../data/settings.json"
-                
+
             os.makedirs(os.path.dirname(settings_path), exist_ok=True)
             with open(settings_path, "w") as f:
                 json.dump({"GOOGLE_API_KEY": api_key}, f)
         except Exception as e:
             logger.error("Failed to persist API key to disk: %s", e, exc_info=True)
-            
+
         logger.info("Google API key validated and set")
         return ApiKeyResponse(valid=True, message="API key is valid")
     except Exception as exc:
@@ -921,8 +985,9 @@ def set_api_key(payload: ApiKeyRequest):
 def check_api_key():
     """Check if an API key is currently configured."""
     import json
+
     key = os.getenv("GOOGLE_API_KEY", "")
-    
+
     # Check persistent storage if not in env
     if not key:
         for path in ["/app/data/settings.json", "../data/settings.json"]:
@@ -945,6 +1010,7 @@ def check_api_key():
 @router.get("/settings/export")
 def export_data(db: Session = Depends(get_db)):
     """Export all relational data to a JSON object."""
+
     def to_dict(obj):
         d = {}
         for c in obj.__table__.columns:
@@ -963,10 +1029,33 @@ def export_data(db: Session = Depends(get_db)):
             "brands": [to_dict(x) for x in db.query(Brand).all()],
             "jingles": [to_dict(x) for x in db.query(Jingle).all()],
             "drafts": [to_dict(x) for x in db.query(Draft).all()],
-            "generation_history": [to_dict(x) for x in db.query(GenerationHistory).all()],
-        }
+            "generation_history": [
+                to_dict(x) for x in db.query(GenerationHistory).all()
+            ],
+        },
     }
     return data
+
+
+@router.get("/settings/logs")
+def get_system_logs(lines: int = 500):
+    """Retrieve the last N lines of the backend log for debugging."""
+    try:
+        import os
+
+        log_path = "logs/backend.log"
+        if not os.path.exists(log_path):
+            return {
+                "logs": "Log file not found. System is waiting for the first error or log entry."
+            }
+
+        # Read the last N lines safely
+        with open(log_path, "r", encoding="utf-8") as f:
+            all_lines = f.readlines()
+            return {"logs": "".join(all_lines[-lines:])}
+    except Exception as exc:
+        logger.error("Failed to read logs: %s", exc, exc_info=True)
+        return {"logs": f"Error reading logs: {exc}"}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -990,7 +1079,12 @@ CRITICAL INSTRUCTION: If the user explicitly agrees to create or finalize a new 
 ```json
 {"action": "propose", "entity": "station", "data": {"name": "Night City FM", "description": "...", "genre": "Synthwave"}}
 ```
-Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency)."""
+Valid entities are "station", "brand", and "artist". Provide as much relevant data as possible (e.g. tagline, tone, personality, age, genre, frequency).
+
+ENTITY RELATIONSHIP RULE (CRITICAL):
+- DJs/Artists MUST be linked to stations (include a `station_id` field if known from context).
+- All other entities (Brands, Stations) MUST NOT contain a `station_id` or attempt to be linked to specific stations.
+This rule prevents data model corruption."""
 
 
 class ChatRequest(BaseModel):
@@ -1003,6 +1097,7 @@ class ChatRequest(BaseModel):
 def chat_assistant(payload: ChatRequest):
     """AI chat assistant for brainstorming station content."""
     import json
+
     api_key = os.getenv("GOOGLE_API_KEY", "")
 
     # Check persistent storage if not in env
@@ -1020,7 +1115,9 @@ def chat_assistant(payload: ChatRequest):
                     pass
 
     if not api_key:
-        return {"reply": "Please set your Google API key in Settings first. I need it to help you brainstorm!"}
+        return {
+            "reply": "Please set your Google API key in Settings first. I need it to help you brainstorm!"
+        }
 
     try:
         from google import genai  # type: ignore
@@ -1030,17 +1127,38 @@ def chat_assistant(payload: ChatRequest):
 
         # Use the frontend-supplied system prompt when provided (station-aware context
         # injected by buildSystemPrompt()); fall back to the generic system prompt.
-        effective_system = payload.system_prompt.strip() if payload.system_prompt and payload.system_prompt.strip() else _CHAT_SYSTEM
+        effective_system = (
+            payload.system_prompt.strip()
+            if payload.system_prompt and payload.system_prompt.strip()
+            else _CHAT_SYSTEM
+        )
 
         # Build conversation history
-        contents = [types.Content(role="user", parts=[types.Part(text=effective_system)])]
-        contents.append(types.Content(role="model", parts=[types.Part(text="Understood! I'm ready to help you build your radio universe. What would you like to create?")]))
+        contents = [
+            types.Content(role="user", parts=[types.Part(text=effective_system)])
+        ]
+        contents.append(
+            types.Content(
+                role="model",
+                parts=[
+                    types.Part(
+                        text="Understood! I'm ready to help you build your radio universe. What would you like to create?"
+                    )
+                ],
+            )
+        )
 
         for msg in payload.history[-10:]:  # Keep last 10 messages for context
             role = "user" if msg.get("role") == "user" else "model"
-            contents.append(types.Content(role=role, parts=[types.Part(text=msg.get("content", ""))]))
+            contents.append(
+                types.Content(
+                    role=role, parts=[types.Part(text=msg.get("content", ""))]
+                )
+            )
 
-        contents.append(types.Content(role="user", parts=[types.Part(text=payload.message)]))
+        contents.append(
+            types.Content(role="user", parts=[types.Part(text=payload.message)])
+        )
 
         response = client.models.generate_content(
             model="gemini-2.0-flash",
@@ -1053,16 +1171,17 @@ def chat_assistant(payload: ChatRequest):
 
         reply_text = response.text
         proposal = None
-        
+
         # Try to parse any trailing JSON block
         import re
-        match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', reply_text, re.DOTALL)
+
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", reply_text, re.DOTALL)
         if match:
             try:
                 parsed = json.loads(match.group(1))
                 if parsed.get("action") == "propose":
                     proposal = parsed
-                reply_text = reply_text[:match.start()].strip()
+                reply_text = reply_text[: match.start()].strip()
             except Exception as e:
                 logger.warning("Failed to parse AI proposal: %s", e)
 
@@ -1070,5 +1189,6 @@ def chat_assistant(payload: ChatRequest):
 
     except Exception as exc:
         logger.error("Chat failed: %s", exc, exc_info=True)
-        return {"reply": f"Sorry, I hit an error: {exc}. Check your API key in Settings."}
-
+        return {
+            "reply": f"Sorry, I hit an error: {exc}. Check your API key in Settings."
+        }
