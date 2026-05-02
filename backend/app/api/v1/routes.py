@@ -686,6 +686,49 @@ def delete_brand(brand_id: str, db: Session = Depends(get_db)):
     return {"deleted": brand_id}
 
 
+@router.post("/brands/{brand_id}/logo")
+def generate_brand_logo(brand_id: str, db: Session = Depends(get_db)):
+    """Generate an AI logo for a brand via Nano Banana 2."""
+    brand = db.query(Brand).filter(Brand.id == brand_id).first()
+    if not brand:
+        raise HTTPException(404, "Brand not found")
+    try:
+        from app.utils.art_generator import ArtGenerator, ArtType
+        from app.models.persona import StationStyle
+        import uuid
+
+        art_gen = ArtGenerator()
+        # Use brand id as style seed for consistency
+        brand_style = StationStyle(
+            display_name=brand.name,
+            style_seed=brand.id or str(uuid.uuid4()),
+            colors=[brand.color_primary] if brand.color_primary else [],
+        )
+        # Create a simple dict for prompt formatting
+        brand_data = {
+            "brand_name": brand.name,
+            "slogan": brand.slogan or "",
+            "industry": brand.industry or "",
+            "tone": brand.tone or "",
+        }
+
+        art_path = art_gen.generate_brand_logo(
+            brand_data=brand_data,
+            brand_style=brand_style,
+        )
+        if art_path:
+            brand.logo_path = str(art_path)
+            brand.updated_at = datetime.utcnow()
+            db.commit()
+            return {"logo_path": str(art_path)}
+        raise HTTPException(500, "Logo generation failed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Brand logo generation failed for {brand_id}: {e}", exc_info=True)
+        raise HTTPException(500, str(e))
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Jingles
 # ═══════════════════════════════════════════════════════════════════
