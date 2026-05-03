@@ -880,6 +880,31 @@ Execute Rule 12 governance process: Check PR #38 for issues, identify blockers, 
 - [ ] Update PR with completion summary
 - [ ] Confirm PR mergeable
 
+### Jr-2: Security Audit — npm Vulnerabilities (2026-05-03)
+
+**Issue**: PR #36 audit check failed due to npm vulnerabilities
+- **Vulnerabilities Found**: 2 moderate severity (esbuild, vite)
+- **Package**: esbuild <=0.24.2 (GHSA-67mh-4wv8-2f99)
+- **Scope**: esbuild vulnerability allows dev server request/response access
+- **Severity**: Moderate (not critical)
+
+**Analysis Performed**:
+1. ✅ Ran `npm audit` → confirmed 2 moderate vulnerabilities
+2. ✅ Attempted `npm audit fix --force` → broke build (Vite 8 incompatibility)
+3. ✅ Reverted to original deps → build works again
+
+**Root Cause**: Vite 5 → 8 upgrade causes lightningcss CSS minification failure
+
+**Decision**: DEFERRED (not blocking)
+- Risk: Vulnerabilities are moderate, not critical
+- Benefit vs. Cost: Fix breaks build, cost too high right now
+- Timeline: Schedule for future security sprint with proper Vite migration testing
+
+**Recommended Path**:
+- Option A: Find intermediate Vite version (6 or 7) that fixes vulnerability without breaking build
+- Option B: Wait for Vite 9 or esbuild patch release
+- Option C: Accept current risk and schedule for next security audit
+
 ### Escalation: Sr-1 Backend Test Hung (22:40+ UTC)
 
 **Issue**: Backend test running for 15+ minutes with no completion

@@ -525,11 +525,38 @@
 
 ---
 
+## Security Audit Issue (Jr-2) — npm Vulnerabilities in Vite
+
+**Identified in PR #36**: npm audit failed with 2 moderate vulnerabilities
+- **Package**: esbuild <=0.24.2, vite <=6.4.1
+- **Severity**: Moderate (GHSA-67mh-4wv8-2f99)
+- **Issue**: esbuild allows sending requests to dev server and reading responses
+- **Status**: ⏳ Deferred (fix breaks build due to Vite 5→8 incompatibility)
+
+**Investigation Results**:
+- [x] Run npm audit → found 2 moderate vulnerabilities
+- [x] Try npm audit fix --force → breaks build (lightningcss CSS minification error in Vite 8)
+- [x] Revert to original dependencies → build works, vulnerabilities remain
+
+**Current State**:
+- Build: ✅ Works (but with vulnerabilities)
+- npm audit fix: ❌ Breaks build (Vite 8 incompatibility)
+
+**Options**:
+1. **Accept risk** — Keep vulnerabilities, monitor for actual exploits
+2. **Upgrade carefully** — Find intermediate Vite version that fixes vulnerabilities without breaking build
+3. **Pin dependencies** — Add security patches in lockfile if available
+4. **Defer** — Schedule for future security audit sprint
+
+**Recommendation**: Option 2 or 4 (investigate Vite 6 or 7 compatibility)
+
+---
+
 ## PR #38 Check-In (Rule 12 — Governance Process) 🔄
 
 **Created**: 2026-05-03 22:22:12Z  
 **Merged Conflicts**: ✅ Resolved (merge commit a3e7b58)  
-**Current Status**: 4/5 CI checks passing, backend test in progress
+**Current Status**: 4/5 CI checks passing, backend test in progress, Sr-1 escalated
 
 ### Issues Identified
 
