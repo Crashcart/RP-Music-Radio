@@ -82,6 +82,26 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **CONSEQUENCE**: PR rejection; requires escalation to repository maintainers
 - **NOTE**: "Never weaken a constraint" — removals must be justified and approved
 
+### Rule 11: Always Use Branch Switching Scripts
+- **REQUIREMENT**: Use provided branch switching scripts for all branch operations:
+  - **Pull from main (stable)**: `./scripts/pull-main.sh`
+  - **Pull from beta (RC)**: `./scripts/pull-beta.sh`
+  - **Pull from alpha (pre-release)**: `./scripts/pull-alpha.sh`
+  - **Interactive switcher**: `./scripts/switch-branch.sh [main|beta|alpha]`
+  - **View branch status**: `./scripts/branch-status.sh`
+- **WHY**: These scripts automatically:
+  - Stash/restore uncommitted changes (prevents data loss)
+  - Fetch latest from remote (keeps local in sync)
+  - Validate branch transitions (prevents accidental merges)
+  - Show branch descriptions and next steps (prevents confusion)
+- **ENFORCEMENT**: Enforce via pre-commit hooks; manual verification required
+- **CONSEQUENCE**: If using raw `git checkout`, re-run appropriate script to ensure proper state
+- **WORKFLOW**: 
+  - **Development**: Always work on feature branches (feat/, fix/, docs/)
+  - **Testing**: `./scripts/pull-alpha.sh` to test new features
+  - **RC validation**: `./scripts/pull-beta.sh` to test release candidates
+  - **Production**: `./scripts/pull-main.sh` to deploy stable releases
+
 ---
 
 ## The A-to-Z Workflow (4 Phases)
@@ -91,7 +111,8 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 2. Review issue context and requirements
 3. Check `PLANNING.md` for related work
 4. Identify dependencies and blockers
-5. **STOP** — ask human if unclear on any requirement
+5. Run `./scripts/branch-status.sh` to verify current branch and available commands
+6. **STOP** — ask human if unclear on any requirement
 
 ### Phase 1: Planning (Immediate)
 1. Break task into 3–5 subtasks
@@ -100,9 +121,10 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
    - Task context and goal
    - Dependencies identified
    - High-level approach
-4. Create feature branch: `git checkout -b feat/issue-N-slug`
-5. **PUSH IMMEDIATELY** — do not wait to accumulate commits
-6. Run: `git pull origin <branch>` — verify no remote conflicts
+4. Ensure you're on a feature branch: `./scripts/pull-alpha.sh` (or appropriate branch for task scope)
+5. Create feature branch: `git checkout -b feat/issue-N-slug`
+6. **PUSH IMMEDIATELY** — do not wait to accumulate commits
+7. Verify branch state: `./scripts/branch-status.sh` — confirm you're on correct feature branch
 
 ### Phase 2: Implementation (Per Subtask)
 1. Read existing code patterns and architecture
