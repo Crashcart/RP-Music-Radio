@@ -11,7 +11,11 @@ interface ChatMessage {
   };
   proposalStatus?: "pending" | "success" | "error";
   djSuggestions?: DJSuggestion[];
-  djStagingStatuses?: Record<number, "idle" | "staging" | "staged" | "error">;
+  djEditingState?: Record<number, DJSuggestion>; // Track edited versions before staging
+  djStagingStatuses?: Record<
+    number,
+    "idle" | "editing" | "staging" | "staged" | "error"
+  >;
 }
 
 /** Parsed fields from a DJ_SUGGESTION block in the AI response. */
