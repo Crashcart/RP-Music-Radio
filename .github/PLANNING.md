@@ -810,6 +810,49 @@ Ensure all created entities can be removed throughout the application.
 
 ---
 
+## Session 8: Rule 12 Enhancement — Continuous 1-Minute PR Checking (2026-05-03)
+
+### Objective
+Improve PR issue detection and resolution speed by implementing continuous monitoring with escalating severity levels.
+
+### Enhancement: Rule 12 Updated
+**Old Approach**: Check PR ~3 minutes after creation, fix categorized issues
+**New Approach**: Check every 1 minute, fix continuously, escalate if needed
+
+**New Severity Escalation**:
+- **Jr** (Junior): Quick fixes, 1 min (docs, lint, config tweaks)
+- **Sr** (Senior): Deeper fixes, 5-30 min (code logic, implementation)
+- **Cr** (Critical): Blockers, escalate to human (env issues, architecture problems)
+
+**Continuous Loop**:
+1. Check PR status (1-minute intervals)
+2. Identify issues (new failures, comments)
+3. Categorize by severity
+4. Fix via governance process (Phase 2-4)
+5. Push and update governance files
+6. Wait 1 minute for CI to update
+7. Re-check for regressions or new issues
+8. Repeat until PR mergeable (0 blockers) or Cr escalation
+
+**Rationale**:
+- Faster feedback loop (1 min vs 3 min) catches issues earlier
+- Escalating severity ensures resource allocation matches issue impact
+- Continuous loop prevents stalled/forgotten PRs
+- Every fix documented per cycle for auditability
+
+**Benefits**:
+- ✅ Quick wins first (Jr issues)
+- ✅ Deep investigation (Sr issues get attention)
+- ✅ Human safety valve (Cr issues escalate)
+- ✅ No stalled PRs (continuous monitoring)
+- ✅ Full auditability (each cycle logged)
+
+### Governance File Changes
+- `.github/copilot-instructions.md` Rule 12 updated with new workflow
+- Commit: 7c64100
+
+---
+
 ## Session 7: PR #38 Check-In & Issue Resolution (2026-05-03 22:33+)
 
 ### Objective
