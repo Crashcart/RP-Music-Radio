@@ -31,6 +31,28 @@
 - [x] Verified all CI/CD workflows exist and are correctly referenced
 - [x] Added migration notes for database upgrades (nullable → NOT NULL)
 
+### 🚨 Active Blockers (User-Reported)
+
+**API Failure on boris.local (Cr-Level — Reported 2026-05-03)**
+- [ ] **BLOCKER**: API is failing on boris.local deployment
+- [ ] Gather logs to diagnose root cause (Claude Code sandbox cannot reach boris.local)
+- [ ] User action required: Run log gathering commands locally:
+  ```bash
+  # On boris.local, run any of these to capture logs:
+  docker-compose logs --tail=200 api          # FastAPI service logs
+  docker-compose logs --tail=200 worker       # Celery worker logs
+  docker-compose ps                           # Service status
+  curl -v http://localhost:8000/health        # Health endpoint check
+  curl -v http://localhost:8000/api/v1/stations  # Sample API call
+  ```
+- [ ] Common failure modes to check:
+  - Database connection (SQLite file permissions, Redis reachable?)
+  - Port conflicts (8000 already in use?)
+  - Missing env vars (GOOGLE_API_KEY, REDIS_URL, DATABASE_URL)
+  - Recent deploy broke schema (Artist.station_id NOT NULL migration needed?)
+  - Celery worker can't reach Redis
+- [ ] Once logs available: paste in chat or commit to `.github/PLANNING.md` for analysis
+
 ---
 
 ## Phase 1: Backend Foundation (Hierarchical DB)
