@@ -3,13 +3,85 @@ Simple log analyzer for AetherWave.
 
 Query the app_logs SQLite table to find issues, patterns, and errors.
 Used by Claude Code session to auto-analyze and suggest fixes.
+
+Phase 2: Pattern detection + fix suggestions for recurring errors.
 """
 
 import json
+import re
 import sqlite3
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
+
+# ── Fix Suggestion Catalog ──────────────────────────────────────────
+# Maps error patterns to common causes and suggested fixes
+
+FIX_CATALOG = {
+    "404": {
+        "causes": [
+            "Endpoint does not exist",
+            "Path prefix doubled (e.g., /api/api/v1)",
+            "VITE_API_URL set incorrectly",
+        ],
+        "fixes": [
+            "Verify endpoint path in routes.py",
+            "Check VITE_API_URL environment variable (should be empty or /api)",
+            "Inspect browser network tab for actual URL being called",
+        ],
+    },
+    "timeout": {
+        "causes": [
+            "Slow database query",
+            "API response too slow",
+            "Network latency",
+            "Resource exhaustion",
+        ],
+        "fixes": [
+            "Add database indexes for slow queries",
+            "Increase request timeout",
+            "Check system CPU/memory usage",
+            "Paginate large result sets",
+        ],
+    },
+    "CSRF": {
+        "causes": [
+            "CSRF token missing or expired",
+            "Cookie not being read by frontend",
+            "Request doesn't include X-CSRF-Token header",
+        ],
+        "fixes": [
+            "Reload page to get fresh CSRF token",
+            "Verify api/client.ts is reading csrf_token cookie",
+            "Check browser developer tools > Network tab for headers",
+        ],
+    },
+    "Gemini": {
+        "causes": [
+            "Invalid model name (e.g., gemini-2.0-flash deprecated)",
+            "API key invalid or expired",
+            "Rate limit exceeded",
+        ],
+        "fixes": [
+            "Update model to gemini-2.5-flash",
+            "Verify GOOGLE_API_KEY in Settings",
+            "Wait before retrying (rate limit)",
+        ],
+    },
+    "validation": {
+        "causes": [
+            "Required field missing or invalid type",
+            "String too long or too short",
+            "Invalid enum value",
+        ],
+        "fixes": [
+            "Check Pydantic schema for field requirements",
+            "Inspect error message for field name",
+            "Adjust request data to match schema",
+        ],
+    },
+}
 
 
 @dataclass
@@ -183,6 +255,101 @@ class LogAnalyzer:
         )
 
         return summary
+
+    def detect_patterns(self, hours: int = 24) -> list[dict]:
+        """
+        Detect recurring error patterns.
+
+        Returns patterns with:
+        - Error message
+        - Frequency (how many times)
+        - Severity (ERROR, CRITICAL)
+        - Suggested fixes from catalog
+        """
+        errors = self.find_errors(hours=hours, limit=1000)
+
+        # Group by message
+        message_counts = Counter(e.message for e in errors)
+
+        patterns = []
+        for message, count in message_counts.most_common(20):
+            if count < 3:  # Only patterns with 3+ occurrences
+                break
+
+            # Find matching fixes from catalog
+            suggested_fixes = self._suggest_fixes(message)
+
+            patterns.append(
+                {
+                    "message": message,
+                    "frequency": count,
+                    "hours": hours,
+                    "severity": self._infer_severity(message),
+                    "suggested_fixes": suggested_fixes,
+                    "next_steps": self._generate_next_steps(message),
+                }
+            )
+
+        return patterns
+
+    def _suggest_fixes(self, error_message: str) -> list[str]:
+        """Look up suggested fixes from catalog based on error message."""
+        fixes = []
+
+        for keyword, catalog_entry in FIX_CATALOG.items():
+            if keyword.lower() in error_message.lower():
+                fixes.extend(catalog_entry.get("fixes", []))
+                break
+
+        # Generic fallback fixes
+        if not fixes:
+            fixes = [
+                "Check the error message for specifics",
+                "Search logs for more context: grep for similar errors",
+                "Review recent code changes that might have caused this",
+            ]
+
+        return fixes[:3]  # Return top 3
+
+    def _infer_severity(self, error_message: str) -> str:
+        """Infer severity from error message."""
+        if "critical" in error_message.lower() or "fatal" in error_message.lower():
+            return "CRITICAL"
+        elif "timeout" in error_message.lower() or "exhausted" in error_message.lower():
+            return "HIGH"
+        else:
+            return "MEDIUM"
+
+    def _generate_next_steps(self, error_message: str) -> list[str]:
+        """Generate next steps based on error type."""
+        steps = []
+
+        if "404" in error_message:
+            steps = [
+                "1. Verify the endpoint exists in routes.py",
+                "2. Check browser network tab for actual URL",
+                "3. Look for /api/api prefix (path doubling)",
+            ]
+        elif "timeout" in error_message.lower():
+            steps = [
+                "1. Check system CPU/memory usage",
+                "2. Look for slow queries in logs",
+                "3. Increase timeout if legitimate",
+            ]
+        elif "csrf" in error_message.lower():
+            steps = [
+                "1. Reload the page",
+                "2. Check api/client.ts token handling",
+                "3. Clear browser cookies and retry",
+            ]
+        else:
+            steps = [
+                "1. Review the full error message in logs",
+                "2. Check recent git commits for causes",
+                "3. Search codebase for similar errors",
+            ]
+
+        return steps
 
 
 # CLI for quick access

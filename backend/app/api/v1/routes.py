@@ -1362,3 +1362,27 @@ def debug_health_report(hours: int = Query(24, ge=1, le=168)):
         ],
         "recommendations": recommendations,
     }
+
+
+@router.get("/logs/patterns")
+def get_error_patterns(hours: int = Query(24, ge=1, le=168)):
+    """
+    Detect recurring error patterns and suggest fixes.
+
+    Returns patterns with:
+    - Error message
+    - Frequency (how many times)
+    - Severity (CRITICAL, HIGH, MEDIUM)
+    - Suggested fixes from fix catalog
+    - Next steps to resolve
+    """
+    from app.log_analyzer import LogAnalyzer
+
+    analyzer = LogAnalyzer()
+    patterns = analyzer.detect_patterns(hours=hours)
+
+    return {
+        "total_patterns": len(patterns),
+        "hours": hours,
+        "patterns": patterns,
+    }
