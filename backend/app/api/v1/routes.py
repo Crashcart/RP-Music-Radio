@@ -1297,3 +1297,68 @@ def search_logs(
             for e in results
         ],
     }
+
+
+@router.get("/debug/health-report")
+def debug_health_report(hours: int = Query(24, ge=1, le=168)):
+    """
+    Comprehensive health report for debugging.
+
+    Includes:
+    - Error summary (count by level/component)
+    - Recent errors
+    - Recommendations
+    """
+    from app.log_analyzer import LogAnalyzer
+    from datetime import datetime
+
+    analyzer = LogAnalyzer()
+
+    summary = analyzer.get_error_summary(hours=hours)
+    errors = analyzer.find_errors(hours=hours, limit=20)
+
+    # Build recommendations
+    recommendations = []
+    total_errors = summary.get("total_errors", 0)
+
+    if total_errors > 50:
+        recommendations.append(
+            {
+                "severity": "CRITICAL",
+                "message": f"Very high error rate ({total_errors} in {hours}h)",
+            }
+        )
+    elif total_errors > 10:
+        recommendations.append(
+            {
+                "severity": "WARNING",
+                "message": f"High error rate ({total_errors} in {hours}h)",
+            }
+        )
+
+    if summary.get("by_level", {}).get("CRITICAL", 0) > 0:
+        recommendations.append(
+            {
+                "severity": "CRITICAL",
+                "message": f"CRITICAL errors detected: {summary['by_level']['CRITICAL']}",
+            }
+        )
+
+    if not recommendations:
+        recommendations.append({"severity": "OK", "message": "System healthy"})
+
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "hours": hours,
+        "summary": summary,
+        "recent_errors": [
+            {
+                "timestamp": e.timestamp,
+                "component": e.component,
+                "level": e.level,
+                "message": e.message,
+            }
+            for e in errors
+        ],
+        "recommendations": recommendations,
+    }
