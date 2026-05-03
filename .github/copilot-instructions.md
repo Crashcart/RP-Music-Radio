@@ -102,6 +102,32 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
   - **RC validation**: `./scripts/pull-beta.sh` to test release candidates
   - **Production**: `./scripts/pull-main.sh` to deploy stable releases
 
+### Rule 12: Always Check & Fix PR Issues via Governance Process
+- **REQUIREMENT**: After creating a PR, wait for review/feedback, then systematically fix issues using the `.github` process
+- **PROCESS**:
+  1. **Check PR** — Review comments, CI failures, review requests
+  2. **Identify Issues** — Categorize by severity (Jr = Junior/Minor, Sr = Senior/Major, etc.)
+  3. **Prioritize** — Fix issues starting with "Jr" and work upward
+  4. **Fix via Governance** — For each issue:
+     - Create/update subtask in `.github/TODO.md`
+     - Document fix approach in `.github/PLANNING.md`
+     - Implement fix on feature branch (Phase 2)
+     - Run full verification (Phase 3)
+     - Commit with conventional prefix: `fix:`, `refactor:`, `docs:`
+     - Push immediately
+     - Update `.github/TODO.md` with completion status
+     - Update `.github/PLANNING.md` with fix summary
+  5. **Repeat** — Continue until all issues resolved
+  6. **Update PR** — Add comment: "Fixed [Jr-1, Jr-2, Sr-1] per governance process"
+- **WHY**: Systematic governance ensures:
+  - No ad-hoc fixes (all documented)
+  - Traceability (TODO.md tracks what was fixed)
+  - Quality (each fix goes through full test/lint/security cycle)
+  - Auditability (PLANNING.md records decisions)
+- **ENFORCEMENT**: PR cannot merge until all identified issues fixed via this process
+- **CONSEQUENCE**: Ad-hoc fixes without governance documentation → PR review blocked
+- **TIMING**: Set a monitor to check PR in ~10 minutes after creation if feedback expected
+
 ---
 
 ## The A-to-Z Workflow (4 Phases)
