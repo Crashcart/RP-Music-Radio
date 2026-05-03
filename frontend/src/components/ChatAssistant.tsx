@@ -1,17 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
-import { api, type Station } from '../api/client';
+import { useState, useRef, useEffect } from "react";
+import { api, type Station } from "../api/client";
 
 interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   proposal?: {
     action: string;
-    entity: 'station' | 'brand' | 'artist';
+    entity: "station" | "brand" | "artist";
     data: Record<string, string>;
   };
-  proposalStatus?: 'pending' | 'success' | 'error';
+  proposalStatus?: "pending" | "success" | "error";
   djSuggestions?: DJSuggestion[];
-  djStagingStatuses?: Record<number, 'idle' | 'staging' | 'staged' | 'error'>;
+  djStagingStatuses?: Record<number, "idle" | "staging" | "staged" | "error">;
 }
 
 /** Parsed fields from a DJ_SUGGESTION block in the AI response. */
@@ -33,19 +33,23 @@ const SYSTEM_INTRO =
   "Hi! I'm AetherWave's AI assistant. I can help you brainstorm station concepts, create DJ personas, design fictional brands, and build your radio universe. What would you like to create?";
 
 const parseApiError = (error: string): string => {
-  if (error.includes('RESOURCE_EXHAUSTED') || error.includes('quota')) {
-    return 'Google API quota exceeded. Try again in a few moments, or upgrade your plan.';
+  if (error.includes("RESOURCE_EXHAUSTED") || error.includes("quota")) {
+    return "Google API quota exceeded. Try again in a few moments, or upgrade your plan.";
   }
-  if (error.includes('API key') || error.includes('401') || error.includes('unauthorized')) {
-    return 'API key is missing or invalid. Check your API key in Settings.';
+  if (
+    error.includes("API key") ||
+    error.includes("401") ||
+    error.includes("unauthorized")
+  ) {
+    return "API key is missing or invalid. Check your API key in Settings.";
   }
-  if (error.includes('timeout')) {
-    return 'Request timed out. Try again in a moment.';
+  if (error.includes("timeout")) {
+    return "Request timed out. Try again in a moment.";
   }
-  if (error.includes('rate limit')) {
-    return 'Too many requests. Please wait a moment before trying again.';
+  if (error.includes("rate limit")) {
+    return "Too many requests. Please wait a moment before trying again.";
   }
-  return 'Something went wrong. Please try again.';
+  return "Something went wrong. Please try again.";
 };
 
 /**
@@ -68,8 +72,8 @@ const parseDJSuggestions = (text: string): DJSuggestion[] => {
   for (let i = 1; i < parts.length; i++) {
     const block = parts[i];
     const fields: Record<string, string> = {};
-    for (const line of block.split('\n')) {
-      const colonIdx = line.indexOf(':');
+    for (const line of block.split("\n")) {
+      const colonIdx = line.indexOf(":");
       if (colonIdx === -1) continue;
       const key = line.slice(0, colonIdx).trim().toLowerCase();
       const value = line.slice(colonIdx + 1).trim();
@@ -77,18 +81,18 @@ const parseDJSuggestions = (text: string): DJSuggestion[] => {
         fields[key] = value;
       }
     }
-    if (fields['name']) {
+    if (fields["name"]) {
       suggestions.push({
-        name: fields['name'] ?? '',
-        display_name: fields['display_name'] ?? '',
-        type: fields['type'] ?? 'dj',
-        personality: fields['personality'] ?? '',
-        speaking_style: fields['speaking_style'] ?? '',
-        voice_description: fields['voice_description'] ?? '',
-        catchphrases: fields['catchphrases'] ?? '',
-        genre: fields['genre'] ?? '',
-        signature_sound: fields['signature_sound'] ?? '',
-        backstory: fields['backstory'] ?? '',
+        name: fields["name"] ?? "",
+        display_name: fields["display_name"] ?? "",
+        type: fields["type"] ?? "dj",
+        personality: fields["personality"] ?? "",
+        speaking_style: fields["speaking_style"] ?? "",
+        voice_description: fields["voice_description"] ?? "",
+        catchphrases: fields["catchphrases"] ?? "",
+        genre: fields["genre"] ?? "",
+        signature_sound: fields["signature_sound"] ?? "",
+        backstory: fields["backstory"] ?? "",
       });
     }
   }
@@ -104,16 +108,19 @@ const buildSystemPrompt = (
   selectedStation: Station | null,
 ): string => {
   let prompt =
-    'You are AetherWave AI, a creative assistant for building fictional radio stations. ' +
-    'Help users brainstorm station concepts, DJ personas, fictional brands, and lore.';
+    "You are AetherWave AI, a creative assistant for building fictional radio stations. " +
+    "Help users brainstorm station concepts, DJ personas, fictional brands, and lore.";
 
   if (currentStationId && selectedStation) {
-    prompt += `
+    prompt +=
+      `
 
 The user is currently editing the station "${selectedStation.name}"` +
-      (selectedStation.frequency ? ` (frequency: ${selectedStation.frequency})` : '') +
-      (selectedStation.genre ? `, genre: ${selectedStation.genre}` : '') +
-      (selectedStation.mood ? `, mood: ${selectedStation.mood}` : '') +
+      (selectedStation.frequency
+        ? ` (frequency: ${selectedStation.frequency})`
+        : "") +
+      (selectedStation.genre ? `, genre: ${selectedStation.genre}` : "") +
+      (selectedStation.mood ? `, mood: ${selectedStation.mood}` : "") +
       `.
 When the user asks you to create DJs for this station, generate detailed, cohesive personalities that fit the station's vibe.
 
@@ -154,23 +161,23 @@ export function ChatAssistant({
 }: ChatAssistantProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'system', content: SYSTEM_INTRO },
+    { role: "system", content: SYSTEM_INTRO },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
-    const userMsg: ChatMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    const userMsg: ChatMessage = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
     setLoading(true);
 
     try {
@@ -178,42 +185,44 @@ export function ChatAssistant({
       const data = await api.chat({
         message: text,
         system_prompt: systemPrompt,
-        history: messages.filter(m => m.role !== 'system').map(m => ({
-          role: m.role,
-          content: m.content,
-        })),
+        history: messages
+          .filter((m) => m.role !== "system")
+          .map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })),
       });
 
-      const replyText: string = data.reply ?? '';
+      const replyText: string = data.reply ?? "";
       const djSuggestions = parseDJSuggestions(replyText);
 
       // Strip DJ_SUGGESTION blocks from the visible reply so the card UI
       // is the sole presentation for structured suggestions.
-      const visibleReply = djSuggestions.length > 0
-        ? replyText.replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, '').trim()
-        : replyText;
+      const visibleReply =
+        djSuggestions.length > 0
+          ? replyText
+              .replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, "")
+              .trim()
+          : replyText;
 
       const newMsg: ChatMessage = {
-        role: 'assistant',
+        role: "assistant",
         content: visibleReply,
         proposal: data.proposal,
-        proposalStatus: data.proposal ? 'pending' : undefined,
+        proposalStatus: data.proposal ? "pending" : undefined,
         djSuggestions: djSuggestions.length > 0 ? djSuggestions : undefined,
-        djStagingStatuses: djSuggestions.length > 0
-          ? Object.fromEntries(djSuggestions.map((_, idx) => [idx, 'idle']))
-          : undefined,
+        djStagingStatuses:
+          djSuggestions.length > 0
+            ? Object.fromEntries(djSuggestions.map((_, idx) => [idx, "idle"]))
+            : undefined,
       };
-      setMessages(prev => [...prev, newMsg]);
-      }
+      setMessages((prev) => [...prev, newMsg]);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Connection failed';
-      let userFriendlyMsg = 'Connection failed. Please check your internet connection.';
-      if (message.includes('fetch')) {
-        userFriendlyMsg = 'Cannot reach the AI service. Make sure the API is running.';
-      }
-      setMessages(prev => [
+      const errorMsg = err instanceof Error ? err.message : "Connection failed";
+      const userFriendlyMsg = parseApiError(errorMsg);
+      setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: `⚠️ ${userFriendlyMsg}` },
+        { role: "assistant", content: `⚠️ ${userFriendlyMsg}` },
       ]);
     } finally {
       setLoading(false);
@@ -221,7 +230,7 @@ export function ChatAssistant({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       send();
     }
@@ -236,13 +245,13 @@ export function ChatAssistant({
     if (!currentStationId) return;
 
     // Mark as staging
-    setMessages(prev => {
+    setMessages((prev) => {
       const copy = [...prev];
       copy[msgIndex] = {
         ...copy[msgIndex],
         djStagingStatuses: {
           ...copy[msgIndex].djStagingStatuses,
-          [djIndex]: 'staging',
+          [djIndex]: "staging",
         },
       };
       return copy;
@@ -252,9 +261,16 @@ export function ChatAssistant({
       await api.stageArtist({
         name: suggestion.name,
         display_name: suggestion.display_name || suggestion.name,
-        artist_type: (['dj', 'musician', 'narrator', 'host', 'caller', 'guest'].includes(suggestion.type)
+        artist_type: ([
+          "dj",
+          "musician",
+          "narrator",
+          "host",
+          "caller",
+          "guest",
+        ].includes(suggestion.type)
           ? suggestion.type
-          : 'dj') as string,
+          : "dj") as string,
         station_id: currentStationId,
         bio: suggestion.backstory,
         personality: suggestion.personality,
@@ -265,13 +281,13 @@ export function ChatAssistant({
         signature_sound: suggestion.signature_sound,
       });
 
-      setMessages(prev => {
+      setMessages((prev) => {
         const copy = [...prev];
         copy[msgIndex] = {
           ...copy[msgIndex],
           djStagingStatuses: {
             ...copy[msgIndex].djStagingStatuses,
-            [djIndex]: 'staged',
+            [djIndex]: "staged",
           },
         };
         return copy;
@@ -282,22 +298,28 @@ export function ChatAssistant({
         onEntityCreated();
       }
     } catch (err: unknown) {
-      setMessages(prev => {
+      setMessages((prev) => {
         const copy = [...prev];
         copy[msgIndex] = {
           ...copy[msgIndex],
           djStagingStatuses: {
             ...copy[msgIndex].djStagingStatuses,
-            [djIndex]: 'error',
+            [djIndex]: "error",
           },
         };
         return copy;
       });
 
-      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
       // Surface user-friendly error — rate limit is the most common failure
-      if (errMsg.includes('429') || errMsg.includes('Rate limit') || errMsg.includes('Too many')) {
-        alert('Rate limit: too many pending DJs. Approve or reject existing drafts first.');
+      if (
+        errMsg.includes("429") ||
+        errMsg.includes("Rate limit") ||
+        errMsg.includes("Too many")
+      ) {
+        alert(
+          "Rate limit: too many pending DJs. Approve or reject existing drafts first.",
+        );
       } else {
         alert(`Failed to stage ${suggestion.name}: ${errMsg}`);
       }
@@ -307,29 +329,29 @@ export function ChatAssistant({
   /** Confirm a manual proposal (existing Station / Brand / Artist creation flow). */
   const confirmProposal = async (
     index: number,
-    proposal: NonNullable<ChatMessage['proposal']>,
+    proposal: NonNullable<ChatMessage["proposal"]>,
   ) => {
     try {
-      if (proposal.entity === 'station') {
+      if (proposal.entity === "station") {
         await api.createStation(proposal.data);
-      } else if (proposal.entity === 'brand') {
+      } else if (proposal.entity === "brand") {
         await api.createBrand(proposal.data);
-      } else if (proposal.entity === 'artist') {
+      } else if (proposal.entity === "artist") {
         await api.createArtist(proposal.data);
       }
 
-      setMessages(prev => {
+      setMessages((prev) => {
         const copy = [...prev];
-        copy[index] = { ...copy[index], proposalStatus: 'success' };
+        copy[index] = { ...copy[index], proposalStatus: "success" };
         return copy;
       });
       if (onEntityCreated) {
         onEntityCreated();
       }
     } catch (err: unknown) {
-      setMessages(prev => {
+      setMessages((prev) => {
         const copy = [...prev];
-        copy[index] = { ...copy[index], proposalStatus: 'error' };
+        copy[index] = { ...copy[index], proposalStatus: "error" };
         return copy;
       });
 
@@ -337,12 +359,12 @@ export function ChatAssistant({
         proposal.entity.charAt(0).toUpperCase() + proposal.entity.slice(1);
       let message = `Couldn't create the ${entityName}.`;
 
-      const errMsg = err instanceof Error ? err.message : '';
-      if (errMsg.includes('Network')) {
-        message = 'Network error. Check your connection and try again.';
-      } else if (errMsg.includes('429') || errMsg.includes('quota')) {
-        message = 'API quota exceeded. Wait a moment and try again.';
-      } else if (errMsg.includes('409') || errMsg.includes('already exists')) {
+      const errMsg = err instanceof Error ? err.message : "";
+      if (errMsg.includes("Network")) {
+        message = "Network error. Check your connection and try again.";
+      } else if (errMsg.includes("429") || errMsg.includes("quota")) {
+        message = "API quota exceeded. Wait a moment and try again.";
+      } else if (errMsg.includes("409") || errMsg.includes("already exists")) {
         message = `A ${proposal.entity} with this name already exists.`;
       }
 
@@ -352,7 +374,11 @@ export function ChatAssistant({
 
   if (!open) {
     return (
-      <button className="chat-toggle" onClick={() => setOpen(true)} title="AI Assistant">
+      <button
+        className="chat-toggle"
+        onClick={() => setOpen(true)}
+        title="AI Assistant"
+      >
         💬
       </button>
     );
@@ -366,17 +392,19 @@ export function ChatAssistant({
           {currentStationId && selectedStation && (
             <span
               style={{
-                fontSize: '0.75em',
-                fontWeight: 'normal',
-                color: 'var(--text-secondary)',
-                marginLeft: '0.5em',
+                fontSize: "0.75em",
+                fontWeight: "normal",
+                color: "var(--text-secondary)",
+                marginLeft: "0.5em",
               }}
             >
               — {selectedStation.name}
             </span>
           )}
         </h3>
-        <button className="chat-close" onClick={() => setOpen(false)}>✕</button>
+        <button className="chat-close" onClick={() => setOpen(false)}>
+          ✕
+        </button>
       </div>
 
       <div className="chat-messages">
@@ -386,28 +414,28 @@ export function ChatAssistant({
 
             {/* Structured DJ suggestion cards */}
             {msg.djSuggestions && msg.djSuggestions.length > 0 && (
-              <div style={{ marginTop: 'var(--space-md)' }}>
+              <div style={{ marginTop: "var(--space-md)" }}>
                 {msg.djSuggestions.map((dj, djIdx) => {
-                  const status = msg.djStagingStatuses?.[djIdx] ?? 'idle';
+                  const status = msg.djStagingStatuses?.[djIdx] ?? "idle";
                   return (
                     <div
                       key={djIdx}
                       style={{
-                        marginBottom: 'var(--space-sm)',
-                        padding: 'var(--space-sm) var(--space-md)',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: 'var(--radius-sm)',
-                        borderLeft: '3px solid var(--accent)',
+                        marginBottom: "var(--space-sm)",
+                        padding: "var(--space-sm) var(--space-md)",
+                        background: "rgba(255,255,255,0.05)",
+                        borderRadius: "var(--radius-sm)",
+                        borderLeft: "3px solid var(--accent)",
                       }}
                     >
-                      <div style={{ marginBottom: 'var(--space-xs)' }}>
+                      <div style={{ marginBottom: "var(--space-xs)" }}>
                         <strong>{dj.display_name || dj.name}</strong>
                         {dj.display_name && dj.name !== dj.display_name && (
                           <span
                             style={{
-                              fontSize: '0.8em',
-                              color: 'var(--text-secondary)',
-                              marginLeft: '0.4em',
+                              fontSize: "0.8em",
+                              color: "var(--text-secondary)",
+                              marginLeft: "0.4em",
                             }}
                           >
                             ({dj.name})
@@ -415,22 +443,22 @@ export function ChatAssistant({
                         )}
                         <span
                           style={{
-                            marginLeft: '0.5em',
-                            fontSize: '0.75em',
-                            color: 'var(--text-muted)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
+                            marginLeft: "0.5em",
+                            fontSize: "0.75em",
+                            color: "var(--text-muted)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
                           }}
                         >
-                          {dj.type || 'dj'}
+                          {dj.type || "dj"}
                         </span>
                       </div>
                       {dj.personality && (
                         <p
                           style={{
-                            fontSize: '0.82em',
-                            color: 'var(--text-secondary)',
-                            margin: '0 0 var(--space-xs) 0',
+                            fontSize: "0.82em",
+                            color: "var(--text-secondary)",
+                            margin: "0 0 var(--space-xs) 0",
                           }}
                         >
                           {dj.personality.length > 120
@@ -441,51 +469,74 @@ export function ChatAssistant({
                       {dj.genre && (
                         <span
                           style={{
-                            fontSize: '0.75em',
-                            color: 'var(--text-muted)',
-                            display: 'block',
-                            marginBottom: 'var(--space-xs)',
+                            fontSize: "0.75em",
+                            color: "var(--text-muted)",
+                            display: "block",
+                            marginBottom: "var(--space-xs)",
                           }}
                         >
                           Genre: {dj.genre}
                         </span>
                       )}
 
-                      {status === 'idle' && currentStationId && (
+                      {status === "idle" && currentStationId && (
                         <button
                           className="btn btn-primary btn-sm"
-                          style={{ marginTop: 'var(--space-xs)' }}
+                          style={{ marginTop: "var(--space-xs)" }}
                           onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
                         >
                           Stage DJ
                         </button>
                       )}
-                      {status === 'staging' && (
-                        <span style={{ fontSize: '0.85em', color: 'var(--text-secondary)' }}>
+                      {status === "staging" && (
+                        <span
+                          style={{
+                            fontSize: "0.85em",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
                           Staging…
                         </span>
                       )}
-                      {status === 'staged' && (
-                        <span style={{ fontSize: '0.85em', color: 'var(--success-color, #4ade80)' }}>
+                      {status === "staged" && (
+                        <span
+                          style={{
+                            fontSize: "0.85em",
+                            color: "var(--success-color, #4ade80)",
+                          }}
+                        >
                           ✅ Staged — check Pending AI DJs
                         </span>
                       )}
-                      {status === 'error' && (
+                      {status === "error" && (
                         <div>
-                          <span style={{ fontSize: '0.85em', color: 'var(--error-color, #f87171)' }}>
+                          <span
+                            style={{
+                              fontSize: "0.85em",
+                              color: "var(--error-color, #f87171)",
+                            }}
+                          >
                             ❌ Staging failed
                           </span>
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ marginLeft: 'var(--space-sm)', fontSize: '0.8em' }}
+                            style={{
+                              marginLeft: "var(--space-sm)",
+                              fontSize: "0.8em",
+                            }}
                             onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
                           >
                             Retry
                           </button>
                         </div>
                       )}
-                      {status === 'idle' && !currentStationId && (
-                        <span style={{ fontSize: '0.8em', color: 'var(--text-muted)' }}>
+                      {status === "idle" && !currentStationId && (
+                        <span
+                          style={{
+                            fontSize: "0.8em",
+                            color: "var(--text-muted)",
+                          }}
+                        >
                           Open a station to stage this DJ
                         </span>
                       )}
@@ -499,37 +550,39 @@ export function ChatAssistant({
             {msg.proposal && (
               <div
                 style={{
-                  marginTop: 'var(--space-md)',
-                  padding: 'var(--space-sm)',
-                  background: 'rgba(255,255,255,0.05)',
-                  borderRadius: 'var(--radius-sm)',
+                  marginTop: "var(--space-md)",
+                  padding: "var(--space-sm)",
+                  background: "rgba(255,255,255,0.05)",
+                  borderRadius: "var(--radius-sm)",
                 }}
               >
                 <p
                   style={{
-                    margin: '0 0 var(--space-sm) 0',
-                    fontSize: '0.9em',
-                    color: 'var(--text-secondary)',
+                    margin: "0 0 var(--space-sm) 0",
+                    fontSize: "0.9em",
+                    color: "var(--text-secondary)",
                   }}
                 >
-                  ✨ AI proposes a new {msg.proposal.entity}:{' '}
+                  ✨ AI proposes a new {msg.proposal.entity}:{" "}
                   <strong>{msg.proposal.data.name}</strong>
                 </p>
-                {msg.proposalStatus === 'pending' && (
+                {msg.proposalStatus === "pending" && (
                   <button
                     className="btn btn-primary"
                     onClick={() => confirmProposal(msgIdx, msg.proposal!)}
                   >
-                    Confirm & Create{' '}
+                    Confirm & Create{" "}
                     {msg.proposal.entity.charAt(0).toUpperCase() +
                       msg.proposal.entity.slice(1)}
                   </button>
                 )}
-                {msg.proposalStatus === 'success' && (
-                  <span style={{ color: 'var(--success-color)' }}>✅ Created successfully!</span>
+                {msg.proposalStatus === "success" && (
+                  <span style={{ color: "var(--success-color)" }}>
+                    ✅ Created successfully!
+                  </span>
                 )}
-                {msg.proposalStatus === 'error' && (
-                  <span style={{ color: 'var(--error-color)' }}>
+                {msg.proposalStatus === "error" && (
+                  <span style={{ color: "var(--error-color)" }}>
                     ❌ Creation failed — see the alert for details
                   </span>
                 )}
@@ -552,12 +605,12 @@ export function ChatAssistant({
           name="chat-message"
           aria-label="Chat message"
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
             currentStationId && selectedStation
               ? `Ask about ${selectedStation.name}...`
-              : 'Ask me about stations, DJs, brands...'
+              : "Ask me about stations, DJs, brands..."
           }
           disabled={loading}
           autoComplete="off"

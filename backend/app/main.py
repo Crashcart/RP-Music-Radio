@@ -35,6 +35,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("AetherWave API starting up")
     init_db()
+    # Ensure output directory exists for static file serving
+    try:
+        output_dir = Path("/app/output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("Output directory ready: %s", output_dir)
+    except (OSError, PermissionError) as e:
+        logger.warning("Could not create output directory: %s", e)
     yield
     logger.info("AetherWave API shut down")
 
@@ -114,7 +121,10 @@ app.include_router(v1_router)
 # ── Static Files (for generated art) ───────────────────────────────────
 # Serve generated images (station art, DJ portraits, brand logos) from /output
 output_dir = Path("/app/output")
-output_dir.mkdir(parents=True, exist_ok=True)
+try:
+    output_dir.mkdir(parents=True, exist_ok=True)
+except (OSError, PermissionError) as e:
+    logger.warning("Could not create output directory at module load: %s", e)
 app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
 logger.info("Static files mounted at /output")
 
