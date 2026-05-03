@@ -175,48 +175,35 @@ export function ChatAssistant({
 
     try {
       const systemPrompt = buildSystemPrompt(currentStationId, selectedStation);
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/v1/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          system_prompt: systemPrompt,
-          history: messages.filter(m => m.role !== 'system').map(m => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+      const data = await api.chat({
+        message: text,
+        system_prompt: systemPrompt,
+        history: messages.filter(m => m.role !== 'system').map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        const errorMsg = data.error?.message || data.message || 'Unknown error';
-        const userFriendlyMsg = parseApiError(errorMsg);
-        setMessages(prev => [
-          ...prev,
-          { role: 'assistant', content: `⚠️ ${userFriendlyMsg}` },
-        ]);
-      } else {
-        const replyText: string = data.reply ?? '';
-        const djSuggestions = parseDJSuggestions(replyText);
+      const replyText: string = data.reply ?? '';
+      const djSuggestions = parseDJSuggestions(replyText);
 
-        // Strip DJ_SUGGESTION blocks from the visible reply so the card UI
-        // is the sole presentation for structured suggestions.
-        const visibleReply = djSuggestions.length > 0
-          ? replyText.replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, '').trim()
-          : replyText;
+      // Strip DJ_SUGGESTION blocks from the visible reply so the card UI
+      // is the sole presentation for structured suggestions.
+      const visibleReply = djSuggestions.length > 0
+        ? replyText.replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, '').trim()
+        : replyText;
 
-        const newMsg: ChatMessage = {
-          role: 'assistant',
-          content: visibleReply,
-          proposal: data.proposal,
-          proposalStatus: data.proposal ? 'pending' : undefined,
-          djSuggestions: djSuggestions.length > 0 ? djSuggestions : undefined,
-          djStagingStatuses: djSuggestions.length > 0
-            ? Object.fromEntries(djSuggestions.map((_, idx) => [idx, 'idle']))
-            : undefined,
-        };
-        setMessages(prev => [...prev, newMsg]);
+      const newMsg: ChatMessage = {
+        role: 'assistant',
+        content: visibleReply,
+        proposal: data.proposal,
+        proposalStatus: data.proposal ? 'pending' : undefined,
+        djSuggestions: djSuggestions.length > 0 ? djSuggestions : undefined,
+        djStagingStatuses: djSuggestions.length > 0
+          ? Object.fromEntries(djSuggestions.map((_, idx) => [idx, 'idle']))
+          : undefined,
+      };
+      setMessages(prev => [...prev, newMsg]);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Connection failed';

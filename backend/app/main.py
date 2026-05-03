@@ -114,9 +114,9 @@ app.include_router(v1_router)
 # ── Static Files (for generated art) ───────────────────────────────────
 # Serve generated images (station art, DJ portraits, brand logos) from /output
 output_dir = Path("/app/output")
-if output_dir.exists():
-    app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
-    logger.info("Static files mounted at /output")
+output_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
+logger.info("Static files mounted at /output")
 
 
 @app.get("/health")

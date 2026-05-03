@@ -30,13 +30,14 @@ def init_worker_logging(**_kwargs):
     """Set up structured logging in each Celery worker process."""
     setup_logging()
 
+
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 celery_app = Celery(
     "aetherwave",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["app.tasks.synthesis"],
+    include=["app.tasks", "app.tasks.synthesis"],
 )
 
 celery_app.conf.update(
@@ -51,12 +52,12 @@ celery_app.conf.update(
     beat_schedule={
         # Daily cleanup: remove expired AI-drafted DJs.
         "cleanup-expired-drafts": {
-            "task": "app.tasks.cleanup.cleanup_expired_drafts",
+            "task": "app.tasks.cleanup_expired_drafts",
             "schedule": crontab(hour=3, minute=0),  # 03:00 UTC daily
         },
         # Frequent auto-publish: finalise DJs past their undo window.
         "autopublish-pending-artists": {
-            "task": "app.tasks.cleanup.autopublish_pending_artists",
+            "task": "app.tasks.autopublish_pending_artists",
             "schedule": 10.0,  # every 10 seconds
         },
     },
@@ -65,7 +66,8 @@ celery_app.conf.update(
 
 # ── Periodic task implementations ────────────────────────────────────
 
-@celery_app.task(name="app.tasks.cleanup.cleanup_expired_drafts", bind=True)
+
+@celery_app.task(name="app.tasks.cleanup_expired_drafts", bind=True)
 def cleanup_expired_drafts(self):
     """
     Delete Artist rows with status='draft' whose expires_at is in the past.
@@ -94,7 +96,10 @@ def cleanup_expired_drafts(self):
         )
     except Exception as exc:
         logger.error(
-            "cleanup_expired_drafts: error=%s correlation=%s", exc, correlation_id, exc_info=True
+            "cleanup_expired_drafts: error=%s correlation=%s",
+            exc,
+            correlation_id,
+            exc_info=True,
         )
         db.rollback()
         raise
@@ -102,7 +107,7 @@ def cleanup_expired_drafts(self):
         db.close()
 
 
-@celery_app.task(name="app.tasks.cleanup.autopublish_pending_artists", bind=True)
+@celery_app.task(name="app.tasks.autopublish_pending_artists", bind=True)
 def autopublish_pending_artists(self):
     """
     Finalise pending_publish Artist rows whose undo window has expired.
@@ -146,12 +151,15 @@ def autopublish_pending_artists(self):
         if count:
             logger.info(
                 "autopublish_pending_artists: promoted=%d correlation=%s",
-                count, correlation_id,
+                count,
+                correlation_id,
             )
     except Exception as exc:
         logger.error(
             "autopublish_pending_artists: error=%s correlation=%s",
-            exc, correlation_id, exc_info=True,
+            exc,
+            correlation_id,
+            exc_info=True,
         )
         db.rollback()
         raise
