@@ -525,6 +525,46 @@ function StationDetail({
             <DetailField label="Notes" value={station.lore_notes} />
           </div>
         </div>
+        {station.color_palette && (
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">🎨 Color Palette</h3>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--space-sm)",
+                flexWrap: "wrap",
+              }}
+            >
+              {station.color_palette.split("|").map((color) => (
+                <div
+                  key={color}
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    backgroundColor: color,
+                    border: "2px solid var(--border-color)",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    title: color,
+                  }}
+                  title={`Copy: ${color}`}
+                  onClick={() => navigator.clipboard.writeText(color)}
+                />
+              ))}
+            </div>
+            <p
+              style={{
+                marginTop: "var(--space-sm)",
+                fontSize: "0.85em",
+                color: "var(--text-muted)",
+              }}
+            >
+              Suggested by AI. Click color to copy hex code.
+            </p>
+          </div>
+        )}
         {/* Station Art with Regenerate */}
         <div className="card">
           <div
