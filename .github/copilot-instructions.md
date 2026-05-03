@@ -102,6 +102,26 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
   - **RC validation**: `./scripts/pull-beta.sh` to test release candidates
   - **Production**: `./scripts/pull-main.sh` to deploy stable releases
 
+### Rule 12-P1: PRIORITY 1 — Never Stop at First Green
+- **CRITICAL**: AI must continue working through ALL issues until entire PR is ALL GREEN
+- **PROHIBITION**: Do NOT stop working when one issue is fixed
+- **REQUIREMENT**: After each issue becomes green, immediately:
+  1. Check for remaining issues (new failures, other checks, regressions)
+  2. If any checks still failing → continue to next issue
+  3. If all checks green → verify no regressions, then STOP
+- **EXAMPLE** (What NOT to do):
+  - ❌ Fix lint issue → lint passes → STOP (WRONG!)
+  - ❌ Fix security audit → audit passes → STOP (WRONG!)
+- **EXAMPLE** (What TO do):
+  - ✅ Fix lint issue → lint passes → check other issues
+  - ✅ Fix security audit → audit passes → check regressions
+  - ✅ Fix test failure → tests pass → verify all green
+  - ✅ All checks green → THEN stop
+- **ENFORCEMENT**: Treat each green issue as a checkpoint, not a finish line
+- **CONSEQUENCE**: Stopping at first green = escalate to human (Cr-level violation)
+
+---
+
 ### Rule 12: Continuous PR Issue Detection & Escalating Fixes
 - **REQUIREMENT**: After creating a PR, continuously monitor and fix issues using escalating severity levels and governance process
 - **CONTINUOUS MONITORING** (Every 1 Minute):
@@ -125,10 +145,13 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
   7. Update `.github/TODO.md` with completion status
   8. Update `.github/PLANNING.md` with fix summary
   9. Add PR comment: "Fixed [Jr-1, Sr-2] in cycle N per governance process"
-- **REPEAT UNTIL ALL GREEN**: Loop monitoring → identify → fix → update → re-check
+- **REPEAT UNTIL ALL GREEN** (Rule 12-P1: Never stop at first green):
   - After each fix, pause 1 minute for CI to update
-  - Check for regressions or new issues
-  - Continue until **ALL CI checks pass** (100% green)
+  - **Immediately re-check ALL checks** (not just the one you fixed)
+  - Check for regressions or newly revealed issues
+  - If ANY check still failing → continue to next issue
+  - If ALL checks green → verify stability, then stop
+  - **Do NOT stop when one issue becomes green** — this is P1 violation
 - **SUCCESS CRITERIA** — PR ready to merge only when:
   - ✅ All CI checks green (verify, build, test-frontend, test-backend, lint, audit, security)
   - ✅ 0 failed checks (no red ✗)
