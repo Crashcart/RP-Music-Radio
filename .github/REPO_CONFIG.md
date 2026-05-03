@@ -1,7 +1,7 @@
 # Repository Configuration — RP-Music-Radio
 
 > **Purpose**: Project-specific settings for AI agents and developers. Read this alongside `copilot-instructions.md`.  
-> **Last Updated**: 2026-04-26  
+> **Last Updated**: 2026-05-03  
 > 🔒 **GOVERNANCE FILE** — Protected by Rule 10 in `copilot-instructions.md`. Follow full workflow when editing.
 
 ---

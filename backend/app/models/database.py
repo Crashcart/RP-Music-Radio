@@ -105,13 +105,20 @@ class Station(Base):
 
 class Artist(Base):
     """
-    An independent artist or DJ persona with persistent voice DNA.
-    Artists can be linked to stations (as DJs) or exist standalone.
+    A DJ or artist persona with persistent voice DNA, always linked to a station.
+
+    Per governance rules (copilot-instructions.md), DJs/Artists MUST be linked
+    to stations via the station_id foreign key. All artists belong to exactly
+    one station.
 
     Status lifecycle for AI-generated DJs:
       draft            — AI-created, pending user review; expires after 7 days
       pending_publish  — User approved, in 30-second undo window
       published        — Live and visible; default for manually created artists
+
+    Migration note: If upgrading from earlier schema with nullable station_id,
+    run: UPDATE artists SET station_id = '<station-id>' WHERE station_id IS NULL
+    before altering the column to NOT NULL.
     """
 
     __tablename__ = "artists"
@@ -123,8 +130,8 @@ class Artist(Base):
     display_name = Column(String, default="")  # On-air name if different
     artist_type = Column(String, default="dj")  # dj, musician, narrator, host
 
-    # Station link (nullable — standalone artists have no station)
-    station_id = Column(String, ForeignKey("stations.id"), nullable=True)
+    # Station link (NOT NULL — all artists must be linked to a station per governance)
+    station_id = Column(String, ForeignKey("stations.id"), nullable=False)
 
     # Bio & personality
     bio = Column(Text, default="")  # Full character backstory
