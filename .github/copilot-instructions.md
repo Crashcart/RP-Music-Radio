@@ -82,6 +82,21 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **CONSEQUENCE**: PR rejection; requires escalation to repository maintainers
 - **NOTE**: "Never weaken a constraint" — removals must be justified and approved
 
+### Rule 11: Always Scan All Open PRs Before Focusing on One
+- **REQUIREMENT**: Before starting PR issue fixing work, scan ALL open PRs for failures/blockers
+- **PROCEDURE**: When asked to fix issues on a specific PR:
+  1. List all open PRs: `gh pr list --state open` (or via GitHub API)
+  2. Check each PR's status: CI results, merge state, comment count
+  3. Identify ANY failing checks or blockers across ALL PRs
+  4. Prioritize: Fix critical blockers across ALL PRs, not just the requested one
+  5. Report summary to user: "Scanning found issues on PR #X, #Y — addressing all"
+- **RATIONALE**: Single-PR focus can blind AI to systemic issues affecting multiple PRs
+- **CONSEQUENCE**: Missing multiple failing PRs = escalate to human for PR triage
+- **EXAMPLE** (What NOT to do):
+  - ❌ User says "fix PR #38" → AI focuses only on #38, misses #36 hanging test
+- **EXAMPLE** (What TO do):
+  - ✅ User says "fix PR #38" → AI scans ALL PRs, finds #36 also broken, fixes both
+
 ---
 
 ## The A-to-Z Workflow (4 Phases)
