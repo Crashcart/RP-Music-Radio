@@ -126,7 +126,7 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
   - Auditability (PLANNING.md records decisions)
 - **ENFORCEMENT**: PR cannot merge until all identified issues fixed via this process
 - **CONSEQUENCE**: Ad-hoc fixes without governance documentation → PR review blocked
-- **TIMING**: Set a monitor to check PR in ~10 minutes after creation if feedback expected
+- **TIMING**: Set a monitor to check PR in ~3 minutes after creation if feedback expected
 
 ---
 
