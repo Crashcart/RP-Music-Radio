@@ -97,6 +97,23 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **EXAMPLE** (What TO do):
   - ✅ User says "fix PR #38" → AI scans ALL PRs, finds #36 also broken, fixes both
 
+### Rule 12-Merge: PR Merge Conflicts Must Be Resolved Before Merge
+- **REQUIREMENT**: No PR can merge with unresolved merge conflicts
+- **CHECK**: Before merging, verify `mergeable_state != "dirty"` (indicates conflicts)
+- **PROCEDURE** (If conflicts detected):
+  1. Fetch latest base branch: `git fetch origin <base-branch>`
+  2. Merge conflicts arise when: feature branch diverged from base
+  3. Resolve conflicts: Edit files, keep correct version of each conflict
+  4. Run full test suite after resolution (conflicts can introduce bugs)
+  5. Commit: `git commit -m "resolve: merge conflicts with origin/<base>"`
+  6. Push: `git push origin <feature-branch>`
+  7. Verify: `mergeable_state` changes to "clean" (or "unstable" if CI pending)
+- **RATIONALE**: Unresolved conflicts block merging; manual resolution ensures correctness
+- **ESCALATION**: If conflicts cannot be resolved automatically, escalate to human
+- **EXAMPLE** (When to fix):
+  - GitHub shows PR status: "This branch has conflicts that must be resolved"
+  - mergeable_state = "dirty" → must resolve before merge can proceed
+
 ---
 
 ## The A-to-Z Workflow (4 Phases)
