@@ -124,7 +124,11 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ### Rule 12: Continuous PR Issue Detection & Escalating Fixes
 - **REQUIREMENT**: After creating a PR, continuously monitor and fix issues using escalating severity levels and governance process
-- **CONTINUOUS MONITORING** (Every 1 Minute):
+- **MONITORING WINDOW**: 8 minutes maximum
+  - Check PR status **once per minute** (not continuously/obsessively)
+  - After 8 minutes, escalate remaining issues as Cr-level blockers to human
+  - Rationale: Ensures progress without creating endless loops
+- **CONTINUOUS MONITORING** (Every 1 Minute, up to 8 total):
   1. **Check PR status** — CI results, comments, review requests, mergeable state
   2. **Identify NEW issues** — As they appear (newly failed checks, comments, etc.)
   3. **Categorize by Severity** — Assign level based on impact:
