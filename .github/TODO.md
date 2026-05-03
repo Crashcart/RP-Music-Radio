@@ -1,8 +1,8 @@
 # AetherWave / RP-Music-Radio — Active Task List
 
-**Last Updated**: 2026-04-27  
+**Last Updated**: 2026-05-03  
 **Project**: Headless Media Factory for procedural lore-heavy radio content  
-**Status**: Foundation & UI Architecture phase
+**Status**: Foundation & UI Architecture phase + Governance Refinement
 
 ---
 
@@ -17,6 +17,19 @@
 - [x] Create `.github/PLANNING.md` with technical decisions
 - [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
 - [x] Update TODO list to reflect the new hierarchical DB architecture
+
+### Governance Refinement (✅ SR-Level Cleanup Completed)
+
+**Session 2026-05-03: Consolidated PR Rules & Entity Constraints**
+- [x] Identified and fixed rule numbering chaos ("10 rules" → "12 core rules")
+- [x] Consolidated overlapping Rules 12-P1 and Rule 12 into single cohesive rule
+- [x] Added explicit escalation procedures with GitHub workflow steps
+- [x] Enhanced escalation triggers: merge conflicts, unclear tests, blocked deps, Cr-level blockers
+- [x] Fixed entity constraint violation: Artist.station_id now NOT NULL (per governance)
+- [x] Updated versions: copilot-instructions.md v2.1 → v3.0
+- [x] Updated timestamps: 2026-04-26 → 2026-05-03 across governance files
+- [x] Verified all CI/CD workflows exist and are correctly referenced
+- [x] Added migration notes for database upgrades (nullable → NOT NULL)
 
 ---
 
