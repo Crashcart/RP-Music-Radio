@@ -139,7 +139,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 value=token,
                 max_age=_CSRF_COOKIE_MAX_AGE,
                 httponly=False,  # JS must be able to read it (double-submit pattern)
-                samesite="lax",  # Changed from strict for dev cross-port support
+                samesite="lax",  # Changed from "strict" to allow cross-port in development
                 secure=False,  # Set to True behind TLS in production
                 path="/",
             )

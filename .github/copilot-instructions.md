@@ -82,6 +82,38 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **CONSEQUENCE**: PR rejection; requires escalation to repository maintainers
 - **NOTE**: "Never weaken a constraint" — removals must be justified and approved
 
+### Rule 11: Always Scan All Open PRs Before Focusing on One
+- **REQUIREMENT**: Before starting PR issue fixing work, scan ALL open PRs for failures/blockers
+- **PROCEDURE**: When asked to fix issues on a specific PR:
+  1. List all open PRs: `gh pr list --state open` (or via GitHub API)
+  2. Check each PR's status: CI results, merge state, comment count
+  3. Identify ANY failing checks or blockers across ALL PRs
+  4. Prioritize: Fix critical blockers across ALL PRs, not just the requested one
+  5. Report summary to user: "Scanning found issues on PR #X, #Y — addressing all"
+- **RATIONALE**: Single-PR focus can blind AI to systemic issues affecting multiple PRs
+- **CONSEQUENCE**: Missing multiple failing PRs = escalate to human for PR triage
+- **EXAMPLE** (What NOT to do):
+  - ❌ User says "fix PR #38" → AI focuses only on #38, misses #36 hanging test
+- **EXAMPLE** (What TO do):
+  - ✅ User says "fix PR #38" → AI scans ALL PRs, finds #36 also broken, fixes both
+
+### Rule 12-Merge: PR Merge Conflicts Must Be Resolved Before Merge
+- **REQUIREMENT**: No PR can merge with unresolved merge conflicts
+- **CHECK**: Before merging, verify `mergeable_state != "dirty"` (indicates conflicts)
+- **PROCEDURE** (If conflicts detected):
+  1. Fetch latest base branch: `git fetch origin <base-branch>`
+  2. Merge conflicts arise when: feature branch diverged from base
+  3. Resolve conflicts: Edit files, keep correct version of each conflict
+  4. Run full test suite after resolution (conflicts can introduce bugs)
+  5. Commit: `git commit -m "resolve: merge conflicts with origin/<base>"`
+  6. Push: `git push origin <feature-branch>`
+  7. Verify: `mergeable_state` changes to "clean" (or "unstable" if CI pending)
+- **RATIONALE**: Unresolved conflicts block merging; manual resolution ensures correctness
+- **ESCALATION**: If conflicts cannot be resolved automatically, escalate to human
+- **EXAMPLE** (When to fix):
+  - GitHub shows PR status: "This branch has conflicts that must be resolved"
+  - mergeable_state = "dirty" → must resolve before merge can proceed
+
 ---
 
 ## The A-to-Z Workflow (4 Phases)

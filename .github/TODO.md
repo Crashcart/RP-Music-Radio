@@ -454,3 +454,124 @@
   - Users can start app and configure key via Settings page
   - Created GEMINI_SETUP.md with setup instructions
 - [ ] First-time user onboarding flow (Settings → "Please add API key to continue")
+
+---
+
+## Logging & Diagnostics (Phase 1-3)
+
+### Phase 1: Core Infrastructure ✅
+
+- [x] SQLite logging handler + app_logs table schema
+- [x] JSON formatter for structured logging
+- [x] Log analyzer with query methods (errors, patterns, summaries)
+- [x] API endpoints: /api/v1/logs/errors, /api/v1/logs/summary, /api/v1/logs/search
+- [x] CLI tool for local debugging (python -m app.log_analyzer)
+- [x] Documentation in .github/LOGGING.md
+
+**Status**: Ready. Claude Code can now query logs via HTTP to analyze issues.
+
+### Phase 2: Pattern Detection & Analysis 🚧 (Next)
+
+- [ ] Error grouping by message + frequency tracking
+- [ ] Auto-detect recurring errors (>3x in 24h)
+- [ ] Build fix suggestion catalog (error → common causes → fixes)
+- [ ] Implement `/api/v1/logs/patterns` endpoint
+- [ ] Claude Code integration: analyze logs → suggest fixes
+- [ ] Track error trends (are we improving?)
+- [ ] Add cost tracking for AI calls (tokens, USD spent)
+
+**When to start**: After Phase 1 tested on alpha branch
+
+### Phase 3: Automation ⏳ (Future)
+
+- [ ] Auto-create GitHub issues for recurring errors (>5 in 24h)
+- [ ] Auto-fix simple issues (env var updates, log level adjustments)
+- [ ] Daily/weekly error summaries (email/Slack)
+- [ ] Performance regression alerts (P95 latency spike >20%)
+- [ ] Cost budget alerts (exceed $X/day → warn)
+- [ ] Log cleanup automation (delete >30 days, compress archives)
+
+**When to start**: After Phase 2 validated on production
+
+---
+
+## Session: New Feature Requirements (2026-05-03) 🚧
+
+### Feature 1: AI Auto-Pick Color for Webpage
+
+**Requirement**: AI should automatically select color palette for website based on station/universe context.
+
+**Subtasks**:
+- [ ] Update ChatAssistant to suggest color palette when creating station
+- [ ] Store color_palette in Station model (already exists)
+- [ ] Extend Gemini prompt to generate color suggestions with hex values
+- [ ] Validate color hex format (6-char hex code)
+- [ ] Update station detail UI to display/edit color palette
+- [ ] Apply colors to station page (background, accent, text)
+- [ ] Test color accessibility (contrast ratio ≥4.5:1 per WCAG AA)
+
+**Implementation Notes**:
+- Use Gemini to suggest palette: primary, secondary, accent colors
+- Format: `"color_primary": "#1a1a2e", "color_secondary": "#16213e", ...`
+- Validate on backend with Pydantic regex: `^#[0-9a-f]{6}$`
+- Apply to CSS custom properties: `--primary: var(--color-primary);`
+
+---
+
+### Feature 2: DJ Announcement Process
+
+**Requirement**: Enable AI to generate DJ announcements/intro scripts for all DJs.
+
+**Subtasks**:
+- [ ] Create `POST /api/v1/artists/{id}/announcement` endpoint
+- [ ] Gemini prompt: "Create a 30-second radio announcement introducing [DJ name] with personality"
+- [ ] Store announcement text in Artist model (new field: `announcement_script`)
+- [ ] Add "Generate Announcement" button in DJ detail card
+- [ ] Display generated announcement in expandable section
+- [ ] Allow user to regenerate if unsatisfied
+- [ ] Optional: Integrate with voice synthesis (Lyria) for audio preview
+- [ ] Apply to ALL artist types (dj, host, musician)
+
+**Announcement Script Format**:
+```
+Station: [Station Name]
+DJ: [DJ Name]
+Format: "[30-second radio intro script]"
+Example: "Welcome back to NEBULA FM! I'm DJ Vex, your guide through the electronic cosmos. Stay tuned for the best synthwave hits and cosmic vibes. You're listening to NEBULA FM 99.8!"
+```
+
+---
+
+### Feature 3: AI Search for Royalty-Free Pictures (Games/Universes)
+
+**Requirement**: When creating a universe/game context, AI should search for and suggest royalty-free images to represent that world.
+
+**Subtasks**:
+- [ ] Update Universe model with `image_url` field (for game world representative art)
+- [ ] Create `POST /api/v1/universes/{id}/research` endpoint enhancement
+- [ ] Extend Gemini research prompt to return image search query suggestions
+- [ ] Integrate with Unsplash/Pexels API for royalty-free image search
+- [ ] Search for images matching: game title, genre, atmosphere, key locations
+- [ ] Display 5-10 image options in Universe detail with attribution
+- [ ] Allow user to select and save image (stores URL + photographer credit)
+- [ ] Cache images locally (save to /output/{universe_id}/{selected_image}.jpg)
+- [ ] Display selected universe image in games/universes list view
+
+**Example Workflow**:
+1. User: "Add universe: Elden Ring"
+2. AI researches: Publisher (FromSoftware), Lore, Atmosphere ("cosmic dark fantasy, golden trees")
+3. AI generates search query: "dark souls fantasy landscape golden runes"
+4. Search Unsplash API → return image results
+5. Show 5 best matches in UI
+6. User selects image → saved to database with credit link
+
+**Attribution**:
+- Include photographer name + Unsplash/Pexels link
+- Display: "Image by [photographer] via Unsplash"
+- Store: `{image_url, image_credit, image_photographer}`
+
+---
+
+**Priority Order**: Feature 1 (color) → Feature 2 (DJ announcement) → Feature 3 (universe images)  
+**Estimated Timeline**: 2-3 days (one feature per day)
+**Branch Strategy**: Feature branches: `feat/ai-color-picker`, `feat/dj-announcements`, `feat/universe-images`
