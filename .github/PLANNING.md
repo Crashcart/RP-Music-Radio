@@ -725,3 +725,49 @@ Every form field in the app must have:
 5. Document in CLAUDE.md: Form field tagging patterns + examples
 6. Merge PR #37 → beta branch
 7. Run UAT with real Gemini API
+
+---
+
+## Session 6: Deletion Capabilities & Cleanup (2026-05-03)
+
+### Objective
+Ensure all created entities can be removed throughout the application.
+
+### 8. Entity Deletion & Data Cleanup ✅
+
+**Decision**: Comprehensive deletion UX across all entity types
+
+**Implementation**:
+
+| Entity | Location | Method | Confirmation |
+|--------|----------|--------|--------------|
+| **Stations** | Stations detail → header | Delete button | Yes |
+| **Published DJs** | Stations detail → DJ card overlay | Red ✕ button | Yes |
+| **Pending DJs** | Stations detail → pending section | Reject button | Yes |
+| **Independent Artists** | Artists page → table row | Delete button | Yes |
+| **Brands** | Brands page → detail | Delete button | Yes |
+| **Jingles** | Stations detail → jingles table | Delete button | Yes |
+| **Drafts** | Drafting Table → table row | Delete button | Yes |
+
+**Rationale**:
+- Users must be able to clean up after experimentation
+- Confirmation dialogs prevent accidental data loss
+- Consistent UX across all pages (red delete button or "Reject" for drafts)
+- Pending DJs have lightweight "Reject" (just deletes draft); published DJs have heavy "Delete" (removes from production)
+- No cascading deletes: deleting a station doesn't auto-delete its DJs (user can still delete them independently)
+
+**UI Pattern**:
+- Published entities: red ✕ or "Delete" button with hover effect
+- Draft entities: "Reject" button (lighter terminology for unfinalized content)
+- All deletions require confirmation: `confirm("Delete [entity]? This cannot be undone.")`
+- Disabled state during deletion: button shows "…" while request in-flight
+
+**API Layer**:
+- All delete endpoints idempotent (safe to retry)
+- Returns `{deleted: "<id>"}` on success
+- Validation: published DJ deletion only works for `status="published"` (drafts use reject endpoint)
+
+**Trade-offs**:
+- No soft deletes (deleted data is permanently gone)
+- No undo (30-second undo only applies to DJ approval, not deletion)
+- Cascading protection: deleting a station requires separate DJ deletions (prevents mass data loss from typos)

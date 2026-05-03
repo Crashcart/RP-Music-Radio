@@ -447,6 +447,36 @@
 
 ---
 
+### Entity Deletion & Data Cleanup (✅ Complete — e4e9d37)
+
+**Completed**:
+- [x] Add delete button for published DJs in station detail (red ✕ overlay)
+- [x] Add delete handler with confirmation dialog
+- [x] Verify all other entities have delete buttons:
+  - [x] Stations: Delete button in detail header
+  - [x] Independent Artists: Delete button in Artists page table
+  - [x] Brands: Delete button in Brands detail
+  - [x] Jingles: Delete button in jingles table
+  - [x] Drafts: Delete button in DraftingTable
+  - [x] Pending DJs: Reject button in pending section (draft deletion)
+- [x] Document deletion UX pattern in PLANNING.md (Session 6)
+- [x] All deletions require confirmation: `confirm("Delete [entity]? This cannot be undone.")`
+
+**Implementation**:
+- Added `deletingDJId` state tracking for in-flight delete requests
+- Added `handleDeleteDJ` async handler with API call and refresh
+- Button shows "…" while deleting, disabled to prevent double-click
+- Published DJ deletion: red background, `color: var(--status-failed)`
+- All deletions permanent (no soft-delete, no undo window)
+- Cascading protection: deleting station doesn't auto-delete DJs
+
+**Status**: Ready for production
+- All entity types support deletion
+- Consistent UX across all pages
+- No data loss risks (confirmation required)
+
+---
+
 ### Environment & Configuration  
 - [x] Make `GOOGLE_API_KEY` optional at startup (no more warnings during boot)
   - Changed logger.warning → logger.debug in all generators
