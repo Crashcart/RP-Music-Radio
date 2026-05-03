@@ -287,6 +287,32 @@ export function ChatAssistant({
     });
   };
 
+  /** Map AI DJ suggestion to artist payload, handling field name transformations. */
+  const mapSuggestionToArtistPayload = (
+    editedData: Record<string, string>,
+  ) => ({
+    name: editedData.name,
+    display_name: editedData.display_name || editedData.name,
+    artist_type: ([
+      "dj",
+      "musician",
+      "narrator",
+      "host",
+      "caller",
+      "guest",
+    ].includes(editedData.type)
+      ? editedData.type
+      : "dj") as string,
+    station_id: currentStationId,
+    bio: editedData.backstory, // Note: backstory maps to bio in API
+    personality: editedData.personality,
+    catchphrases: editedData.catchphrases,
+    speaking_style: editedData.speaking_style,
+    voice_description: editedData.voice_description,
+    genre: editedData.genre,
+    signature_sound: editedData.signature_sound,
+  });
+
   /** Stage a DJ with edited data */
   const handleStageDJWithEdits = async (
     msgIndex: number,
@@ -295,7 +321,13 @@ export function ChatAssistant({
   ) => {
     if (!currentStationId) return;
 
-    // Mark as staging
+    // Validate required fields
+    if (!editedData.name?.trim()) {
+      alert("DJ name is required");
+      return;
+    }
+
+    // Mark as staging (but preserve edit state in case of error)
     setMessages((prev) => {
       const copy = [...prev];
       copy[msgIndex] = {
@@ -304,36 +336,14 @@ export function ChatAssistant({
           ...copy[msgIndex].djStagingStatuses,
           [djIndex]: "staging",
         },
-        djEditingIndex: null,
-        djEditingData: undefined,
       };
       return copy;
     });
 
     try {
-      await api.stageArtist({
-        name: editedData.name,
-        display_name: editedData.display_name || editedData.name,
-        artist_type: ([
-          "dj",
-          "musician",
-          "narrator",
-          "host",
-          "caller",
-          "guest",
-        ].includes(editedData.type)
-          ? editedData.type
-          : "dj") as string,
-        station_id: currentStationId,
-        bio: editedData.backstory,
-        personality: editedData.personality,
-        catchphrases: editedData.catchphrases,
-        speaking_style: editedData.speaking_style,
-        voice_description: editedData.voice_description,
-        genre: editedData.genre,
-        signature_sound: editedData.signature_sound,
-      });
+      await api.stageArtist(mapSuggestionToArtistPayload(editedData));
 
+      // Only clear edit state on successful staging
       setMessages((prev) => {
         const copy = [...prev];
         copy[msgIndex] = {
@@ -342,6 +352,8 @@ export function ChatAssistant({
             ...copy[msgIndex].djStagingStatuses,
             [djIndex]: "staged",
           },
+          djEditingIndex: null,
+          djEditingData: undefined,
         };
         return copy;
       });
@@ -527,10 +539,18 @@ export function ChatAssistant({
                             style={{ display: "grid", gap: "var(--space-sm)" }}
                           >
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
-                                Real Name
+                              <label
+                                htmlFor={`dj-edit-name-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Real Name *
                               </label>
                               <input
+                                id={`dj-edit-name-${msgIdx}`}
                                 type="text"
                                 value={editData.name || ""}
                                 onChange={(e) =>
@@ -540,22 +560,49 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="name"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="Real Name (required)"
+                                required
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
                                   fontSize: "0.9em",
                                   background: "rgba(255,255,255,0.05)",
-                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  border: !editData.name?.trim()
+                                    ? "1px solid var(--error-color, #f87171)"
+                                    : "1px solid rgba(255,255,255,0.1)",
                                   borderRadius: "var(--radius-sm)",
                                   color: "var(--text-primary)",
                                 }}
                               />
+                              {!editData.name?.trim() && (
+                                <span
+                                  style={{
+                                    fontSize: "0.75em",
+                                    color: "var(--error-color, #f87171)",
+                                    display: "block",
+                                    marginTop: "0.25em",
+                                  }}
+                                >
+                                  Name is required
+                                </span>
+                              )}
                             </div>
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-display-name-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 On-Air Name
                               </label>
                               <input
+                                id={`dj-edit-display-name-${msgIdx}`}
                                 type="text"
                                 value={editData.display_name || ""}
                                 onChange={(e) =>
@@ -565,6 +612,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="display_name"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="On-Air Name"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -577,8 +628,18 @@ export function ChatAssistant({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>Type</label>
+                              <label
+                                htmlFor={`dj-edit-type-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Type
+                              </label>
                               <select
+                                id={`dj-edit-type-${msgIdx}`}
                                 value={editData.type || "dj"}
                                 onChange={(e) =>
                                   handleEditFieldChange(
@@ -587,6 +648,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="type"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="Artist Type"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -631,10 +696,18 @@ export function ChatAssistant({
                             style={{ display: "grid", gap: "var(--space-sm)" }}
                           >
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-personality-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Personality
                               </label>
                               <textarea
+                                id={`dj-edit-personality-${msgIdx}`}
                                 value={editData.personality || ""}
                                 onChange={(e) =>
                                   handleEditFieldChange(
@@ -643,6 +716,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="personality"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Personality traits and characteristics"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -658,10 +735,18 @@ export function ChatAssistant({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-speaking-style-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Speaking Style
                               </label>
                               <input
+                                id={`dj-edit-speaking-style-${msgIdx}`}
                                 type="text"
                                 value={editData.speaking_style || ""}
                                 onChange={(e) =>
@@ -671,6 +756,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="speaking_style"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Speaking Style"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -683,10 +772,18 @@ export function ChatAssistant({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-voice-description-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Voice Description
                               </label>
                               <input
+                                id={`dj-edit-voice-description-${msgIdx}`}
                                 type="text"
                                 value={editData.voice_description || ""}
                                 onChange={(e) =>
@@ -696,6 +793,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="voice_description"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Voice Description for audio synthesis"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -733,10 +834,18 @@ export function ChatAssistant({
                             style={{ display: "grid", gap: "var(--space-sm)" }}
                           >
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-catchphrases-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Catchphrases (pipe-separated)
                               </label>
                               <input
+                                id={`dj-edit-catchphrases-${msgIdx}`}
                                 type="text"
                                 value={editData.catchphrases || ""}
                                 onChange={(e) =>
@@ -746,6 +855,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="catchphrases"
+                                data-section="quirks"
+                                data-type="artist"
+                                aria-label="Catchphrases (pipe-separated)"
                                 placeholder="Keep it retro|Waves incoming"
                                 style={{
                                   width: "100%",
@@ -784,10 +897,18 @@ export function ChatAssistant({
                             style={{ display: "grid", gap: "var(--space-sm)" }}
                           >
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-genre-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Genre
                               </label>
                               <input
+                                id={`dj-edit-genre-${msgIdx}`}
                                 type="text"
                                 value={editData.genre || ""}
                                 onChange={(e) =>
@@ -797,6 +918,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="genre"
+                                data-section="music"
+                                data-type="artist"
+                                aria-label="Music Genre"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -809,10 +934,18 @@ export function ChatAssistant({
                               />
                             </div>
                             <div>
-                              <label style={{ fontSize: "0.85em" }}>
+                              <label
+                                htmlFor={`dj-edit-signature-sound-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
                                 Signature Sound
                               </label>
                               <input
+                                id={`dj-edit-signature-sound-${msgIdx}`}
                                 type="text"
                                 value={editData.signature_sound || ""}
                                 onChange={(e) =>
@@ -822,6 +955,10 @@ export function ChatAssistant({
                                     e.target.value,
                                   )
                                 }
+                                data-field="signature_sound"
+                                data-section="music"
+                                data-type="artist"
+                                aria-label="Signature Sound"
                                 style={{
                                   width: "100%",
                                   padding: "0.4em",
@@ -850,7 +987,18 @@ export function ChatAssistant({
                             Backstory
                           </h5>
                           <div>
+                            <label
+                              htmlFor={`dj-edit-backstory-${msgIdx}`}
+                              style={{
+                                fontSize: "0.85em",
+                                display: "block",
+                                marginBottom: "0.25em",
+                              }}
+                            >
+                              Full Story
+                            </label>
                             <textarea
+                              id={`dj-edit-backstory-${msgIdx}`}
                               value={editData.backstory || ""}
                               onChange={(e) =>
                                 handleEditFieldChange(
@@ -859,6 +1007,10 @@ export function ChatAssistant({
                                   e.target.value,
                                 )
                               }
+                              data-field="backstory"
+                              data-section="lore"
+                              data-type="artist"
+                              aria-label="DJ Backstory and history"
                               style={{
                                 width: "100%",
                                 padding: "0.4em",
@@ -883,6 +1035,12 @@ export function ChatAssistant({
                             className="btn btn-primary btn-sm"
                             onClick={() =>
                               handleStageDJWithEdits(msgIdx, djIdx, editData)
+                            }
+                            disabled={!editData.name?.trim()}
+                            title={
+                              !editData.name?.trim()
+                                ? "DJ name is required"
+                                : "Stage this DJ with the edited details"
                             }
                           >
                             Stage DJ
@@ -970,14 +1128,14 @@ export function ChatAssistant({
                             style={{ marginTop: "var(--space-xs)" }}
                             onClick={() => handleEditDJ(msgIdx, djIdx, dj)}
                           >
-                            Edit & Stage
+                            ✏️ Edit
                           </button>
                           <button
                             className="btn btn-ghost btn-sm"
                             style={{ marginTop: "var(--space-xs)" }}
                             onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
                           >
-                            Stage as-is
+                            Stage Now
                           </button>
                         </div>
                       )}
