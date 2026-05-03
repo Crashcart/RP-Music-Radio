@@ -847,9 +847,26 @@ Improve PR issue detection and resolution speed by implementing continuous monit
 - ✅ No stalled PRs (continuous monitoring)
 - ✅ Full auditability (each cycle logged)
 
+### ALL GREEN Requirement Added
+**New Rule 12 Enforcement**:
+- PR cannot merge until **ALL CI checks pass** (100% green)
+- Success criteria:
+  - ✅ All checks green (verify, build, test-frontend, test-backend, lint, audit, security)
+  - ✅ 0 failed checks (no red ✗)
+  - ✅ 0 blockers (mergeable_state = "clean")
+  - ✅ All issues fixed and documented
+  - ✅ PR comment added confirming readiness
+
+**Quality Gate**:
+- All green = production-ready code
+- Any failed check = continue fixing cycle
+- Escalation: Jr → Sr → Cr if needed
+
 ### Governance File Changes
-- `.github/copilot-instructions.md` Rule 12 updated with new workflow
-- Commit: 7c64100
+- `.github/copilot-instructions.md` Rule 12 updated with:
+  - Continuous 1-minute checking (Commit: 7c64100)
+  - ALL GREEN requirement (Commit: 00fc3dd)
+- `.github/PLANNING.md` Session 8 updated with enhancement details
 
 ---
 
