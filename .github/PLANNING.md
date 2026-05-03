@@ -569,6 +569,42 @@ Implement AI-guided DJ form filling (Phases 1 & 2), run comprehensive Opus 4.7 b
 
 ---
 
+## 8. Logging & Diagnostics Architecture ✅
+
+**Decision**: Structured JSON logging to SQLite + HTTP API for Claude Code analysis
+
+**Implementation**:
+- **Storage**: Dual-write to SQLite (`app_logs` table) + JSON files
+- **Format**: JSON records with timestamp, component, level, message, context, exception
+- **Access**: HTTP endpoints (`/api/v1/logs/errors`, `/api/v1/logs/summary`, `/api/v1/logs/search`)
+- **Retention**: Daily rotation (keep 10 days of files), automatic cleanup (>30 days in DB)
+- **Analysis**: Claude Code queries endpoints to detect patterns and suggest fixes
+
+**Rationale**:
+- JSON format enables automated parsing and pattern detection
+- SQLite allows efficient querying by time, level, component
+- HTTP endpoints make it easy for Claude to analyze without SSH/local access
+- Phased approach: Phase 1 (core logging) → Phase 2 (pattern detection) → Phase 3 (automation)
+
+**Trade-offs**:
+- SQLite writes add minimal overhead (non-blocking, separate thread)
+- Disk usage grows with log volume (mitigated by daily rotation)
+- No real-time dashboarding yet (Phase 2 feature)
+
+**Phases**:
+- **Phase 1** ✅: Core logging (structured logs to SQLite + files + HTTP access)
+- **Phase 2** 🚧: Pattern detection (error grouping, frequency tracking, fix suggestions)
+- **Phase 3** ⏳: Automation (auto-create issues, auto-fix simple errors, alerts)
+
+**Monitoring Integration**:
+- `GET /api/v1/logs/errors?hours=24` — fetch recent errors for analysis
+- `GET /api/v1/logs/summary?hours=24` — error frequency by level/component
+- `GET /api/v1/logs/search?pattern=timeout` — find specific error patterns
+
+See `.github/LOGGING.md` for implementation details.
+
+---
+
 ## Session 5: AI DJ Edit-Before-Save + Senior Review (2026-05-03)
 
 ### Objective

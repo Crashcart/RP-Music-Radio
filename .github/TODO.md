@@ -484,3 +484,41 @@
   - Users can start app and configure key via Settings page
   - Created GEMINI_SETUP.md with setup instructions
 - [ ] First-time user onboarding flow (Settings → "Please add API key to continue")
+
+---
+
+## Logging & Diagnostics (Phase 1-3)
+
+### Phase 1: Core Infrastructure ✅
+
+- [x] SQLite logging handler + app_logs table schema
+- [x] JSON formatter for structured logging
+- [x] Log analyzer with query methods (errors, patterns, summaries)
+- [x] API endpoints: /api/v1/logs/errors, /api/v1/logs/summary, /api/v1/logs/search
+- [x] CLI tool for local debugging (python -m app.log_analyzer)
+- [x] Documentation in .github/LOGGING.md
+
+**Status**: Ready. Claude Code can now query logs via HTTP to analyze issues.
+
+### Phase 2: Pattern Detection & Analysis 🚧 (Next)
+
+- [ ] Error grouping by message + frequency tracking
+- [ ] Auto-detect recurring errors (>3x in 24h)
+- [ ] Build fix suggestion catalog (error → common causes → fixes)
+- [ ] Implement `/api/v1/logs/patterns` endpoint
+- [ ] Claude Code integration: analyze logs → suggest fixes
+- [ ] Track error trends (are we improving?)
+- [ ] Add cost tracking for AI calls (tokens, USD spent)
+
+**When to start**: After Phase 1 tested on alpha branch
+
+### Phase 3: Automation ⏳ (Future)
+
+- [ ] Auto-create GitHub issues for recurring errors (>5 in 24h)
+- [ ] Auto-fix simple issues (env var updates, log level adjustments)
+- [ ] Daily/weekly error summaries (email/Slack)
+- [ ] Performance regression alerts (P95 latency spike >20%)
+- [ ] Cost budget alerts (exceed $X/day → warn)
+- [ ] Log cleanup automation (delete >30 days, compress archives)
+
+**When to start**: After Phase 2 validated on production

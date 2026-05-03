@@ -1008,7 +1008,7 @@ def set_api_key(payload: ApiKeyRequest):
 
         client = genai.Client(api_key=api_key)
         # Lightweight validation call
-        client.models.get(model="gemini-2.0-flash")
+        client.models.get(model="gemini-2.5-flash")
 
         # Save to memory and persistent storage
         os.environ["GOOGLE_API_KEY"] = api_key
@@ -1409,7 +1409,7 @@ def chat_assistant(payload: ChatRequest):
         )
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
                 temperature=0.9,
@@ -1440,3 +1440,153 @@ def chat_assistant(payload: ChatRequest):
         return {
             "reply": f"Sorry, I hit an error: {exc}. Check your API key in Settings."
         }
+
+
+# ── Logging / Diagnostics ────────────────────────────────────────────────────
+
+
+@router.get("/logs/errors")
+def get_logs_errors(hours: int = Query(24, ge=1, le=168)):
+    """Get all ERROR/CRITICAL logs from the past N hours."""
+    from app.log_analyzer import LogAnalyzer
+
+    analyzer = LogAnalyzer()
+    errors = analyzer.find_errors(hours=hours, limit=100)
+    return {
+        "total": len(errors),
+        "hours": hours,
+        "errors": [
+            {
+                "timestamp": e.timestamp,
+                "component": e.component,
+                "level": e.level,
+                "message": e.message,
+                "context": e.context,
+            }
+            for e in errors
+        ],
+    }
+
+
+@router.get("/logs/summary")
+def get_logs_summary(hours: int = Query(24, ge=1, le=168)):
+    """Get error summary for the past N hours."""
+    from app.log_analyzer import LogAnalyzer
+
+    analyzer = LogAnalyzer()
+    return analyzer.get_error_summary(hours=hours)
+
+
+@router.get("/logs/search")
+def search_logs(
+    pattern: str = Query(..., min_length=1),
+    hours: int = Query(24, ge=1, le=168),
+):
+    """Search logs by message pattern."""
+    from app.log_analyzer import LogAnalyzer
+
+    analyzer = LogAnalyzer()
+    results = analyzer.find_pattern(pattern, hours=hours, limit=50)
+    return {
+        "pattern": pattern,
+        "total": len(results),
+        "hours": hours,
+        "results": [
+            {
+                "timestamp": e.timestamp,
+                "component": e.component,
+                "level": e.level,
+                "message": e.message,
+            }
+            for e in results
+        ],
+    }
+
+
+@router.get("/debug/health-report")
+def debug_health_report(hours: int = Query(24, ge=1, le=168)):
+    """
+    Comprehensive health report for debugging.
+
+    Includes:
+    - Error summary (count by level/component)
+    - Recent errors
+    - Recommendations
+    """
+    from app.log_analyzer import LogAnalyzer
+    from datetime import datetime
+
+    analyzer = LogAnalyzer()
+
+    summary = analyzer.get_error_summary(hours=hours)
+    errors = analyzer.find_errors(hours=hours, limit=20)
+
+    # Build recommendations
+    recommendations = []
+    total_errors = summary.get("total_errors", 0)
+
+    if total_errors > 50:
+        recommendations.append(
+            {
+                "severity": "CRITICAL",
+                "message": f"Very high error rate ({total_errors} in {hours}h)",
+            }
+        )
+    elif total_errors > 10:
+        recommendations.append(
+            {
+                "severity": "WARNING",
+                "message": f"High error rate ({total_errors} in {hours}h)",
+            }
+        )
+
+    if summary.get("by_level", {}).get("CRITICAL", 0) > 0:
+        recommendations.append(
+            {
+                "severity": "CRITICAL",
+                "message": f"CRITICAL errors detected: {summary['by_level']['CRITICAL']}",
+            }
+        )
+
+    if not recommendations:
+        recommendations.append({"severity": "OK", "message": "System healthy"})
+
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "hours": hours,
+        "summary": summary,
+        "recent_errors": [
+            {
+                "timestamp": e.timestamp,
+                "component": e.component,
+                "level": e.level,
+                "message": e.message,
+            }
+            for e in errors
+        ],
+        "recommendations": recommendations,
+    }
+
+
+@router.get("/logs/patterns")
+def get_error_patterns(hours: int = Query(24, ge=1, le=168)):
+    """
+    Detect recurring error patterns and suggest fixes.
+
+    Returns patterns with:
+    - Error message
+    - Frequency (how many times)
+    - Severity (CRITICAL, HIGH, MEDIUM)
+    - Suggested fixes from fix catalog
+    - Next steps to resolve
+    """
+    from app.log_analyzer import LogAnalyzer
+
+    analyzer = LogAnalyzer()
+    patterns = analyzer.detect_patterns(hours=hours)
+
+    return {
+        "total_patterns": len(patterns),
+        "hours": hours,
+        "patterns": patterns,
+    }
