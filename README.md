@@ -377,13 +377,56 @@ docker-compose logs -f
 ./install-full.sh                    # Reinstall fresh
 ```
 
+## 🎁 Free to Use — With a Favor
+
+**AetherWave is completely free to use, modify, and deploy.**
+
+If you find this project useful and are making it public (sharing with others, deploying publicly, or using it in a public game/stream), we'd love it if you'd:
+
+- **Add a small credit** in your game credits, stream description, or project README:
+  > "Radio content generated with [AetherWave](https://github.com/crashcart/rp-music-radio) — a procedural radio station generator for immersive game environments."
+- **Link to this repo** so others discover the tool
+- **Share your universe examples** if you create interesting ones (open an issue with your game world!)
+
+This helps the project grow and inspires others to build amazing radio experiences. No obligation—use it freely either way! 🎙️
+
+## 📚 Example Content (Try It Now!)
+
+The repo includes example universes & content you can load immediately:
+
+**Included Examples:**
+- 🎮 **Cyberpunk World** — Futuristic neon aesthetic, corporate factions, ramen bars
+- ⚔️ **Medieval Kingdom** — Taverns, guilds, fantasy items, ballad aesthetics
+- 🌙 **Cosmic Horror** — Eldritch atmospheres, mysterious factions, ambient mood
+- 🏜️ **Post-Apocalyptic** — Wasteland survival, faction wars, gritty authenticity
+
+**To Load Examples:**
+```bash
+# Option 1: Use the UI
+# 1. Open http://localhost:8432
+# 2. Click "🌍 Universes"
+# 3. Enter a universe name from the examples above
+# 4. Click "🔍 Research" to auto-populate via AI
+
+# Option 2: Seed via CLI (coming soon)
+# python scripts/seed-examples.py
+```
+
+Each example includes:
+- Researched description (lore, atmosphere, distinctive items)
+- Genre/mood hints (e.g., "synthwave|cyberpunk", "dark|mysterious")
+- 3-4 sample DJs tailored to the world
+- Suggested ad content and places to stay
+- Music mood recommendations
+
 ## Support
 
 - **Full Documentation**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **GitHub Issues**: Post questions
+- **GitHub Issues**: Post questions & share your universe ideas!
 - **Development Log**: [.github/PLANNING.md](.github/PLANNING.md)
 - **Bundle Diagnostics**: `./collect-logs.sh` then attach the tarball to your issue
+- **Share Your Universes**: Create an issue titled "[Universe] Game Name" with your research results
 
 ---
 
-**AetherWave v1.0.4** | Built with FastAPI, React, and Google Cloud AI
+**AetherWave v1.0.4** | Free & Open | Built with FastAPI, React, and Google Cloud AI
