@@ -535,7 +535,8 @@
 
 | Issue ID | Severity | Type | Status | Notes |
 |----------|----------|------|--------|-------|
-| Jr-1 | Minor | CI | 🔄 In Progress | Backend test still running (`test-backend`) |
+| Jr-1 | Minor | CI | ❌ ESCALATED | Backend test still running (`test-backend`) |
+| Sr-1 | Major | CI Infrastructure | 🚨 ESCALATED | Backend test hung (15+ min, no completion, started 22:34:21) |
 
 ### CI Check Status
 
