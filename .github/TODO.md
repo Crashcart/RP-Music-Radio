@@ -525,30 +525,28 @@
 
 ---
 
-## Security Audit Issue (Jr-2) — npm Vulnerabilities in Vite
+## Security Audit Issue (Jr-2) — npm Vulnerabilities in Vite ✅ FIXED
 
 **Identified in PR #36**: npm audit failed with 2 moderate vulnerabilities
 - **Package**: esbuild <=0.24.2, vite <=6.4.1
 - **Severity**: Moderate (GHSA-67mh-4wv8-2f99)
 - **Issue**: esbuild allows sending requests to dev server and reading responses
-- **Status**: ⏳ Deferred (fix breaks build due to Vite 5→8 incompatibility)
+- **Status**: ✅ FIXED (Vite upgraded to 6.4.2)
 
-**Investigation Results**:
-- [x] Run npm audit → found 2 moderate vulnerabilities
-- [x] Try npm audit fix --force → breaks build (lightningcss CSS minification error in Vite 8)
-- [x] Revert to original dependencies → build works, vulnerabilities remain
+**Fix Applied** (Commit 858c604):
+- Upgraded vite from ^5.0.8 → ^6.4.2
+- npm audit: ✅ 0 vulnerabilities (was 2)
+- Build: ✅ Successful (no breaking changes)
+- Verified: Build works, TypeScript compiles, assets generated
 
-**Current State**:
-- Build: ✅ Works (but with vulnerabilities)
-- npm audit fix: ❌ Breaks build (Vite 8 incompatibility)
+**Testing Results**:
+- [x] npm install with Vite 6.4.2 → success
+- [x] npm run build → success (1.05s, no errors)
+- [x] npm audit → 0 vulnerabilities found
+- [x] Build output: identical size/structure to v5
 
-**Options**:
-1. **Accept risk** — Keep vulnerabilities, monitor for actual exploits
-2. **Upgrade carefully** — Find intermediate Vite version that fixes vulnerabilities without breaking build
-3. **Pin dependencies** — Add security patches in lockfile if available
-4. **Defer** — Schedule for future security audit sprint
-
-**Recommendation**: Option 2 or 4 (investigate Vite 6 or 7 compatibility)
+**Resolution**:
+Option 2 implemented: Found Vite 6.4.2 as intermediate version that patches vulnerabilities without breaking changes. Vite 6 is stable and maintained, provides better compatibility than Vite 8.
 
 ---
 
