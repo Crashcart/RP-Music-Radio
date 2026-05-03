@@ -125,19 +125,31 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
   7. Update `.github/TODO.md` with completion status
   8. Update `.github/PLANNING.md` with fix summary
   9. Add PR comment: "Fixed [Jr-1, Sr-2] in cycle N per governance process"
-- **REPEAT UNTIL ALL FIXED**: Loop monitoring → identify → fix → update → re-check
+- **REPEAT UNTIL ALL GREEN**: Loop monitoring → identify → fix → update → re-check
   - After each fix, pause 1 minute for CI to update
   - Check for regressions or new issues
-  - Continue until PR is mergeable (0 blockers)
+  - Continue until **ALL CI checks pass** (100% green)
+- **SUCCESS CRITERIA** — PR ready to merge only when:
+  - ✅ All CI checks green (verify, build, test-frontend, test-backend, lint, audit, security)
+  - ✅ 0 failed checks (no red ✗)
+  - ✅ 0 blockers (mergeable_state = "clean")
+  - ✅ All issues fixed and documented in governance files
+  - ✅ PR comment added: "All checks passing [Jr-X, Sr-Y fixed] — ready to merge"
 - **WHY**: Escalating severity ensures:
   - Quick wins first (Jr issues fixed fast)
   - Systematic investigation (Sr issues get deeper analysis)
   - Human safety valve (Cr issues get escalated)
   - Continuous progress (no stalled PRs)
   - Auditability (every fix documented per cycle)
-- **ENFORCEMENT**: PR cannot merge until all issues fixed and 0 blockers remain
-- **CONSEQUENCE**: Unresolved blockers → escalate to human (Cr-level)
-- **TIMING**: Continuous 1-minute check cycles until PR mergeable or Cr escalation triggered
+  - **Quality gate** (all green = production-ready)
+- **ENFORCEMENT**: PR cannot merge until:
+  - ✅ All CI checks green (mandatory)
+  - ✅ All identified issues fixed (mandatory)
+  - ✅ Governance files updated (mandatory)
+- **CONSEQUENCE**: 
+  - Any failed check = continue fixing (Jr → Sr → Cr escalation)
+  - Unresolved blockers after Cr escalation = human review required
+- **TIMING**: Continuous 1-minute check cycles until ALL GREEN or Cr escalation triggered
 
 ---
 
