@@ -1002,7 +1002,7 @@ def set_api_key(payload: ApiKeyRequest):
 
         client = genai.Client(api_key=api_key)
         # Lightweight validation call
-        client.models.get(model="gemini-2.0-flash")
+        client.models.get(model="gemini-2.0")
 
         # Save to memory and persistent storage
         os.environ["GOOGLE_API_KEY"] = api_key
@@ -1205,7 +1205,7 @@ def chat_assistant(payload: ChatRequest):
         )
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.0",
             contents=contents,
             config=types.GenerateContentConfig(
                 temperature=0.9,
