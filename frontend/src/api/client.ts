@@ -190,6 +190,23 @@ export interface Jingle {
   created_at: string;
 }
 
+export interface Universe {
+  id: string;
+  name: string;
+  description: string;
+  publisher: string;
+  key_features: string;
+  research_links: string;
+  status: string;
+  research_summary: string;
+  genre_hints: string;
+  mood_hints: string;
+  setting: string;
+  era: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Draft {
   id: string;
   station_id: string | null;
@@ -344,6 +361,43 @@ export const api = {
   rejectArtist: (artistId: string) =>
     request<{ deleted: string }>(`/api/v1/artists/${artistId}`, {
       method: "DELETE",
+    }),
+
+  // ── Universes / Game Worlds ───────────────────────────────────
+  /** Create a new universe (game world) for research. */
+  createUniverse: (data: { name: string }) =>
+    request<Universe>("/api/v1/universes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  /** List all universes with optional status filter. */
+  listUniverses: (status?: string) => {
+    const params = status ? `?status=${status}` : "";
+    return request<Universe[]>(`/api/v1/universes${params}`);
+  },
+
+  /** Get a single universe by ID. */
+  getUniverse: (id: string) => request<Universe>(`/api/v1/universes/${id}`),
+
+  /** Update universe fields (user edits after research). */
+  updateUniverse: (id: string, data: Partial<Universe>) =>
+    request<Universe>(`/api/v1/universes/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
+  /** Delete a universe. */
+  deleteUniverse: (id: string) =>
+    request<{ deleted: string }>(`/api/v1/universes/${id}`, {
+      method: "DELETE",
+    }),
+
+  /** Research a universe via Google Search + Gemini. */
+  researchUniverse: (id: string) =>
+    request<Universe>(`/api/v1/universes/${id}/research`, {
+      method: "POST",
+      body: JSON.stringify({}),
     }),
 
   // ── Brands ────────────────────────────────────────────────────

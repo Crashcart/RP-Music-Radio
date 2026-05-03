@@ -13,10 +13,10 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # ═══════════════════════════════════════════════════════════════════
 #  Station
 # ═══════════════════════════════════════════════════════════════════
+
 
 class StationCreate(BaseModel):
     name: str
@@ -79,6 +79,7 @@ class StationOut(BaseModel):
 # ═══════════════════════════════════════════════════════════════════
 #  Artist / DJ
 # ═══════════════════════════════════════════════════════════════════
+
 
 class ArtistCreate(BaseModel):
     name: str
@@ -177,13 +178,17 @@ class ArtistDraftCreate(BaseModel):
     any database write to prevent malformed AI output from persisting.
     """
 
-    name: str = Field(..., min_length=1, max_length=200, description="DJ real name (required)")
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="DJ real name (required)"
+    )
     display_name: str = Field(default="", max_length=200)
     artist_type: str = Field(default="dj")
     station_id: Optional[str] = Field(default=None)
     bio: str = Field(default="", max_length=5000)
     personality: str = Field(default="", max_length=3000)
-    catchphrases: str = Field(default="", max_length=1000, description="Pipe-separated catchphrases")
+    catchphrases: str = Field(
+        default="", max_length=1000, description="Pipe-separated catchphrases"
+    )
     quirks: str = Field(default="", max_length=1000)
     speaking_style: str = Field(default="", max_length=200)
     accent: str = Field(default="", max_length=200)
@@ -204,7 +209,9 @@ class ArtistDraftCreate(BaseModel):
     def validate_artist_type(cls, v: str) -> str:
         """Reject unknown artist types to prevent garbage data."""
         if v not in _VALID_ARTIST_TYPES:
-            raise ValueError(f"artist_type must be one of: {sorted(_VALID_ARTIST_TYPES)}")
+            raise ValueError(
+                f"artist_type must be one of: {sorted(_VALID_ARTIST_TYPES)}"
+            )
         return v
 
     @field_validator("name")
@@ -260,7 +267,9 @@ class ArtistDraftResponse(BaseModel):
 class BulkArtistIds(BaseModel):
     """Request body for bulk publish/reject operations."""
 
-    artist_ids: List[str] = Field(..., min_length=1, description="List of artist IDs to act on")
+    artist_ids: List[str] = Field(
+        ..., min_length=1, description="List of artist IDs to act on"
+    )
 
     @field_validator("artist_ids")
     @classmethod
@@ -287,6 +296,7 @@ class BulkUndoResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════
 #  Brand
 # ═══════════════════════════════════════════════════════════════════
+
 
 class BrandCreate(BaseModel):
     name: str
@@ -355,6 +365,7 @@ class BrandOut(BaseModel):
 #  Jingle
 # ═══════════════════════════════════════════════════════════════════
 
+
 class JingleCreate(BaseModel):
     station_id: str
     name: str
@@ -380,8 +391,10 @@ class JingleOut(BaseModel):
 #  Ingest (legacy — still works for quick seed upload)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class IngestRow(BaseModel):
     """A single seed row from a CSV or manual form."""
+
     station_name: str
     artist_name: str
     genre: str = ""
@@ -394,11 +407,13 @@ class IngestRow(BaseModel):
 
 class IngestRequest(BaseModel):
     """Payload for POST /api/v1/ingest."""
+
     rows: list[IngestRow]
 
 
 class IngestResponse(BaseModel):
     """Response after ingesting seed data."""
+
     created: int
     draft_ids: list[str]
 
@@ -407,8 +422,10 @@ class IngestResponse(BaseModel):
 #  Drafts
 # ═══════════════════════════════════════════════════════════════════
 
+
 class DraftOut(BaseModel):
     """A draft row as returned by the API."""
+
     id: str
     station_id: Optional[str] = None
     artist_id: Optional[str] = None
@@ -432,6 +449,7 @@ class DraftOut(BaseModel):
 
 class DraftUpdate(BaseModel):
     """Partial update payload for PATCH /api/v1/drafts/{id}."""
+
     station_id: Optional[str] = None
     artist_id: Optional[str] = None
     brand_id: Optional[str] = None
@@ -448,6 +466,7 @@ class DraftUpdate(BaseModel):
 
 class DraftListResponse(BaseModel):
     """Response for GET /api/v1/drafts."""
+
     total: int
     drafts: list[DraftOut]
 
@@ -456,13 +475,16 @@ class DraftListResponse(BaseModel):
 #  Commit
 # ═══════════════════════════════════════════════════════════════════
 
+
 class CommitRequest(BaseModel):
     """Payload for POST /api/v1/commit."""
+
     draft_ids: list[str]
 
 
 class CommitResponse(BaseModel):
     """Response after committing drafts to the synthesis queue."""
+
     queued: int
     tasks: list[dict]  # [{draft_id, task_id}, ...]
 
@@ -471,8 +493,10 @@ class CommitResponse(BaseModel):
 #  Tasks / Status
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TaskStatus(BaseModel):
     """Status of a generation task."""
+
     task_id: str
     draft_id: str
     status: str
@@ -483,8 +507,93 @@ class TaskStatus(BaseModel):
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  Universes / Game Worlds
+# ═══════════════════════════════════════════════════════════════════
+
+
+class ResearchLink(BaseModel):
+    """A reference link for universe research."""
+
+    title: str = Field(..., min_length=1, max_length=200)
+    url: str = Field(..., min_length=5, max_length=500)
+
+
+class UniverseCreate(BaseModel):
+    """Create a new universe (initial game name only)."""
+
+    name: str = Field(
+        ...,
+        min_length=1,
+        max_length=200,
+        description="Game/world name (e.g. 'Cyberpunk 2077')",
+    )
+
+
+class UniverseUpdate(BaseModel):
+    """Update universe fields (user edits after research)."""
+
+    description: Optional[str] = None
+    publisher: Optional[str] = None
+    key_features: Optional[str] = None
+    research_links: Optional[str] = None  # JSON array
+    research_summary: Optional[str] = None
+    genre_hints: Optional[str] = None
+    mood_hints: Optional[str] = None
+    setting: Optional[str] = None
+    era: Optional[str] = None
+    status: Optional[str] = None  # draft, researching, reviewed, published
+
+
+class UniverseOut(BaseModel):
+    """Full universe response with all fields."""
+
+    id: str
+    name: str
+    description: str
+    publisher: str
+    key_features: str
+    research_links: str  # JSON array
+    status: str
+    research_summary: str
+    genre_hints: str
+    mood_hints: str
+    setting: str
+    era: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UniverseResearchRequest(BaseModel):
+    """Request to research a universe via Google Search + Gemini."""
+
+    # No fields needed — research is triggered on the universe with the given name
+
+
+class UniverseResearchResponse(BaseModel):
+    """Response from AI research endpoint."""
+
+    id: str
+    name: str
+    description: str
+    publisher: str
+    research_summary: str
+    genre_hints: str
+    mood_hints: str
+    setting: str
+    era: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  Settings
 # ═══════════════════════════════════════════════════════════════════
+
 
 class ApiKeyRequest(BaseModel):
     api_key: str
