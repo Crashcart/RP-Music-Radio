@@ -122,13 +122,8 @@ The user is currently editing the station "${selectedStation.name}"` +
       (selectedStation.genre ? `, genre: ${selectedStation.genre}` : "") +
       (selectedStation.mood ? `, mood: ${selectedStation.mood}` : "") +
       `.
-When the user asks you to create DJs for this station, generate detailed, cohesive personalities that fit the station's vibe.
 
-If the user says something like "Create 3 DJs for this station" or "Generate DJs", respond with:
-1. A brief acknowledgment
-2. The DJ suggestions in the structured format below
-
-DJ Suggestion Format — use this EXACT structure (one block per DJ) so the system can parse it:
+CRITICAL: When the user asks you to create or implement DJs (e.g. "add it", "implement it", "no just implement it"), you MUST respond with DJ_SUGGESTION blocks in EXACTLY this format, with NO other descriptive text before or mixed in:
 
 DJ_SUGGESTION
 name: [DJ Real Name]
@@ -142,7 +137,7 @@ genre: [Primary music genre]
 signature_sound: [What makes their sound unique]
 backstory: [Brief in-universe backstory]
 
-Repeat the DJ_SUGGESTION block once for each DJ. After all blocks you may add follow-up context.`;
+Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.`;
   }
 
   return prompt;
