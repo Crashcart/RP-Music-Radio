@@ -198,6 +198,173 @@ logs/
 
 Logs are auto-rotated (last 30 per script) and ignored by `.gitignore`.
 
+## AI Logging & Automated Error Analysis
+
+AetherWave includes a **three-phase AI logging system** that automatically analyzes errors, detects patterns, and suggests fixes.
+
+### Phase 1: Log Collection & Persistence
+
+Every API call, error, and task is logged to a structured **SQLite database** for queryable analysis:
+
+```bash
+# View logs via the Settings page
+# Navigate to: Settings → System Logs → Live backend logs
+```
+
+**Logged Events**:
+- ✅ Successful API calls (endpoint, duration, status)
+- ❌ Errors & exceptions (type, message, stack trace)
+- ⏱️ Performance metrics (slow queries, timeouts)
+- 🤖 AI API calls (model, tokens used, cost)
+- 📝 Form submissions & data validation
+- 🔄 Task queue events (staging, synthesis, retries)
+
+**Database**: SQLite table `app_logs` with JSON context + exceptions
+
+### Phase 2: Pattern Detection & Fix Suggestions
+
+The system automatically detects **recurring errors** and suggests fixes:
+
+```bash
+# Check for recurring error patterns
+python -m app.automation --action check-errors
+
+# Example output:
+# Pattern: "404 Not Found" (5 occurrences in 24h)
+# Severity: HIGH
+# Suggested fixes:
+#   - Verify endpoint path in routes.py
+#   - Check VITE_API_URL environment variable
+#   - Inspect browser network tab for actual URL
+```
+
+**Supported Pattern Detection**:
+- **404 errors** → Path issues, doubled prefixes (/api/api/)
+- **Timeouts** → Slow queries, API rate limits, resource exhaustion
+- **CSRF errors** → Token handling, cookie configuration
+- **Gemini API errors** → Invalid models, deprecated APIs, rate limits
+- **Validation errors** → Required fields, type mismatches, enum violations
+
+### Phase 3: Automated Remediation & Reporting
+
+The system can **auto-fix simple issues** and generate alerts:
+
+```bash
+# Auto-fix known issues
+python -m app.automation --action auto-fix
+
+# Generate daily error summary
+python -m app.automation --action summary --period daily
+
+# Generate weekly summary
+python -m app.automation --action summary --period weekly
+
+# Clean up old logs (keep only 30 days)
+python -m app.automation --action cleanup --days 30
+
+# Create GitHub issues for critical recurring errors
+python -m app.automation --action create-issues
+```
+
+**Auto-Fix Examples**:
+- 🔧 Update environment variables (e.g., LOG_LEVEL=INFO → LOG_LEVEL=info)
+- 📝 Fix configuration values
+- 🗑️ Clean up expired draft records
+- 📊 Generate error trend reports
+
+### Viewing Error Analysis
+
+**Via Web UI**:
+1. Open Settings → System Logs
+2. Browse backend logs in real-time
+3. See color-coded errors and warnings
+4. Search for specific patterns
+
+**Via API**:
+```bash
+# Get error summary (past 24 hours)
+curl http://localhost:8433/api/v1/logs/summary?hours=24
+
+# Get recent errors
+curl http://localhost:8433/api/v1/logs/errors?hours=24&limit=10
+
+# Search for specific pattern
+curl "http://localhost:8433/api/v1/logs/search?pattern=timeout"
+
+# Get detected patterns with fix suggestions
+curl http://localhost:8433/api/v1/logs/patterns
+```
+
+**Via CLI**:
+```bash
+# List recent errors
+python -m app.log_analyzer errors 24
+
+# Search for specific pattern
+python -m app.log_analyzer search "CSRF" 24
+
+# View error summary
+python -m app.log_analyzer summary 24
+```
+
+### Error Budget & Cost Control
+
+The system enforces **cost limits** for AI API calls:
+
+```bash
+# Set daily cost ceiling (in cents, e.g., 500 = $5.00)
+export AI_COST_CEILING_CENTS=500
+
+# System returns HTTP 429 (Too Many Requests) when exceeded
+# Cost tracking via X-AI-Cost-Cents response header
+```
+
+### Automated Alerts
+
+Critical errors trigger **automatic GitHub issue creation**:
+
+```bash
+# Automatically create issues for errors > 5 in 24 hours
+python -m app.automation --action create-issues
+
+# Issues include:
+# - Error message & frequency
+# - Suggested fixes from catalog
+# - Investigation steps
+# - Related log links
+```
+
+Requires `GITHUB_TOKEN` environment variable.
+
+### Fix Catalog
+
+The system includes a built-in catalog of common errors and fixes:
+
+| Pattern | Causes | Suggested Fixes |
+|---------|--------|-----------------|
+| **404** | Endpoint missing, path doubled, VITE_API_URL misconfigured | Check routes.py, verify VITE_API_URL, inspect network tab |
+| **timeout** | Slow query, API slowness, resource exhaustion | Add DB indexes, increase timeout, check CPU/memory |
+| **CSRF** | Token missing/expired, cookie not sent | Reload page, check api/client.ts, clear cookies |
+| **Gemini** | Invalid model, API key expired, rate limit | Update model name, verify key, wait before retry |
+| **validation** | Missing field, wrong type, invalid enum | Check Pydantic schema, inspect error details, fix request |
+
+### Data Retention
+
+- 📊 Logs retained for **30 days** (configurable)
+- 🗑️ Auto-cleanup runs daily via Celery beat
+- 🔒 All personal data scrubbed from error reports
+- 💾 Export available for compliance/support
+
+### Integration with Development
+
+AI agents (Claude, Copilot, Gemini) can use the logging system to:
+- **Diagnose issues** during development without SSH
+- **Spot trends** (e.g., "Why is this endpoint timing out?")
+- **Auto-suggest fixes** based on error patterns
+- **Monitor cost** of AI API calls in real-time
+
+See [.github/PLANNING.md](.github/PLANNING.md) for Phase 1-3 logging architecture decisions.
+
 ### Quick Health Check
 ```bash
 curl http://localhost:8000/health
@@ -210,13 +377,56 @@ docker-compose logs -f
 ./install-full.sh                    # Reinstall fresh
 ```
 
+## 🎁 Free to Use — With a Favor
+
+**AetherWave is completely free to use, modify, and deploy.**
+
+If you find this project useful and are making it public (sharing with others, deploying publicly, or using it in a public game/stream), we'd love it if you'd:
+
+- **Add a small credit** in your game credits, stream description, or project README:
+  > "Radio content generated with [AetherWave](https://github.com/crashcart/rp-music-radio) — a procedural radio station generator for immersive game environments."
+- **Link to this repo** so others discover the tool
+- **Share your universe examples** if you create interesting ones (open an issue with your game world!)
+
+This helps the project grow and inspires others to build amazing radio experiences. No obligation—use it freely either way! 🎙️
+
+## 📚 Example Content (Try It Now!)
+
+The repo includes example universes & content you can load immediately:
+
+**Included Examples:**
+- 🎮 **Cyberpunk World** — Futuristic neon aesthetic, corporate factions, ramen bars
+- ⚔️ **Medieval Kingdom** — Taverns, guilds, fantasy items, ballad aesthetics
+- 🌙 **Cosmic Horror** — Eldritch atmospheres, mysterious factions, ambient mood
+- 🏜️ **Post-Apocalyptic** — Wasteland survival, faction wars, gritty authenticity
+
+**To Load Examples:**
+```bash
+# Option 1: Use the UI
+# 1. Open http://localhost:8432
+# 2. Click "🌍 Universes"
+# 3. Enter a universe name from the examples above
+# 4. Click "🔍 Research" to auto-populate via AI
+
+# Option 2: Seed via CLI (coming soon)
+# python scripts/seed-examples.py
+```
+
+Each example includes:
+- Researched description (lore, atmosphere, distinctive items)
+- Genre/mood hints (e.g., "synthwave|cyberpunk", "dark|mysterious")
+- 3-4 sample DJs tailored to the world
+- Suggested ad content and places to stay
+- Music mood recommendations
+
 ## Support
 
 - **Full Documentation**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **GitHub Issues**: Post questions
+- **GitHub Issues**: Post questions & share your universe ideas!
 - **Development Log**: [.github/PLANNING.md](.github/PLANNING.md)
 - **Bundle Diagnostics**: `./collect-logs.sh` then attach the tarball to your issue
+- **Share Your Universes**: Create an issue titled "[Universe] Game Name" with your research results
 
 ---
 
-**AetherWave v1.0.4** | Built with FastAPI, React, and Google Cloud AI
+**AetherWave v1.0.4** | Free & Open | Built with FastAPI, React, and Google Cloud AI

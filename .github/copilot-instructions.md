@@ -82,37 +82,101 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **CONSEQUENCE**: PR rejection; requires escalation to repository maintainers
 - **NOTE**: "Never weaken a constraint" — removals must be justified and approved
 
-### Rule 11: Always Scan All Open PRs Before Focusing on One
-- **REQUIREMENT**: Before starting PR issue fixing work, scan ALL open PRs for failures/blockers
-- **PROCEDURE**: When asked to fix issues on a specific PR:
-  1. List all open PRs: `gh pr list --state open` (or via GitHub API)
-  2. Check each PR's status: CI results, merge state, comment count
-  3. Identify ANY failing checks or blockers across ALL PRs
-  4. Prioritize: Fix critical blockers across ALL PRs, not just the requested one
-  5. Report summary to user: "Scanning found issues on PR #X, #Y — addressing all"
-- **RATIONALE**: Single-PR focus can blind AI to systemic issues affecting multiple PRs
-- **CONSEQUENCE**: Missing multiple failing PRs = escalate to human for PR triage
-- **EXAMPLE** (What NOT to do):
-  - ❌ User says "fix PR #38" → AI focuses only on #38, misses #36 hanging test
-- **EXAMPLE** (What TO do):
-  - ✅ User says "fix PR #38" → AI scans ALL PRs, finds #36 also broken, fixes both
+### Rule 11: Always Use Branch Switching Scripts
+- **REQUIREMENT**: Use provided branch switching scripts for all branch operations:
+  - **Pull from main (stable)**: `./scripts/pull-main.sh`
+  - **Pull from beta (RC)**: `./scripts/pull-beta.sh`
+  - **Pull from alpha (pre-release)**: `./scripts/pull-alpha.sh`
+  - **Interactive switcher**: `./scripts/switch-branch.sh [main|beta|alpha]`
+  - **View branch status**: `./scripts/branch-status.sh`
+- **WHY**: These scripts automatically:
+  - Stash/restore uncommitted changes (prevents data loss)
+  - Fetch latest from remote (keeps local in sync)
+  - Validate branch transitions (prevents accidental merges)
+  - Show branch descriptions and next steps (prevents confusion)
+- **ENFORCEMENT**: Enforce via pre-commit hooks; manual verification required
+- **CONSEQUENCE**: If using raw `git checkout`, re-run appropriate script to ensure proper state
+- **WORKFLOW**: 
+  - **Development**: Always work on feature branches (feat/, fix/, docs/)
+  - **Testing**: `./scripts/pull-alpha.sh` to test new features
+  - **RC validation**: `./scripts/pull-beta.sh` to test release candidates
+  - **Production**: `./scripts/pull-main.sh` to deploy stable releases
 
-### Rule 12-Merge: PR Merge Conflicts Must Be Resolved Before Merge
-- **REQUIREMENT**: No PR can merge with unresolved merge conflicts
-- **CHECK**: Before merging, verify `mergeable_state != "dirty"` (indicates conflicts)
-- **PROCEDURE** (If conflicts detected):
-  1. Fetch latest base branch: `git fetch origin <base-branch>`
-  2. Merge conflicts arise when: feature branch diverged from base
-  3. Resolve conflicts: Edit files, keep correct version of each conflict
-  4. Run full test suite after resolution (conflicts can introduce bugs)
-  5. Commit: `git commit -m "resolve: merge conflicts with origin/<base>"`
-  6. Push: `git push origin <feature-branch>`
-  7. Verify: `mergeable_state` changes to "clean" (or "unstable" if CI pending)
-- **RATIONALE**: Unresolved conflicts block merging; manual resolution ensures correctness
-- **ESCALATION**: If conflicts cannot be resolved automatically, escalate to human
-- **EXAMPLE** (When to fix):
-  - GitHub shows PR status: "This branch has conflicts that must be resolved"
-  - mergeable_state = "dirty" → must resolve before merge can proceed
+### Rule 12-P1: PRIORITY 1 — Never Stop at First Green
+- **CRITICAL**: AI must continue working through ALL issues until entire PR is ALL GREEN
+- **PROHIBITION**: Do NOT stop working when one issue is fixed
+- **REQUIREMENT**: After each issue becomes green, immediately:
+  1. Check for remaining issues (new failures, other checks, regressions)
+  2. If any checks still failing → continue to next issue
+  3. If all checks green → verify no regressions, then STOP
+- **EXAMPLE** (What NOT to do):
+  - ❌ Fix lint issue → lint passes → STOP (WRONG!)
+  - ❌ Fix security audit → audit passes → STOP (WRONG!)
+- **EXAMPLE** (What TO do):
+  - ✅ Fix lint issue → lint passes → check other issues
+  - ✅ Fix security audit → audit passes → check regressions
+  - ✅ Fix test failure → tests pass → verify all green
+  - ✅ All checks green → THEN stop
+- **ENFORCEMENT**: Treat each green issue as a checkpoint, not a finish line
+- **CONSEQUENCE**: Stopping at first green = escalate to human (Cr-level violation)
+
+---
+
+### Rule 12: Continuous PR Issue Detection & Escalating Fixes
+- **REQUIREMENT**: After creating a PR, continuously monitor and fix issues using escalating severity levels and governance process
+- **MONITORING WINDOW**: 8 minutes maximum
+  - Check PR status **once per minute** (not continuously/obsessively)
+  - After 8 minutes, escalate remaining issues as Cr-level blockers to human
+  - Rationale: Ensures progress without creating endless loops
+- **CONTINUOUS MONITORING** (Every 1 Minute, up to 8 total):
+  1. **Check PR status** — CI results, comments, review requests, mergeable state
+  2. **Identify NEW issues** — As they appear (newly failed checks, comments, etc.)
+  3. **Categorize by Severity** — Assign level based on impact:
+     - **Jr** (Junior): Minor issues, 1-minute fix (docs, lint, config)
+     - **Sr** (Senior): Major issues, 5-30 min fix (code logic, architecture)
+     - **Cr** (Critical): Blockers, escalate to human (blocked dependencies, env issues)
+- **ESCALATION STRATEGY** — If issue persists across check cycles:
+  - Cycle 1 (Jr-level): Try quick fix
+  - Cycle 2 (Sr-level): Attempt deeper investigation & fix
+  - Cycle 3+ (Cr-level): Document and escalate to human review
+- **FIX WORKFLOW** (Per Issue):
+  1. Create/update subtask in `.github/TODO.md` with issue ID and severity
+  2. Document fix approach in `.github/PLANNING.md`
+  3. Implement fix on feature branch (Phase 2)
+  4. Run full verification (Phase 3: build, test, lint, audit)
+  5. Commit with conventional prefix: `fix:`, `refactor:`, `docs:`
+  6. Push immediately
+  7. Update `.github/TODO.md` with completion status
+  8. Update `.github/PLANNING.md` with fix summary
+  9. Add PR comment: "Fixed [Jr-1, Sr-2] in cycle N per governance process"
+- **REPEAT UNTIL ALL GREEN** (Rule 12-P1: Never stop at first green):
+  - After each fix, pause 1 minute for CI to update
+  - **Immediately re-check ALL checks** (not just the one you fixed)
+  - Check for regressions or newly revealed issues
+  - If ANY check still failing → continue to next issue
+  - If ALL checks green → verify stability, then stop
+  - **Do NOT stop when one issue becomes green** — this is P1 violation
+- **SUCCESS CRITERIA** — PR ready to merge only when:
+  - ✅ All CI checks green (verify, build, test-frontend, test-backend, lint, audit, security)
+  - ✅ 0 failed checks (no red ✗)
+  - ✅ 0 blockers (mergeable_state = "clean")
+  - ✅ All issues fixed and documented in governance files
+  - ✅ PR comment added: "All checks passing [Jr-X, Sr-Y fixed] — ready to merge"
+- **WHY**: Escalating severity ensures:
+  - Quick wins first (Jr issues fixed fast)
+  - Systematic investigation (Sr issues get deeper analysis)
+  - Human safety valve (Cr issues get escalated)
+  - Continuous progress (no stalled PRs)
+  - Auditability (every fix documented per cycle)
+  - **Quality gate** (all green = production-ready)
+- **ENFORCEMENT**: PR cannot merge until:
+  - ✅ All CI checks green (mandatory)
+  - ✅ All identified issues fixed (mandatory)
+  - ✅ Governance files updated (mandatory)
+- **CONSEQUENCE**: 
+  - Any failed check = continue fixing (Jr → Sr → Cr escalation)
+  - Unresolved blockers after Cr escalation = human review required
+- **TIMING**: Continuous 1-minute check cycles until ALL GREEN or Cr escalation triggered
 
 ---
 
@@ -123,7 +187,8 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 2. Review issue context and requirements
 3. Check `PLANNING.md` for related work
 4. Identify dependencies and blockers
-5. **STOP** — ask human if unclear on any requirement
+5. Run `./scripts/branch-status.sh` to verify current branch and available commands
+6. **STOP** — ask human if unclear on any requirement
 
 ### Phase 1: Planning (Immediate)
 1. Break task into 3–5 subtasks
@@ -132,9 +197,10 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
    - Task context and goal
    - Dependencies identified
    - High-level approach
-4. Create feature branch: `git checkout -b feat/issue-N-slug`
-5. **PUSH IMMEDIATELY** — do not wait to accumulate commits
-6. Run: `git pull origin <branch>` — verify no remote conflicts
+4. Ensure you're on a feature branch: `./scripts/pull-alpha.sh` (or appropriate branch for task scope)
+5. Create feature branch: `git checkout -b feat/issue-N-slug`
+6. **PUSH IMMEDIATELY** — do not wait to accumulate commits
+7. Verify branch state: `./scripts/branch-status.sh` — confirm you're on correct feature branch
 
 ### Phase 2: Implementation (Per Subtask)
 1. Read existing code patterns and architecture

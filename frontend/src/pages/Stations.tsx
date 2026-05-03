@@ -196,6 +196,7 @@ function StationDetail({
   });
   const [savingJingle, setSavingJingle] = useState(false);
   const [deletingJingleId, setDeletingJingleId] = useState<string | null>(null);
+  const [deletingDJId, setDeletingDJId] = useState<string | null>(null);
 
   // Pending AI DJs state
   const [pendingDJs, setPendingDJs] = useState<Artist[]>([]);
@@ -385,6 +386,19 @@ function StationDetail({
     }
   };
 
+  const handleDeleteDJ = async (djId: string) => {
+    if (!confirm("Delete this DJ? This cannot be undone.")) return;
+    setDeletingDJId(djId);
+    try {
+      await api.deleteArtist(djId);
+      onRefresh();
+    } catch (e: unknown) {
+      alert(`Deletion failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setDeletingDJId(null);
+    }
+  };
+
   if (editingPendingDJ) {
     return (
       <div>
@@ -511,6 +525,46 @@ function StationDetail({
             <DetailField label="Notes" value={station.lore_notes} />
           </div>
         </div>
+        {station.color_palette && (
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">🎨 Color Palette</h3>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--space-sm)",
+                flexWrap: "wrap",
+              }}
+            >
+              {station.color_palette.split("|").map((color) => (
+                <div
+                  key={color}
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    backgroundColor: color,
+                    border: "2px solid var(--border-color)",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    title: color,
+                  }}
+                  title={`Copy: ${color}`}
+                  onClick={() => navigator.clipboard.writeText(color)}
+                />
+              ))}
+            </div>
+            <p
+              style={{
+                marginTop: "var(--space-sm)",
+                fontSize: "0.85em",
+                color: "var(--text-muted)",
+              }}
+            >
+              Suggested by AI. Click color to copy hex code.
+            </p>
+          </div>
+        )}
         {/* Station Art with Regenerate */}
         <div className="card">
           <div
@@ -803,32 +857,66 @@ function StationDetail({
                   ) : (
                     <div className="entity-card-placeholder small">🎙️</div>
                   )}
-                  <button
-                    className="btn btn-sm"
+                  <div
                     style={{
                       position: "absolute",
                       top: "4px",
                       right: "4px",
-                      padding: "4px 8px",
-                      fontSize: "0.75rem",
-                      background: "rgba(0,0,0,0.7)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      opacity: 0.8,
-                      transition: "opacity 0.2s",
+                      display: "flex",
+                      gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.opacity = "0.8")
-                    }
-                    onClick={() => handleGeneratePortrait(dj.id)}
-                    disabled={generatingPortrait === dj.id}
-                    title="Regenerate portrait"
                   >
-                    {generatingPortrait === dj.id ? "⏳" : "🔄"}
-                  </button>
+                    <button
+                      className="btn btn-sm"
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "0.75rem",
+                        background: "rgba(0,0,0,0.7)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        opacity: 0.8,
+                        transition: "opacity 0.2s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.opacity = "1")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.opacity = "0.8")
+                      }
+                      onClick={() => handleGeneratePortrait(dj.id)}
+                      disabled={generatingPortrait === dj.id}
+                      title="Regenerate portrait"
+                    >
+                      {generatingPortrait === dj.id ? "⏳" : "🔄"}
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "0.75rem",
+                        background: "rgba(200,0,0,0.7)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        opacity: 0.8,
+                        transition: "opacity 0.2s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.opacity = "1")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.opacity = "0.8")
+                      }
+                      onClick={() => handleDeleteDJ(dj.id)}
+                      disabled={deletingDJId === dj.id}
+                      title="Delete DJ"
+                    >
+                      {deletingDJId === dj.id ? "…" : "✕"}
+                    </button>
+                  </div>
                 </div>
                 <div className="entity-card-info">
                   <h4>{dj.display_name || dj.name}</h4>

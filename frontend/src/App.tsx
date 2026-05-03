@@ -3,6 +3,7 @@ import { useIsMobile } from "./hooks/useIsMobile";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
+import { Universes } from "./pages/Universes";
 import { DraftingTable } from "./pages/DraftingTable";
 // @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from "./pages/GenerationQueue";
@@ -10,12 +11,20 @@ import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { api, type Draft, type Station } from "./api/client";
 
-type Page = "stations" | "artists" | "brands" | "drafts" | "queue" | "settings";
+type Page =
+  | "stations"
+  | "artists"
+  | "brands"
+  | "universes"
+  | "drafts"
+  | "queue"
+  | "settings";
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "stations", label: "Stations", icon: "📻" },
   { id: "artists", label: "Artists", icon: "🎤" },
   { id: "brands", label: "Brands", icon: "🏢" },
+  { id: "universes", label: "Universes", icon: "🌍" },
   { id: "drafts", label: "Drafts", icon: "📋" },
   { id: "queue", label: "Queue", icon: "⚡" },
   { id: "settings", label: "Settings", icon: "⚙️" },
@@ -76,6 +85,8 @@ export default function App() {
         return <Artists />;
       case "brands":
         return <Brands />;
+      case "universes":
+        return <Universes />;
       case "drafts":
         return <DraftingTable drafts={drafts} onRefresh={refreshDrafts} />;
       case "queue":

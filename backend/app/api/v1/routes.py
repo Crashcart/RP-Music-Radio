@@ -32,6 +32,7 @@ from app.models.database import (
     GenerationHistory,
     Jingle,
     Station,
+    Universe,
 )
 from app.api.v1.schemas import (
     ApiKeyRequest,
@@ -60,6 +61,11 @@ from app.api.v1.schemas import (
     StationOut,
     StationUpdate,
     TaskStatus,
+    UniverseCreate,
+    UniverseOut,
+    UniverseResearchRequest,
+    UniverseResearchResponse,
+    UniverseUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -629,6 +635,60 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
         raise HTTPException(500, f"Portrait generation error: {exc}")
 
 
+@router.post("/artists/{artist_id}/announcement")
+def generate_artist_announcement(artist_id: str, db: Session = Depends(get_db)):
+    """Generate a 30-second radio announcement/intro script for an artist."""
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(404, "Artist not found")
+
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        raise HTTPException(400, "Google API key not configured")
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+
+        # Build context for announcement
+        station_name = ""
+        if artist.station_id:
+            station = db.query(Station).filter(Station.id == artist.station_id).first()
+            station_name = station.name if station else ""
+
+        prompt = (
+            f"Create a 30-second radio announcement introducing this artist:\n"
+            f"Name: {artist.name}\n"
+            f"Display Name: {artist.display_name or artist.name}\n"
+            f"Type: {artist.artist_type}\n"
+            f"Personality: {artist.personality}\n"
+            f"Station: {station_name or 'Independent'}\n\n"
+            f"Write ONLY the announcement text, no explanations. Keep it under 75 words (≈30 seconds spoken)."
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
+            config=types.GenerateContentConfig(
+                temperature=0.8,
+                max_output_tokens=256,
+            ),
+        )
+
+        announcement = response.text.strip()
+        artist.announcement_script = announcement
+        db.commit()
+
+        return {"announcement_script": announcement}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Announcement generation failed: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Announcement generation error: {exc}")
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Brands
 # ═══════════════════════════════════════════════════════════════════
@@ -1129,6 +1189,204 @@ ENTITY RELATIONSHIP RULE (CRITICAL):
 - DJs/Artists MUST be linked to stations (include a `station_id` field if known from context).
 - All other entities (Brands, Stations) MUST NOT contain a `station_id` or attempt to be linked to specific stations.
 This rule prevents data model corruption."""
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Universes / Game Worlds
+# ═══════════════════════════════════════════════════════════════════
+
+
+@router.post("/universes", response_model=UniverseOut)
+def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)):
+    """Create a new universe (game world) for research."""
+    universe = Universe(name=payload.name, status="draft")
+    db.add(universe)
+    db.commit()
+    db.refresh(universe)
+    logger.info("Created universe: %s", universe.name)
+    return UniverseOut.model_validate(universe)
+
+
+@router.get("/universes", response_model=list[UniverseOut])
+def list_universes(status: str | None = None, db: Session = Depends(get_db)):
+    """List all universes with optional status filter."""
+    query = db.query(Universe)
+    if status:
+        query = query.filter(Universe.status == status)
+    universes = query.order_by(Universe.created_at.desc()).all()
+    return [UniverseOut.model_validate(u) for u in universes]
+
+
+@router.get("/universes/{universe_id}", response_model=UniverseOut)
+def get_universe(universe_id: str, db: Session = Depends(get_db)):
+    """Get a single universe by ID."""
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(404, "Universe not found")
+    return UniverseOut.model_validate(universe)
+
+
+@router.patch("/universes/{universe_id}", response_model=UniverseOut)
+def update_universe(
+    universe_id: str, payload: UniverseUpdate, db: Session = Depends(get_db)
+):
+    """Update universe fields (user edits after research)."""
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(404, "Universe not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(universe, field, value)
+    universe.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(universe)
+    logger.info("Updated universe: %s", universe.name)
+    return UniverseOut.model_validate(universe)
+
+
+@router.delete("/universes/{universe_id}")
+def delete_universe(universe_id: str, db: Session = Depends(get_db)):
+    """Delete a universe."""
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(404, "Universe not found")
+    db.delete(universe)
+    db.commit()
+    logger.info("Deleted universe: %s", universe.name)
+    return {"deleted": universe_id}
+
+
+@router.post(
+    "/universes/{universe_id}/research", response_model=UniverseResearchResponse
+)
+def research_universe(
+    universe_id: str, payload: UniverseResearchRequest, db: Session = Depends(get_db)
+):
+    """
+    Research a universe via Google Search + Gemini.
+
+    Extracts publisher, setting, lore, distinctive items, places to stay,
+    factions, mood, genre, and atmosphere. Returns researched description
+    that can be used to influence content generation.
+    """
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        raise HTTPException(
+            400,
+            {
+                "error": "Google API key not configured. Set it in Settings first.",
+                "code": "missing_api_key",
+            },
+        )
+
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(404, "Universe not found")
+
+    # Mark as researching
+    universe.status = "researching"
+    db.commit()
+
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+
+        # Research prompt for Gemini with Google Search grounding
+        research_prompt = f"""
+Research the video game or fictional universe: "{universe.name}"
+
+Please provide detailed information about:
+1. Publisher/Developer
+2. Setting and atmosphere (medieval, futuristic, post-apocalyptic, etc.)
+3. Key lore and storyline
+4. Distinctive items, weapons, or technology
+5. Places to stay (taverns, hotels, bases, settlements)
+6. Factions, groups, or factions
+7. Food and drink culture
+8. Music and audio aesthetic (if applicable)
+9. Genre and mood (dark, hopeful, mysterious, energetic, etc.)
+10. Unique features that define this world
+
+Format your response as a detailed description suitable for influencing radio content generation, DJ personalities, and advertisements.
+Include a short summary (2-3 sentences) and full description.
+"""
+
+        # Use Gemini with Google Search grounding
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=research_prompt,
+            config=genai.types.GenerateContentConfig(
+                tools=[genai.Tool(google_search=genai.types.GoogleSearch())],
+            ),
+        )
+
+        research_text = response.text if response.text else ""
+
+        # Extract key information from the research
+        # For now, use the full text as description
+        universe.description = research_text
+        universe.research_summary = research_text[:500]  # First 500 chars as summary
+        universe.status = "reviewed"
+
+        # Try to extract genre/mood hints (simple heuristic)
+        text_lower = research_text.lower()
+        genres = []
+        moods = []
+
+        genre_keywords = {
+            "synthwave": ["synthwave", "neon", "retro-future", "80s"],
+            "cyberpunk": ["cyberpunk", "futuristic", "high-tech"],
+            "fantasy": ["fantasy", "medieval", "magic"],
+            "horror": ["horror", "scary", "dark", "spooky"],
+            "noir": ["noir", "detective", "crime", "mystery"],
+            "ambient": ["ambient", "atmospheric", "ethereal"],
+        }
+
+        for genre, keywords in genre_keywords.items():
+            if any(kw in text_lower for kw in keywords):
+                genres.append(genre)
+
+        mood_keywords = {
+            "dark": ["dark", "grim", "somber", "ominous"],
+            "mysterious": ["mysterious", "cryptic", "unknown"],
+            "energetic": ["energetic", "fast-paced", "action"],
+            "chill": ["chill", "relaxed", "peaceful"],
+            "hopeful": ["hopeful", "inspiring", "uplifting"],
+        }
+
+        for mood, keywords in mood_keywords.items():
+            if any(kw in text_lower for kw in keywords):
+                moods.append(mood)
+
+        if genres:
+            universe.genre_hints = "|".join(genres)
+        if moods:
+            universe.mood_hints = "|".join(moods)
+
+        universe.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(universe)
+
+        logger.info(
+            "Researched universe: %s genres=%s moods=%s",
+            universe.name,
+            genres,
+            moods,
+        )
+
+        return UniverseResearchResponse.model_validate(universe)
+
+    except Exception as exc:
+        universe.status = "draft"
+        db.commit()
+        logger.error("Universe research failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            500,
+            {
+                "error": f"Research failed: {exc}",
+                "code": "research_failed",
+            },
+        )
 
 
 class ChatRequest(BaseModel):

@@ -11,11 +11,9 @@ interface ChatMessage {
   };
   proposalStatus?: "pending" | "success" | "error";
   djSuggestions?: DJSuggestion[];
-  djEditingState?: Record<number, DJSuggestion>; // Track edited versions before staging
-  djStagingStatuses?: Record<
-    number,
-    "idle" | "editing" | "staging" | "staged" | "error"
-  >;
+  djStagingStatuses?: Record<number, "idle" | "staging" | "staged" | "error">;
+  djEditingIndex?: number | null;
+  djEditingData?: Record<string, string>;
 }
 
 /** Parsed fields from a DJ_SUGGESTION block in the AI response. */
@@ -141,7 +139,34 @@ genre: [Primary music genre]
 signature_sound: [What makes their sound unique]
 backstory: [Brief in-universe backstory]
 
-Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.`;
+Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.
+
+OPTIONAL: When the user asks about colors or styling (e.g. "what colors would suit this station", "pick a color scheme"), respond with a JSON proposal in this format:
+
+\`\`\`json
+{
+  "action": "propose_colors",
+  "entity": "station",
+  "data": {
+    "color_primary": "#hex_code",
+    "color_secondary": "#hex_code",
+    "color_accent": "#hex_code"
+  }
+}
+\`\`\`
+
+Example colors for a synthwave station:
+\`\`\`json
+{
+  "action": "propose_colors",
+  "entity": "station",
+  "data": {
+    "color_primary": "#ff006e",
+    "color_secondary": "#0f3460",
+    "color_accent": "#00d4ff"
+  }
+}
+\`\`\``;
   }
 
   return prompt;
@@ -204,6 +229,27 @@ export function ChatAssistant({
               .trim()
           : replyText;
 
+      // Handle color proposals automatically
+      if (data.proposal?.action === "propose_colors" && selectedStation) {
+        try {
+          const colorData = data.proposal.data as Record<string, string>;
+          const colorPalette = [
+            colorData.color_primary,
+            colorData.color_secondary,
+            colorData.color_accent,
+          ]
+            .filter((c) => c)
+            .join("|");
+
+          await api.updateStation(selectedStation.id, {
+            color_palette: colorPalette,
+          });
+          onEntityCreated?.();
+        } catch (err) {
+          console.error("Failed to apply colors:", err);
+        }
+      }
+
       const newMsg: ChatMessage = {
         role: "assistant",
         content: visibleReply,
@@ -235,15 +281,96 @@ export function ChatAssistant({
     }
   };
 
-  /** Stage a single AI-suggested DJ and update the message's staging statuses. */
-  const handleStageDJ = async (
+  /** Open edit modal for a DJ suggestion */
+  const handleEditDJ = (
     msgIndex: number,
     djIndex: number,
     suggestion: DJSuggestion,
   ) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      copy[msgIndex] = {
+        ...copy[msgIndex],
+        djEditingIndex: djIndex,
+        djEditingData: { ...suggestion },
+      };
+      return copy;
+    });
+  };
+
+  /** Cancel editing and clear edit state */
+  const handleCancelEditDJ = (msgIndex: number) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      copy[msgIndex] = {
+        ...copy[msgIndex],
+        djEditingIndex: null,
+        djEditingData: undefined,
+      };
+      return copy;
+    });
+  };
+
+  /** Update a field in the edit form */
+  const handleEditFieldChange = (
+    msgIndex: number,
+    field: string,
+    value: string,
+  ) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      copy[msgIndex] = {
+        ...copy[msgIndex],
+        djEditingData: {
+          ...copy[msgIndex].djEditingData,
+          [field]: value,
+        },
+      };
+      return copy;
+    });
+  };
+
+  /** Map AI DJ suggestion to artist payload, handling field name transformations. */
+  const mapSuggestionToArtistPayload = (
+    editedData: Record<string, string>,
+  ) => ({
+    name: editedData.name,
+    display_name: editedData.display_name || editedData.name,
+    artist_type: ([
+      "dj",
+      "musician",
+      "narrator",
+      "host",
+      "caller",
+      "guest",
+    ].includes(editedData.type)
+      ? editedData.type
+      : "dj") as string,
+    station_id: currentStationId,
+    bio: editedData.backstory, // Note: backstory maps to bio in API
+    personality: editedData.personality,
+    catchphrases: editedData.catchphrases,
+    speaking_style: editedData.speaking_style,
+    voice_description: editedData.voice_description,
+    genre: editedData.genre,
+    signature_sound: editedData.signature_sound,
+  });
+
+  /** Stage a DJ with edited data */
+  const handleStageDJWithEdits = async (
+    msgIndex: number,
+    djIndex: number,
+    editedData: Record<string, string>,
+  ) => {
     if (!currentStationId) return;
 
-    // Mark as staging
+    // Validate required fields
+    if (!editedData.name?.trim()) {
+      alert("DJ name is required");
+      return;
+    }
+
+    // Mark as staging (but preserve edit state in case of error)
     setMessages((prev) => {
       const copy = [...prev];
       copy[msgIndex] = {
@@ -257,29 +384,9 @@ export function ChatAssistant({
     });
 
     try {
-      await api.stageArtist({
-        name: suggestion.name,
-        display_name: suggestion.display_name || suggestion.name,
-        artist_type: ([
-          "dj",
-          "musician",
-          "narrator",
-          "host",
-          "caller",
-          "guest",
-        ].includes(suggestion.type)
-          ? suggestion.type
-          : "dj") as string,
-        station_id: currentStationId,
-        bio: suggestion.backstory,
-        personality: suggestion.personality,
-        catchphrases: suggestion.catchphrases,
-        speaking_style: suggestion.speaking_style,
-        voice_description: suggestion.voice_description,
-        genre: suggestion.genre,
-        signature_sound: suggestion.signature_sound,
-      });
+      await api.stageArtist(mapSuggestionToArtistPayload(editedData));
 
+      // Only clear edit state on successful staging
       setMessages((prev) => {
         const copy = [...prev];
         copy[msgIndex] = {
@@ -288,6 +395,8 @@ export function ChatAssistant({
             ...copy[msgIndex].djStagingStatuses,
             [djIndex]: "staged",
           },
+          djEditingIndex: null,
+          djEditingData: undefined,
         };
         return copy;
       });
@@ -320,9 +429,18 @@ export function ChatAssistant({
           "Rate limit: too many pending DJs. Approve or reject existing drafts first.",
         );
       } else {
-        alert(`Failed to stage ${suggestion.name}: ${errMsg}`);
+        alert(`Failed to stage DJ: ${errMsg}`);
       }
     }
+  };
+
+  /** Stage a single AI-suggested DJ without editing */
+  const handleStageDJ = async (
+    msgIndex: number,
+    djIndex: number,
+    suggestion: DJSuggestion,
+  ) => {
+    handleStageDJWithEdits(msgIndex, djIndex, suggestion);
   };
 
   /** Confirm a manual proposal (existing Station / Brand / Artist creation flow). */
@@ -411,11 +529,577 @@ export function ChatAssistant({
           <div key={msgIdx} className={`chat-message ${msg.role}`}>
             {msg.content}
 
-            {/* Structured DJ suggestion cards */}
+            {/* Structured DJ suggestion cards with edit modal */}
             {msg.djSuggestions && msg.djSuggestions.length > 0 && (
               <div style={{ marginTop: "var(--space-md)" }}>
                 {msg.djSuggestions.map((dj, djIdx) => {
                   const status = msg.djStagingStatuses?.[djIdx] ?? "idle";
+                  const isEditing = msg.djEditingIndex === djIdx;
+                  const editData = msg.djEditingData || {};
+
+                  if (isEditing) {
+                    // Edit form for AI-generated DJ
+                    return (
+                      <div
+                        key={djIdx}
+                        style={{
+                          marginBottom: "var(--space-sm)",
+                          padding: "var(--space-md)",
+                          background: "rgba(255,255,255,0.08)",
+                          borderRadius: "var(--radius-sm)",
+                          border: "1px solid var(--accent)",
+                        }}
+                      >
+                        <h4
+                          style={{
+                            marginTop: 0,
+                            marginBottom: "var(--space-md)",
+                          }}
+                        >
+                          Edit DJ: {editData.display_name || editData.name}
+                        </h4>
+
+                        {/* Identity Section */}
+                        <div
+                          style={{
+                            marginBottom: "var(--space-lg)",
+                            paddingBottom: "var(--space-lg)",
+                            borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <h5
+                            style={{
+                              fontSize: "0.9em",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              color: "var(--text-secondary)",
+                              marginBottom: "var(--space-sm)",
+                            }}
+                          >
+                            Identity
+                          </h5>
+                          <div
+                            style={{ display: "grid", gap: "var(--space-sm)" }}
+                          >
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-name-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Real Name *
+                              </label>
+                              <input
+                                id={`dj-edit-name-${msgIdx}`}
+                                type="text"
+                                value={editData.name || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="name"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="Real Name (required)"
+                                required
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: !editData.name?.trim()
+                                    ? "1px solid var(--error-color, #f87171)"
+                                    : "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                              {!editData.name?.trim() && (
+                                <span
+                                  style={{
+                                    fontSize: "0.75em",
+                                    color: "var(--error-color, #f87171)",
+                                    display: "block",
+                                    marginTop: "0.25em",
+                                  }}
+                                >
+                                  Name is required
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-display-name-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                On-Air Name
+                              </label>
+                              <input
+                                id={`dj-edit-display-name-${msgIdx}`}
+                                type="text"
+                                value={editData.display_name || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "display_name",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="display_name"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="On-Air Name"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-type-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Type
+                              </label>
+                              <select
+                                id={`dj-edit-type-${msgIdx}`}
+                                value={editData.type || "dj"}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "type",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="type"
+                                data-section="identity"
+                                data-type="artist"
+                                aria-label="Artist Type"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              >
+                                <option value="dj">DJ</option>
+                                <option value="musician">Musician</option>
+                                <option value="host">Host</option>
+                                <option value="narrator">Narrator</option>
+                                <option value="caller">Caller</option>
+                                <option value="guest">Guest</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Personality Section */}
+                        <div
+                          style={{
+                            marginBottom: "var(--space-lg)",
+                            paddingBottom: "var(--space-lg)",
+                            borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <h5
+                            style={{
+                              fontSize: "0.9em",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              color: "var(--text-secondary)",
+                              marginBottom: "var(--space-sm)",
+                            }}
+                          >
+                            Personality & Voice
+                          </h5>
+                          <div
+                            style={{ display: "grid", gap: "var(--space-sm)" }}
+                          >
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-personality-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Personality
+                              </label>
+                              <textarea
+                                id={`dj-edit-personality-${msgIdx}`}
+                                value={editData.personality || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "personality",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="personality"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Personality traits and characteristics"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  minHeight: "80px",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                  fontFamily: "inherit",
+                                  resize: "vertical",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-speaking-style-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Speaking Style
+                              </label>
+                              <input
+                                id={`dj-edit-speaking-style-${msgIdx}`}
+                                type="text"
+                                value={editData.speaking_style || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "speaking_style",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="speaking_style"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Speaking Style"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-voice-description-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Voice Description
+                              </label>
+                              <input
+                                id={`dj-edit-voice-description-${msgIdx}`}
+                                type="text"
+                                value={editData.voice_description || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "voice_description",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="voice_description"
+                                data-section="personality"
+                                data-type="artist"
+                                aria-label="Voice Description for audio synthesis"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quirks Section */}
+                        <div
+                          style={{
+                            marginBottom: "var(--space-lg)",
+                            paddingBottom: "var(--space-lg)",
+                            borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <h5
+                            style={{
+                              fontSize: "0.9em",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              color: "var(--text-secondary)",
+                              marginBottom: "var(--space-sm)",
+                            }}
+                          >
+                            Quirks & Catchphrases
+                          </h5>
+                          <div
+                            style={{ display: "grid", gap: "var(--space-sm)" }}
+                          >
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-catchphrases-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Catchphrases (pipe-separated)
+                              </label>
+                              <input
+                                id={`dj-edit-catchphrases-${msgIdx}`}
+                                type="text"
+                                value={editData.catchphrases || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "catchphrases",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="catchphrases"
+                                data-section="quirks"
+                                data-type="artist"
+                                aria-label="Catchphrases (pipe-separated)"
+                                placeholder="Keep it retro|Waves incoming"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Music Section */}
+                        <div
+                          style={{
+                            marginBottom: "var(--space-lg)",
+                            paddingBottom: "var(--space-lg)",
+                            borderBottom: "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          <h5
+                            style={{
+                              fontSize: "0.9em",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              color: "var(--text-secondary)",
+                              marginBottom: "var(--space-sm)",
+                            }}
+                          >
+                            Music
+                          </h5>
+                          <div
+                            style={{ display: "grid", gap: "var(--space-sm)" }}
+                          >
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-genre-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Genre
+                              </label>
+                              <input
+                                id={`dj-edit-genre-${msgIdx}`}
+                                type="text"
+                                value={editData.genre || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "genre",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="genre"
+                                data-section="music"
+                                data-type="artist"
+                                aria-label="Music Genre"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`dj-edit-signature-sound-${msgIdx}`}
+                                style={{
+                                  fontSize: "0.85em",
+                                  display: "block",
+                                  marginBottom: "0.25em",
+                                }}
+                              >
+                                Signature Sound
+                              </label>
+                              <input
+                                id={`dj-edit-signature-sound-${msgIdx}`}
+                                type="text"
+                                value={editData.signature_sound || ""}
+                                onChange={(e) =>
+                                  handleEditFieldChange(
+                                    msgIdx,
+                                    "signature_sound",
+                                    e.target.value,
+                                  )
+                                }
+                                data-field="signature_sound"
+                                data-section="music"
+                                data-type="artist"
+                                aria-label="Signature Sound"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.4em",
+                                  fontSize: "0.9em",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  borderRadius: "var(--radius-sm)",
+                                  color: "var(--text-primary)",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lore Section */}
+                        <div style={{ marginBottom: "var(--space-lg)" }}>
+                          <h5
+                            style={{
+                              fontSize: "0.9em",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.05em",
+                              color: "var(--text-secondary)",
+                              marginBottom: "var(--space-sm)",
+                            }}
+                          >
+                            Backstory
+                          </h5>
+                          <div>
+                            <label
+                              htmlFor={`dj-edit-backstory-${msgIdx}`}
+                              style={{
+                                fontSize: "0.85em",
+                                display: "block",
+                                marginBottom: "0.25em",
+                              }}
+                            >
+                              Full Story
+                            </label>
+                            <textarea
+                              id={`dj-edit-backstory-${msgIdx}`}
+                              value={editData.backstory || ""}
+                              onChange={(e) =>
+                                handleEditFieldChange(
+                                  msgIdx,
+                                  "backstory",
+                                  e.target.value,
+                                )
+                              }
+                              data-field="backstory"
+                              data-section="lore"
+                              data-type="artist"
+                              aria-label="DJ Backstory and history"
+                              style={{
+                                width: "100%",
+                                padding: "0.4em",
+                                fontSize: "0.9em",
+                                minHeight: "100px",
+                                background: "rgba(255,255,255,0.05)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "var(--radius-sm)",
+                                color: "var(--text-primary)",
+                                fontFamily: "inherit",
+                                resize: "vertical",
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div
+                          style={{ display: "flex", gap: "var(--space-sm)" }}
+                        >
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() =>
+                              handleStageDJWithEdits(msgIdx, djIdx, editData)
+                            }
+                            disabled={!editData.name?.trim()}
+                            title={
+                              !editData.name?.trim()
+                                ? "DJ name is required"
+                                : "Stage this DJ with the edited details"
+                            }
+                          >
+                            Stage DJ
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleCancelEditDJ(msgIdx)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Non-editing card view
                   return (
                     <div
                       key={djIdx}
@@ -479,13 +1163,24 @@ export function ChatAssistant({
                       )}
 
                       {status === "idle" && currentStationId && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          style={{ marginTop: "var(--space-xs)" }}
-                          onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
+                        <div
+                          style={{ display: "flex", gap: "var(--space-xs)" }}
                         >
-                          Stage DJ
-                        </button>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ marginTop: "var(--space-xs)" }}
+                            onClick={() => handleEditDJ(msgIdx, djIdx, dj)}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ marginTop: "var(--space-xs)" }}
+                            onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
+                          >
+                            Stage Now
+                          </button>
+                        </div>
                       )}
                       {status === "staging" && (
                         <span

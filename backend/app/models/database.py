@@ -30,7 +30,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 
 from app.database import Base
 
@@ -47,6 +56,7 @@ def _new_uuid() -> str:
 #  Station
 # ═══════════════════════════════════════════════════════════════════
 
+
 class Station(Base):
     """
     A fictional radio station — the top-level container.
@@ -60,27 +70,29 @@ class Station(Base):
 
     # Identity
     name = Column(String, nullable=False, unique=True)
-    tagline = Column(String, default="")             # "The sound of tomorrow"
-    description = Column(Text, default="")            # Full station lore
-    frequency = Column(String, default="")            # "99.8 FM" or "Channel 7"
+    tagline = Column(String, default="")  # "The sound of tomorrow"
+    description = Column(Text, default="")  # Full station lore
+    frequency = Column(String, default="")  # "99.8 FM" or "Channel 7"
 
     # Style
-    genre = Column(String, default="")                # Primary genre
-    sub_genres = Column(Text, default="")             # Pipe-separated sub-genres
-    mood = Column(String, default="")                 # energetic, chill, dark, etc.
-    era = Column(String, default="")                  # retro-future, post-apocalyptic, etc.
-    broadcast_style = Column(String, default="")      # professional, pirate, underground, corporate
-    color_palette = Column(Text, default="")          # Pipe-separated hex colors
+    genre = Column(String, default="")  # Primary genre
+    sub_genres = Column(Text, default="")  # Pipe-separated sub-genres
+    mood = Column(String, default="")  # energetic, chill, dark, etc.
+    era = Column(String, default="")  # retro-future, post-apocalyptic, etc.
+    broadcast_style = Column(
+        String, default=""
+    )  # professional, pirate, underground, corporate
+    color_palette = Column(Text, default="")  # Pipe-separated hex colors
 
     # Art
-    art_path = Column(String, nullable=True)          # Station logo/art
-    style_seed = Column(String, default=_new_uuid)    # For consistent art generation
+    art_path = Column(String, nullable=True)  # Station logo/art
+    style_seed = Column(String, default=_new_uuid)  # For consistent art generation
 
     # Lore
-    location = Column(String, default="")             # "Orbital Platform Sigma-7"
-    founded_year = Column(String, default="")         # In-universe founding date
-    owner = Column(String, default="")                # In-universe owner/corp
-    lore_notes = Column(Text, default="")             # Additional worldbuilding
+    location = Column(String, default="")  # "Orbital Platform Sigma-7"
+    founded_year = Column(String, default="")  # In-universe founding date
+    owner = Column(String, default="")  # In-universe owner/corp
+    lore_notes = Column(Text, default="")  # Additional worldbuilding
 
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
@@ -89,6 +101,7 @@ class Station(Base):
 # ═══════════════════════════════════════════════════════════════════
 #  Artist / DJ
 # ═══════════════════════════════════════════════════════════════════
+
 
 class Artist(Base):
     """
@@ -107,38 +120,39 @@ class Artist(Base):
 
     # Identity
     name = Column(String, nullable=False)
-    display_name = Column(String, default="")         # On-air name if different
-    artist_type = Column(String, default="dj")        # dj, musician, narrator, host
+    display_name = Column(String, default="")  # On-air name if different
+    artist_type = Column(String, default="dj")  # dj, musician, narrator, host
 
     # Station link (nullable — standalone artists have no station)
     station_id = Column(String, ForeignKey("stations.id"), nullable=True)
 
     # Bio & personality
-    bio = Column(Text, default="")                    # Full character backstory
-    personality = Column(Text, default="")            # Personality description
-    catchphrases = Column(Text, default="")           # Pipe-separated catchphrases
-    quirks = Column(Text, default="")                 # Pipe-separated quirks/habits
-    speaking_style = Column(String, default="")       # fast, drawling, whispered, etc.
-    accent = Column(String, default="")               # British, Southern, robotic, etc.
-    age = Column(String, default="")                  # Character age or range
-    gender = Column(String, default="")               # For voice generation
+    bio = Column(Text, default="")  # Full character backstory
+    personality = Column(Text, default="")  # Personality description
+    catchphrases = Column(Text, default="")  # Pipe-separated catchphrases
+    quirks = Column(Text, default="")  # Pipe-separated quirks/habits
+    speaking_style = Column(String, default="")  # fast, drawling, whispered, etc.
+    accent = Column(String, default="")  # British, Southern, robotic, etc.
+    age = Column(String, default="")  # Character age or range
+    gender = Column(String, default="")  # For voice generation
+    announcement_script = Column(Text, default="")  # AI-generated 30-second intro
 
     # Voice DNA
-    voice_seed = Column(String, default=_new_uuid)    # Persistent voice consistency
-    voice_description = Column(Text, default="")      # "deep baritone with gravel"
+    voice_seed = Column(String, default=_new_uuid)  # Persistent voice consistency
+    voice_description = Column(Text, default="")  # "deep baritone with gravel"
 
     # Visual
-    portrait_path = Column(String, nullable=True)     # AI-generated portrait
-    appearance = Column(Text, default="")             # Physical description for art gen
+    portrait_path = Column(String, nullable=True)  # AI-generated portrait
+    appearance = Column(Text, default="")  # Physical description for art gen
 
     # Music taste / style
     genre = Column(String, default="")
-    influences = Column(Text, default="")             # Pipe-separated influences
-    signature_sound = Column(String, default="")      # What makes them unique
+    influences = Column(Text, default="")  # Pipe-separated influences
+    signature_sound = Column(String, default="")  # What makes them unique
 
     # Relationships
-    rivals = Column(Text, default="")                 # Pipe-separated rival names
-    allies = Column(Text, default="")                 # Pipe-separated ally names
+    rivals = Column(Text, default="")  # Pipe-separated rival names
+    allies = Column(Text, default="")  # Pipe-separated ally names
 
     # Stats
     total_tracks = Column(Integer, default=0)
@@ -147,7 +161,9 @@ class Artist(Base):
     # Values: "published" (default/manual), "draft" (AI-staged), "pending_publish" (in undo window)
     status = Column(String, default="published")
     # Nullable: set by AI generation flow; None for manually created artists
-    created_by = Column(String, nullable=True)        # Future multi-user: who initiated the AI generation
+    created_by = Column(
+        String, nullable=True
+    )  # Future multi-user: who initiated the AI generation
     # TTL for draft records — drafts expire 7 days after creation
     expires_at = Column(DateTime, nullable=True)
     # Set when status moves to pending_publish; used to enforce the 30s undo window
@@ -161,6 +177,7 @@ class Artist(Base):
 #  Brand (fictional in-universe sponsor/company)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class Brand(Base):
     """
     A fictional in-universe brand/company that sponsors stations.
@@ -173,29 +190,29 @@ class Brand(Base):
 
     # Identity
     name = Column(String, nullable=False)
-    slogan = Column(String, default="")               # "Taste the Nebula"
-    industry = Column(String, default="")              # food, weapons, medicine, tech, etc.
-    description = Column(Text, default="")             # What does this brand do?
+    slogan = Column(String, default="")  # "Taste the Nebula"
+    industry = Column(String, default="")  # food, weapons, medicine, tech, etc.
+    description = Column(Text, default="")  # What does this brand do?
 
     # Brand voice
-    tone = Column(String, default="")                  # corporate, quirky, sinister, wholesome
-    target_audience = Column(String, default="")       # "space truckers", "corporate drones"
-    ad_style = Column(String, default="")              # infomercial, testimonial, jingle, PSA
+    tone = Column(String, default="")  # corporate, quirky, sinister, wholesome
+    target_audience = Column(String, default="")  # "space truckers", "corporate drones"
+    ad_style = Column(String, default="")  # infomercial, testimonial, jingle, PSA
 
     # Products (pipe-separated)
-    products = Column(Text, default="")                # "Fusion Core|Med-Kit|Plasma Ammo"
-    product_descriptions = Column(Text, default="")    # JSON array of {name, desc, price}
+    products = Column(Text, default="")  # "Fusion Core|Med-Kit|Plasma Ammo"
+    product_descriptions = Column(Text, default="")  # JSON array of {name, desc, price}
 
     # Visual
     logo_path = Column(String, nullable=True)
-    color_primary = Column(String, default="")         # Brand color hex
+    color_primary = Column(String, default="")  # Brand color hex
     color_secondary = Column(String, default="")
 
     # Lore
     founded_year = Column(String, default="")
     headquarters = Column(String, default="")
-    reputation = Column(String, default="")            # trusted, shady, cult-like, etc.
-    controversies = Column(Text, default="")           # In-universe scandals
+    reputation = Column(String, default="")  # trusted, shady, cult-like, etc.
+    controversies = Column(Text, default="")  # In-universe scandals
     lore_notes = Column(Text, default="")
 
     created_at = Column(DateTime, default=_utcnow)
@@ -205,6 +222,7 @@ class Brand(Base):
 # ═══════════════════════════════════════════════════════════════════
 #  Jingle
 # ═══════════════════════════════════════════════════════════════════
+
 
 class Jingle(Base):
     """
@@ -218,11 +236,13 @@ class Jingle(Base):
     station_id = Column(String, ForeignKey("stations.id"), nullable=False)
 
     name = Column(String, nullable=False)
-    jingle_type = Column(String, default="bumper")     # intro, outro, bumper, sting, ad-bed
+    jingle_type = Column(
+        String, default="bumper"
+    )  # intro, outro, bumper, sting, ad-bed
     description = Column(String, default="")
     audio_path = Column(String, nullable=True)
     duration_seconds = Column(Float, nullable=True)
-    status = Column(String, default="pending")         # pending, generating, completed, failed
+    status = Column(String, default="pending")  # pending, generating, completed, failed
 
     created_at = Column(DateTime, default=_utcnow)
 
@@ -230,6 +250,7 @@ class Jingle(Base):
 # ═══════════════════════════════════════════════════════════════════
 #  Draft (modified — now links to station/artist/brand)
 # ═══════════════════════════════════════════════════════════════════
+
 
 class Draft(Base):
     """
@@ -254,15 +275,15 @@ class Draft(Base):
     artist_name = Column(String, nullable=False)
     genre = Column(String, default="")
     mood = Column(String, default="")
-    items = Column(Text, default="")          # pipe-delimited item list
-    script = Column(Text, default="")         # AI-generated or user-edited script
+    items = Column(Text, default="")  # pipe-delimited item list
+    script = Column(Text, default="")  # AI-generated or user-edited script
     backstory = Column(Text, default="")
     market_research = Column(Text, default="")
     filler_protocol = Column(Boolean, default=False)
 
     # Status: draft | fleshed_out | committed | generating | completed | failed
     status = Column(String, default="draft")
-    task_id = Column(String, nullable=True)   # Celery task ID once committed
+    task_id = Column(String, nullable=True)  # Celery task ID once committed
 
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
@@ -271,6 +292,7 @@ class Draft(Base):
 # ═══════════════════════════════════════════════════════════════════
 #  Generation History
 # ═══════════════════════════════════════════════════════════════════
+
 
 class GenerationHistory(Base):
     """
@@ -307,3 +329,63 @@ class GenerationHistory(Base):
 
     created_at = Column(DateTime, default=_utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Universe / Game World
+# ═══════════════════════════════════════════════════════════════════
+
+
+class Universe(Base):
+    """
+    A game world or fictional universe for radio content generation.
+
+    Users provide a game/world name, and the system researches it via Google
+    Search + Gemini to extract publisher, setting, lore, distinctive items,
+    places to stay, factions, etc. The description is then used to influence
+    all content generation (DJs, stations, jingles, ads) to match the world's
+    atmosphere and aesthetic.
+
+    Research Status Workflow:
+      draft        — User entered name, awaiting research
+      researching  — AI research in progress
+      reviewed     — Research complete, user reviewing/editing
+      published    — Approved and ready for content generation
+    """
+
+    __tablename__ = "universes"
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+
+    # Identity
+    name = Column(
+        String, nullable=False, unique=True
+    )  # e.g. "The Witcher 3", "Cyberpunk 2077"
+    description = Column(Text, default="")  # Full AI-researched description
+
+    # Research metadata
+    publisher = Column(String, default="")  # e.g. "CD Projekt Red"
+    key_features = Column(Text, default="")  # Pipe-separated keywords/tags
+    research_links = Column(Text, default="")  # JSON array of {title, url}
+
+    # Research workflow
+    status = Column(String, default="draft")  # draft, researching, reviewed, published
+    research_summary = Column(
+        Text, default=""
+    )  # Short version for quick reference (lore, atmosphere)
+
+    # Content generation context
+    genre_hints = Column(
+        String, default=""
+    )  # Pipe-separated: "synthwave|cyberpunk|atmospheric"
+    mood_hints = Column(
+        String, default=""
+    )  # Pipe-separated: "dark|mysterious|energetic"
+    setting = Column(String, default="")  # "futuristic city", "medieval kingdom", etc.
+    era = Column(
+        String, default=""
+    )  # "futuristic", "medieval", "post-apocalyptic", etc.
+
+    # Admin/audit
+    created_at = Column(DateTime, default=_utcnow)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
