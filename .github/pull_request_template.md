@@ -1,52 +1,70 @@
-## Description
+## Summary
 
-Please provide a brief description of the changes in this PR.
+<!-- Brief one-sentence summary of the change -->
 
 ## Type of Change
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Dependency update
-- [ ] Chore (non-functional changes)
+<!-- Mark the relevant option with an "x" -->
 
-## Related Issue
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ Feature (non-breaking change which adds functionality)
+- [ ] 🚀 Performance improvement
+- [ ] 📚 Documentation
+- [ ] 🔧 Configuration / Build / Deployment
+- [ ] ♻️ Refactoring (no feature or bug fix)
+- [ ] 🧪 Test addition / update
+- [ ] ⚠️ Breaking change (fix or feature that would cause existing functionality to change)
 
-Closes #N (replace N with issue number)
+## Description
+
+<!-- Provide detailed context about what this PR does -->
+
+## Related Issues
+
+<!-- Link related issues with "#123" format -->
+Closes #
 
 ## Testing
 
-Describe the testing approach:
-- [ ] Unit tests added/updated
-- [ ] Manual testing completed
-- [ ] Full test suite passes (`npm test`)
-- [ ] No regressions detected
+<!-- Describe how to test these changes -->
 
-## Quality Checklist
+- [ ] I have tested this change locally
+- [ ] I have added / updated tests
+- [ ] Tests pass without regressions
 
-- [ ] Linting passes (`npm run lint:check`)
-- [ ] Code formatting correct (`npm run format:check`)
-- [ ] Security audit clean (`npm audit`)
+## Checklist
+
 - [ ] Code follows project style guidelines
-- [ ] Comments added for complex logic
-- [ ] No hardcoded secrets or credentials
+- [ ] I have self-reviewed my code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have updated relevant documentation
+- [ ] My changes generate no new warnings
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] New and existing unit tests pass locally with my changes
 
-## Documentation
+## Screenshots (if applicable)
 
-- [ ] `.github/TODO.md` updated with completed subtasks
-- [ ] `.github/PLANNING.md` updated with decisions/blockers
-- [ ] `README.md` updated (if public-facing changes)
-- [ ] Inline code comments added (if needed)
+<!-- Add screenshots for UI changes -->
 
-## Deployment Notes (if applicable)
+## Migration Required?
 
-Describe any deployment considerations, database migrations, environment variable changes, etc.
+- [ ] Database migration needed
+- [ ] Environment variables changed
+- [ ] Breaking API changes
 
-## Additional Context
+<!-- If checked, please describe the migration path -->
 
-Add any other context about the PR here.
+## Performance Impact
+
+<!-- What's the impact on performance? -->
+- No impact / Minor / Significant
+
+## Security Considerations
+
+<!-- Any security implications? -->
 
 ---
 
-**Note**: This PR follows the governance workflow defined in `.github/copilot-instructions.md`.
+**Branch Policy**: This PR targets the **{{ target_branch }}** branch per [BRANCH_STRATEGY.md](.github/BRANCH_STRATEGY.md)
+
+https://claude.ai/code/session_016f5Rxo4bLV2gCqkQQCf6uE
