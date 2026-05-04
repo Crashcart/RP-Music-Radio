@@ -1,8 +1,8 @@
 # AetherWave / RP-Music-Radio — Active Task List
 
-**Last Updated**: 2026-04-27  
+**Last Updated**: 2026-05-03  
 **Project**: Headless Media Factory for procedural lore-heavy radio content  
-**Status**: Foundation & UI Architecture phase
+**Status**: Foundation & UI Architecture phase + Governance Refinement
 
 ---
 
@@ -17,6 +17,41 @@
 - [x] Create `.github/PLANNING.md` with technical decisions
 - [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
 - [x] Update TODO list to reflect the new hierarchical DB architecture
+
+### Governance Refinement (✅ SR-Level Cleanup Completed)
+
+**Session 2026-05-03: Consolidated PR Rules & Entity Constraints**
+- [x] Identified and fixed rule numbering chaos ("10 rules" → "12 core rules")
+- [x] Consolidated overlapping Rules 12-P1 and Rule 12 into single cohesive rule
+- [x] Added explicit escalation procedures with GitHub workflow steps
+- [x] Enhanced escalation triggers: merge conflicts, unclear tests, blocked deps, Cr-level blockers
+- [x] Fixed entity constraint violation: Artist.station_id now NOT NULL (per governance)
+- [x] Updated versions: copilot-instructions.md v2.1 → v3.0
+- [x] Updated timestamps: 2026-04-26 → 2026-05-03 across governance files
+- [x] Verified all CI/CD workflows exist and are correctly referenced
+- [x] Added migration notes for database upgrades (nullable → NOT NULL)
+
+### 🚨 Active Blockers (User-Reported)
+
+**API Failure on boris.local (Cr-Level — Reported 2026-05-03)**
+- [ ] **BLOCKER**: API is failing on boris.local deployment
+- [ ] Gather logs to diagnose root cause (Claude Code sandbox cannot reach boris.local)
+- [ ] User action required: Run log gathering commands locally:
+  ```bash
+  # On boris.local, run any of these to capture logs:
+  docker-compose logs --tail=200 api          # FastAPI service logs
+  docker-compose logs --tail=200 worker       # Celery worker logs
+  docker-compose ps                           # Service status
+  curl -v http://localhost:8000/health        # Health endpoint check
+  curl -v http://localhost:8000/api/v1/stations  # Sample API call
+  ```
+- [ ] Common failure modes to check:
+  - Database connection (SQLite file permissions, Redis reachable?)
+  - Port conflicts (8000 already in use?)
+  - Missing env vars (GOOGLE_API_KEY, REDIS_URL, DATABASE_URL)
+  - Recent deploy broke schema (Artist.station_id NOT NULL migration needed?)
+  - Celery worker can't reach Redis
+- [ ] Once logs available: paste in chat or commit to `.github/PLANNING.md` for analysis
 
 ---
 
