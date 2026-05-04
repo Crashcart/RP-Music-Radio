@@ -196,6 +196,7 @@ function StationDetail({
   });
   const [savingJingle, setSavingJingle] = useState(false);
   const [deletingJingleId, setDeletingJingleId] = useState<string | null>(null);
+  const [deletingDJId, setDeletingDJId] = useState<string | null>(null);
 
   // Pending AI DJs state
   const [pendingDJs, setPendingDJs] = useState<Artist[]>([]);
@@ -382,6 +383,19 @@ function StationDetail({
       alert(`Deletion failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleDeleteDJ = async (djId: string) => {
+    if (!confirm("Delete this DJ? This cannot be undone.")) return;
+    setDeletingDJId(djId);
+    try {
+      await api.deleteArtist(djId);
+      onRefresh();
+    } catch (e: unknown) {
+      alert(`Deletion failed: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setDeletingDJId(null);
     }
   };
 
@@ -803,32 +817,66 @@ function StationDetail({
                   ) : (
                     <div className="entity-card-placeholder small">🎙️</div>
                   )}
-                  <button
-                    className="btn btn-sm"
+                  <div
                     style={{
                       position: "absolute",
                       top: "4px",
                       right: "4px",
-                      padding: "4px 8px",
-                      fontSize: "0.75rem",
-                      background: "rgba(0,0,0,0.7)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      opacity: 0.8,
-                      transition: "opacity 0.2s",
+                      display: "flex",
+                      gap: "4px",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.opacity = "0.8")
-                    }
-                    onClick={() => handleGeneratePortrait(dj.id)}
-                    disabled={generatingPortrait === dj.id}
-                    title="Regenerate portrait"
                   >
-                    {generatingPortrait === dj.id ? "⏳" : "🔄"}
-                  </button>
+                    <button
+                      className="btn btn-sm"
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "0.75rem",
+                        background: "rgba(0,0,0,0.7)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        opacity: 0.8,
+                        transition: "opacity 0.2s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.opacity = "1")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.opacity = "0.8")
+                      }
+                      onClick={() => handleGeneratePortrait(dj.id)}
+                      disabled={generatingPortrait === dj.id}
+                      title="Regenerate portrait"
+                    >
+                      {generatingPortrait === dj.id ? "⏳" : "🔄"}
+                    </button>
+                    <button
+                      className="btn btn-sm"
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "0.75rem",
+                        background: "rgba(200,0,0,0.7)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        opacity: 0.8,
+                        transition: "opacity 0.2s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.opacity = "1")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.opacity = "0.8")
+                      }
+                      onClick={() => handleDeleteDJ(dj.id)}
+                      disabled={deletingDJId === dj.id}
+                      title="Delete DJ"
+                    >
+                      {deletingDJId === dj.id ? "…" : "✕"}
+                    </button>
+                  </div>
                 </div>
                 <div className="entity-card-info">
                   <h4>{dj.display_name || dj.name}</h4>

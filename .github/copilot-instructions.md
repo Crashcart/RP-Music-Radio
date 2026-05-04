@@ -1,7 +1,8 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 2.1** | **Last Updated**: 2026-04-26  
-**Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.
+**Version 3.0** | **Last Updated**: 2026-05-03  
+**Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
+**Changes in v3.0**: Consolidated Rules 12-P1 and Rule 12 into single cohesive rule; fixed entity constraint in database schema; added explicit escalation procedures.
 
 ---
 
@@ -21,7 +22,9 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ---
 
-## The 10 Non-Negotiable Rules
+## The 12 Core Governance Rules
+
+**Summary**: 12 rules establish mandatory workflow discipline. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle.
 
 ### Rule 1: Never Push to Main
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
@@ -82,37 +85,101 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **CONSEQUENCE**: PR rejection; requires escalation to repository maintainers
 - **NOTE**: "Never weaken a constraint" — removals must be justified and approved
 
-### Rule 11: Always Scan All Open PRs Before Focusing on One
-- **REQUIREMENT**: Before starting PR issue fixing work, scan ALL open PRs for failures/blockers
-- **PROCEDURE**: When asked to fix issues on a specific PR:
-  1. List all open PRs: `gh pr list --state open` (or via GitHub API)
-  2. Check each PR's status: CI results, merge state, comment count
-  3. Identify ANY failing checks or blockers across ALL PRs
-  4. Prioritize: Fix critical blockers across ALL PRs, not just the requested one
-  5. Report summary to user: "Scanning found issues on PR #X, #Y — addressing all"
-- **RATIONALE**: Single-PR focus can blind AI to systemic issues affecting multiple PRs
-- **CONSEQUENCE**: Missing multiple failing PRs = escalate to human for PR triage
-- **EXAMPLE** (What NOT to do):
-  - ❌ User says "fix PR #38" → AI focuses only on #38, misses #36 hanging test
-- **EXAMPLE** (What TO do):
-  - ✅ User says "fix PR #38" → AI scans ALL PRs, finds #36 also broken, fixes both
+### Rule 11: Always Use Branch Switching Scripts
+- **REQUIREMENT**: Use provided branch switching scripts for all branch operations:
+  - **Pull from main (stable)**: `./scripts/pull-main.sh`
+  - **Pull from beta (RC)**: `./scripts/pull-beta.sh`
+  - **Pull from alpha (pre-release)**: `./scripts/pull-alpha.sh`
+  - **Interactive switcher**: `./scripts/switch-branch.sh [main|beta|alpha]`
+  - **View branch status**: `./scripts/branch-status.sh`
+- **WHY**: These scripts automatically:
+  - Stash/restore uncommitted changes (prevents data loss)
+  - Fetch latest from remote (keeps local in sync)
+  - Validate branch transitions (prevents accidental merges)
+  - Show branch descriptions and next steps (prevents confusion)
+- **ENFORCEMENT**: Enforce via pre-commit hooks; manual verification required
+- **CONSEQUENCE**: If using raw `git checkout`, re-run appropriate script to ensure proper state
+- **WORKFLOW**: 
+  - **Development**: Always work on feature branches (feat/, fix/, docs/)
+  - **Testing**: `./scripts/pull-alpha.sh` to test new features
+  - **RC validation**: `./scripts/pull-beta.sh` to test release candidates
+  - **Production**: `./scripts/pull-main.sh` to deploy stable releases
 
-### Rule 12-Merge: PR Merge Conflicts Must Be Resolved Before Merge
-- **REQUIREMENT**: No PR can merge with unresolved merge conflicts
-- **CHECK**: Before merging, verify `mergeable_state != "dirty"` (indicates conflicts)
-- **PROCEDURE** (If conflicts detected):
-  1. Fetch latest base branch: `git fetch origin <base-branch>`
-  2. Merge conflicts arise when: feature branch diverged from base
-  3. Resolve conflicts: Edit files, keep correct version of each conflict
-  4. Run full test suite after resolution (conflicts can introduce bugs)
-  5. Commit: `git commit -m "resolve: merge conflicts with origin/<base>"`
-  6. Push: `git push origin <feature-branch>`
-  7. Verify: `mergeable_state` changes to "clean" (or "unstable" if CI pending)
-- **RATIONALE**: Unresolved conflicts block merging; manual resolution ensures correctness
-- **ESCALATION**: If conflicts cannot be resolved automatically, escalate to human
-- **EXAMPLE** (When to fix):
-  - GitHub shows PR status: "This branch has conflicts that must be resolved"
-  - mergeable_state = "dirty" → must resolve before merge can proceed
+### Rule 12: Continuous PR Monitoring with Escalating Fixes (Never Stop at First Green)
+
+**CORE PRINCIPLE**: AI must continue working through ALL issues until the entire PR is ALL GREEN. Do NOT stop when one issue is fixed. Treat each green issue as a checkpoint, not a finish line.
+
+#### Monitoring & Escalation Process
+
+- **MONITORING WINDOW**: 8 minutes maximum
+  - Check PR status **once per minute** (not continuously/obsessively)
+  - After 8 minutes, escalate remaining issues as Cr-level blockers to human
+  - Rationale: Ensures progress without creating endless loops
+
+- **CONTINUOUS MONITORING** (Every 1 Minute, up to 8 total):
+  1. **Check PR status** — CI results, comments, review requests, mergeable state
+  2. **Identify NEW issues** — As they appear (newly failed checks, comments, etc.)
+  3. **Categorize by Severity** — Assign level based on impact and fix time:
+     - **Jr** (Junior): Minor issues, 1-minute fix (docs, lint, config)
+     - **Sr** (Senior): Major issues, 5-30 min fix (code logic, architecture)
+     - **Cr** (Critical): Blockers, escalate to human (blocked dependencies, env issues)
+
+#### Issue Fix Workflow (Per Issue)
+
+1. Create/update subtask in `.github/TODO.md` with issue ID and severity
+2. Document fix approach in `.github/PLANNING.md`
+3. Implement fix on feature branch (Phase 2)
+4. Run full verification (Phase 3: build, test, lint, audit)
+5. Commit with conventional prefix: `fix:`, `refactor:`, `docs:`
+6. Push immediately
+7. Update `.github/TODO.md` with completion status
+8. Update `.github/PLANNING.md` with fix summary
+9. Add PR comment: "Fixed [Jr-1, Sr-2] in cycle N per governance process"
+
+#### Repeat Until All Green (The "Never Stop" Requirement)
+
+- After each fix, pause **1 minute for CI to update**
+- **Immediately re-check ALL checks** (not just the one you fixed)
+- Check for regressions or newly revealed issues
+- **If ANY check still failing** → continue to next issue
+- **If ALL checks green** → verify stability, then STOP
+- **CRITICAL**: Do NOT stop when one issue becomes green — escalate as Cr-level violation if you do
+
+#### Escalation Strategy
+
+If an issue persists across check cycles:
+- Cycle 1 (Jr-level): Try quick fix
+- Cycle 2 (Sr-level): Attempt deeper investigation & fix
+- Cycle 3+ (Cr-level): Document and escalate to human review
+
+#### Success Criteria — PR Ready to Merge Only When:
+
+- ✅ All CI checks green (verify, build, test-frontend, test-backend, lint, audit, security)
+- ✅ 0 failed checks (no red ✗)
+- ✅ 0 blockers (mergeable_state = "clean")
+- ✅ All issues fixed and documented in governance files
+- ✅ PR comment added: "All checks passing [Jr-X, Sr-Y fixed] — ready to merge"
+
+#### Why This Matters
+
+- **Quick wins first**: Jr issues fixed fast, unblocking other work
+- **Systematic investigation**: Sr issues get deeper analysis and root cause fixes
+- **Human safety valve**: Cr issues escalate to human experts
+- **Continuous progress**: No stalled PRs or one-issue-at-a-time fixes
+- **Auditability**: Every fix documented per cycle for review
+- **Quality gate**: All green = production-ready code
+
+#### Enforcement & Consequences
+
+- **PR cannot merge until**:
+  - ✅ All CI checks green (mandatory)
+  - ✅ All identified issues fixed (mandatory)
+  - ✅ Governance files updated (mandatory)
+- **Violations**:
+  - Any failed check = continue fixing (Jr → Sr → Cr escalation)
+  - Stopping at first green = Cr-level violation, escalate to human
+  - Unresolved blockers after Cr escalation = human review required
+- **TIMING**: Continuous 1-minute check cycles until ALL GREEN or Cr escalation triggered
 
 ---
 
@@ -123,7 +190,8 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 2. Review issue context and requirements
 3. Check `PLANNING.md` for related work
 4. Identify dependencies and blockers
-5. **STOP** — ask human if unclear on any requirement
+5. Run `./scripts/branch-status.sh` to verify current branch and available commands
+6. **STOP** — ask human if unclear on any requirement
 
 ### Phase 1: Planning (Immediate)
 1. Break task into 3–5 subtasks
@@ -132,9 +200,10 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
    - Task context and goal
    - Dependencies identified
    - High-level approach
-4. Create feature branch: `git checkout -b feat/issue-N-slug`
-5. **PUSH IMMEDIATELY** — do not wait to accumulate commits
-6. Run: `git pull origin <branch>` — verify no remote conflicts
+4. Ensure you're on a feature branch: `./scripts/pull-alpha.sh` (or appropriate branch for task scope)
+5. Create feature branch: `git checkout -b feat/issue-N-slug`
+6. **PUSH IMMEDIATELY** — do not wait to accumulate commits
+7. Verify branch state: `./scripts/branch-status.sh` — confirm you're on correct feature branch
 
 ### Phase 2: Implementation (Per Subtask)
 1. Read existing code patterns and architecture
@@ -195,22 +264,62 @@ If working across multiple Crashcart repositories:
 
 ---
 
-## Escalation Triggers
+## Escalation Triggers & Procedures
 
 **STOP and escalate to human immediately if:**
-- Merge conflicts cannot be resolved
-- Tests fail and root cause is unclear
-- Security audit flags issues
-- Architectural changes needed
-- Governance file edits required
-- Issue requirements are ambiguous
-- Dependencies are blocked
+- Merge conflicts cannot be resolved after multiple attempts
+- Tests fail and root cause is unclear (Jr & Sr investigation exhausted)
+- Security audit flags critical vulnerabilities
+- Architectural changes needed (beyond scope of PR)
+- Governance file edits required (Rule 10 protection)
+- Issue requirements are ambiguous or contradictory
+- Dependencies are blocked by external systems
+- Rule 12 monitoring window (8 minutes) has elapsed with unresolved Cr issues
 
-**HOW TO ESCALATE:**
-1. Post summary comment in issue/PR
-2. Reference specific failure/blocker
-3. Include error messages and logs
-4. **WAIT FOR HUMAN RESPONSE** — do not proceed
+**HOW TO ESCALATE (Detailed Process):**
+
+1. **Document the Issue**
+   - Create detailed summary of blocker with error messages
+   - Identify exact file, line number, and failure output
+   - Note what you've already tried (Jr & Sr fixes attempted)
+   - Include timestamps and cycle count
+
+2. **Update Governance Files**
+   - Add escalation note to `.github/PLANNING.md` with full context
+   - Update `.github/TODO.md` with blocker status and Cr-level flag
+   - Include copy of error output in a code block
+
+3. **Post GitHub Comment on PR or Issue**
+   - Mention `@maintainers` or `@human-reviewer` tag if available
+   - Use format:
+     ```
+     ## 🚨 Escalation Required (Cr-Level)
+     
+     **Issue**: [Brief title]
+     **Blocker**: [What's blocking progress]
+     **Root Cause**: [If known, or investigation results]
+     **Steps Taken**: 
+     - [Jr-level attempts and results]
+     - [Sr-level investigation and findings]
+     
+     **Error Output**:
+     \`\`\`
+     [Full error message/log]
+     \`\`\`
+     
+     **Next Steps**: Awaiting human review and guidance.
+     ```
+
+4. **Wait for Human Response**
+   - Do NOT continue with workarounds or force-pushes
+   - Do NOT attempt to weaken constraints or skip checks
+   - Monitor PR for human comments (typically within 30 minutes)
+   - Be ready to provide additional context if requested
+
+5. **Resume When Unblocked**
+   - Once human provides guidance, implement fix or adjustment
+   - Loop back to normal fix workflow (Phase 2 → Phase 3 → Push)
+   - Reference the escalation in commit message and PR comment
 
 ---
 
@@ -236,8 +345,10 @@ If you MUST edit a governance file:
 ## Status
 
 **ACTIVE** — Applies to all commits and PRs with no exceptions  
-**Last Updated**: 2026-04-26 UTC  
-**Enforced By**: Branch protection, workflow automations, human review gates
+**Version**: 3.0  
+**Last Updated**: 2026-05-03 UTC  
+**Enforced By**: Branch protection, workflow automations, human review gates, AI escalation procedures  
+**Recent Changes**: Consolidated Rules 12-P1 and 12; added explicit escalation procedures; enforced entity constraints (Artist.station_id NOT NULL)
 
 ---
 
