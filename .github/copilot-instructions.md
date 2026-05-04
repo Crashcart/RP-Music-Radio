@@ -13,9 +13,11 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ## Entity Relationship Constraints
 
-**CRITICAL DATA MODEL RULE**: 
-- **DJs (Artists)** should be linked to stations (via `station_id`).
-- **All other topics (Brands, Stations, etc.)** MUST NOT be linked to the station. Do not attempt to add `station_id` foreign keys to non-DJ models or API payloads.
+**CRITICAL DATA MODEL RULE**:
+- **DJs/Artists** MUST be linked to stations (via `station_id` foreign key or context).
+- **All other entities (Brands, Stations, Jingles)** MUST NOT be linked to a station or have a `station_id` field.
+- This rule prevents data model corruption and ensures clean entity relationships across the codebase.
+- When writing AI prompts, ChatAssistant, or API validation, enforce this constraint strictly.
 
 ---
 

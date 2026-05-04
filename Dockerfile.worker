@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ .
 
 # Command to run Celery worker
-CMD ["celery", "-A", "app.tasks", "worker", "--loglevel=info"]
+CMD ["sh", "-c", "celery -A app.tasks worker --loglevel=${LOG_LEVEL:-info}"]

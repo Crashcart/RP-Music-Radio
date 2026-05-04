@@ -113,9 +113,15 @@ cmd_show() {
 
 cmd_docker() {
   local service="${1:-}"
+  local compose_cmd
+  if command -v docker-compose >/dev/null 2>&1; then
+    compose_cmd="docker-compose"
+  else
+    compose_cmd="docker compose"
+  fi
   if [[ -z "$service" ]]; then
     header "All Container Logs"
-    docker-compose -f "$PROJECT_DIR/docker-compose.yml" logs --tail=100
+    $compose_cmd -f "$PROJECT_DIR/docker-compose.yml" logs --tail=100
   else
     header "Container: $service"
     docker logs --tail=200 "$service" 2>&1 || {

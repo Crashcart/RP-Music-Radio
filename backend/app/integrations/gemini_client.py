@@ -161,7 +161,7 @@ class GeminiClient:
             return result
 
         except json.JSONDecodeError as exc:
-            logger.error("Gemini returned invalid JSON: %s", exc)
+            logger.error("Gemini returned invalid JSON: %s", exc, exc_info=True)
             # Return a minimal fallback
             return {
                 "track_title": f"{station_name} - {artist_name}",
@@ -173,7 +173,7 @@ class GeminiClient:
             }
 
         except Exception as exc:
-            logger.error("Gemini API call failed: %s", exc)
+            logger.error("Gemini API call failed: %s", exc, exc_info=True)
             return {
                 "track_title": f"{station_name} - {artist_name}",
                 "script": "",
