@@ -996,3 +996,182 @@ Execute Rule 12 governance process: Check PR #38 for issues, identify blockers, 
 - Check for timeouts, hung processes, or test suite issues
 - Cancel stuck job if necessary and re-trigger CI
 - Or provide timeline if this is a known long-running test suite
+
+---
+
+## Session 9: Governance Cleanup v3.0 + Senior Review (2026-05-03)
+
+### Objective
+Consolidate overlapping PR rules, enforce entity constraints at database layer, and conduct mid-level + senior architectural reviews.
+
+### 18. Governance Consolidation (v2.1 → v3.0) ✅
+
+**Decision**: Merge Rules 12-P1 and Rule 12 into single Rule 12 with clear subsections
+
+**Problem Addressed**: 
+- Rules 12-P1 ("Never Stop at First Green") and Rule 12 ("Continuous PR Monitoring") overlapped
+- Ambiguous when to stop: Rule 12-P1 said "stop after all green", Rule 12 said "check every 1 minute for 8 min"
+- AI agents got confused about early termination (stop after one fix? or continue until all checks pass?)
+
+**Solution**:
+- Merged both into single Rule 12: "Continuous PR Monitoring with Escalating Fixes (Never Stop at First Green)"
+- Core principle: "Do NOT stop when one issue is fixed. Treat each green issue as a checkpoint, not a finish line."
+- Added subsections: Monitoring Process, Issue Fix Workflow, Repeat Until All Green, Escalation Strategy, Success Criteria
+
+**Changes**:
+- copilot-instructions.md v2.1 → v3.0 (breaking change due to rule consolidation)
+- Timestamps: 2026-04-26 → 2026-05-03 across all .github/ files
+- Rule count clarified: "12 Core Governance Rules" (was "10 Non-Negotiable Rules" with 15+ actual rules)
+
+**Rationale**:
+- Reduces rule interpretation drift (where AI agents make different decisions)
+- Governance becomes self-enforcing through clarity, not correction
+- Single rule easier to audit and update
+- Principle ("never stop") now explicit in rule name and structure
+
+### 19. Entity Constraint Enforcement ✅
+
+**Decision**: Change Artist.station_id from nullable=True to nullable=False
+
+**Problem Addressed**:
+- copilot-instructions.md Rule states: "DJs/Artists MUST be linked to stations"
+- But database schema allowed nullable=True (contradiction)
+- Risk: Code could silently create orphaned artists without stations
+
+**Solution**:
+- Changed `Artist.station_id = Column(..., nullable=False)` in database.py
+- Updated docstring: "All artists must be linked to exactly one station per governance"
+- Added migration note for existing databases: `UPDATE artists SET station_id = '<station-id>' WHERE station_id IS NULL`
+
+**Benefits**:
+- ✅ Enforces at database layer (cannot be bypassed by careless code)
+- ✅ FK constraint prevents orphaned artists
+- ✅ API will fail early with clear error if station_id missing
+- ✅ Schema now matches documentation (no contradictions)
+
+**Risk Mitigation**:
+- ⚠️ Requires database migration before deployment (documented in docstring)
+- See "Deployment Checklist" below
+
+### 20. Enhanced Escalation Procedures ✅
+
+**Decision**: Document explicit 5-step escalation process with GitHub workflow
+
+**Problem Addressed**:
+- Old escalation triggers said "post comment in issue/PR" (vague)
+- No documented GitHub workflow (format, fields, timing)
+- AI agents weren't sure HOW to escalate
+
+**Solution**:
+- 5-step escalation process: Document → Update Files → Post GitHub Comment → Wait → Resume
+- Provided specific GitHub comment template with required fields (Issue, Blocker, Root Cause, Steps Taken, Error Output)
+- Defined clear escalation triggers: merge conflicts, unclear tests, blocked deps, Cr-level blockers, 8-minute window expiry
+
+**Example Escalation Comment**:
+```
+## 🚨 Escalation Required (Cr-Level)
+
+**Issue**: [Brief title]
+**Blocker**: [What's blocking progress]
+**Root Cause**: [If known, or investigation results]
+**Steps Taken**: 
+- [Jr-level attempts and results]
+- [Sr-level investigation and findings]
+
+**Error Output**:
+[Full error message/log]
+
+**Next Steps**: Awaiting human review and guidance.
+```
+
+**Benefits**:
+- ✅ Clear workflow (not improvised per situation)
+- ✅ All required info captured (GitHub system can parse it)
+- ✅ Reduces back-and-forth questions from reviewers
+- ✅ Escalations documented for future audit trail
+
+### Review Results
+
+**Mid-Level Code Review**: PASS with notes
+- ✅ Governance consolidation reduces ambiguity
+- ✅ Entity constraint enforces stated requirements
+- ✅ Documentation is thorough
+- ⚠️ Database migration timing must be documented
+- ⚠️ Form field tagging implementation requires verification
+
+**Senior-Level Architecture Review**: APPROVED FOR ALPHA with 2 actions
+- ✅ Strategic alignment: Rule consolidation improves AI agent clarity
+- ✅ Architectural principles: Entity constraint at database boundary enforces governance
+- ⚠️ Deployment risk: MEDIUM (migration) → LOW (with checklist)
+- ✅ Merged to alpha, ready for testing
+- ⚠️ Action: Document migration order before beta merge
+- ⚠️ Action: Verify form field tagging in ChatAssistant.tsx
+
+### Deployment Checklist (Required Before Beta/Main Merge)
+
+**Critical Path**:
+- [ ] Database migration: Run `UPDATE artists SET station_id = '<default_station_id>' WHERE station_id IS NULL`
+- [ ] API tests pass with new NOT NULL constraint
+- [ ] Form component verified: ChatAssistant.tsx has all data-field attributes
+- [ ] Governance file consistency: Verify all .github/ files have current timestamps
+- [ ] Pre-deployment validation: Deploy to alpha first (✅ already done)
+- [ ] Monitor logs: Watch for FK constraint violations on artist creation
+
+**Status**: ✅ Alpha ⏳ Beta (pending actions) ⏳ Main (pending actions)
+
+---
+
+## Session 10: Google Cloud API Offline (2026-05-04)
+
+### Objective
+Diagnose and resolve Google Cloud API connectivity issue blocking all AI features.
+
+### Issue: Google Cloud API Offline ❌
+
+**Symptoms**:
+- Settings page shows: "API Status: ❌ Offline"
+- ChatAssistant cannot reach Gemini API
+- No AI features functional (chat, DJ generation, announcements, art generation)
+
+**Root Cause Analysis Required**:
+1. **Environment**: Is GOOGLE_API_KEY set in `.env`?
+   - Check: `echo $GOOGLE_API_KEY` (should not be empty)
+   - If missing: Add key from Google Cloud Console
+   
+2. **API Permissions**: Does the key have access to required APIs?
+   - Gemini (text generation)
+   - Lyria (audio synthesis)
+   - Nano Banana 2 (image generation)
+   - Check: Google Cloud Console → APIs & Services → Enabled APIs
+
+3. **Billing & Quotas**: Is the project in good standing?
+   - Billing enabled? (Check Google Cloud Console)
+   - Quotas available? (Not exceeded or rate-limited)
+   - Test: `curl -H "Authorization: Bearer <KEY>" https://generativelanguage.googleapis.com/v1/models:list`
+
+4. **Network**: Can backend reach googleapis.com?
+   - Test from boris.local: `curl -v https://generativelanguage.googleapis.com`
+   - Check firewall rules (if applicable)
+   - Check DNS resolution
+
+5. **Backend Validation**: Is `/api/v1/settings/api-key` endpoint responding?
+   - Test: `curl http://localhost:8000/api/v1/settings/api-key`
+   - Expected: `{"valid": true}` or `{"valid": false, "error": "..."}`
+
+**Impact**:
+- 🔴 CRITICAL: All AI features blocked
+- ChatAssistant cannot generate DJ suggestions
+- DJ announcement generation unavailable
+- Art generation (station logos, DJ portraits) unavailable
+- Universe research unavailable
+
+**Next Steps**:
+- [ ] User verifies GOOGLE_API_KEY in `.env`
+- [ ] User tests API key validity via curl
+- [ ] User checks Google Cloud Console (billing, APIs, quotas)
+- [ ] Report findings: "API key valid but endpoint unreachable" vs "API key invalid" vs "quota exceeded"
+- [ ] AI fixes backend connectivity or provides troubleshooting steps
+
+---
+
+---

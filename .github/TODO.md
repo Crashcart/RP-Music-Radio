@@ -53,6 +53,24 @@
   - Celery worker can't reach Redis
 - [ ] Once logs available: paste in chat or commit to `.github/PLANNING.md` for analysis
 
+**Google Cloud API Offline (Cr-Level — Reported 2026-05-04)**
+- [ ] **BLOCKER**: Google Cloud API status shows ❌ Offline in Settings UI
+- [ ] Frontend shows: "API Status: ❌ Offline" on Settings page
+- [ ] Issue: ChatAssistant cannot reach Gemini, Lyria, or Nano Banana APIs
+- [ ] Root cause to investigate:
+  - GOOGLE_API_KEY missing or invalid in environment
+  - Google Cloud project not configured
+  - API services (Gemini, Lyria, Nano Banana) disabled in console
+  - Network connectivity issue (backend cannot reach googleapis.com)
+  - API quota exceeded or billing suspended
+- [ ] User action required:
+  - [ ] Verify GOOGLE_API_KEY is set in `.env` (not shown in Settings)
+  - [ ] Verify API key has permissions for: Gemini, Lyria, Nano Banana 2
+  - [ ] Test: `curl -H "Authorization: Bearer <KEY>" https://generativelanguage.googleapis.com/v1/models:list`
+  - [ ] Check Google Cloud Console: Billing enabled, APIs activated, quotas available
+- [ ] Once verified: Backend should return status 200 on `/api/v1/settings/api-key` validation
+- [ ] Impact: All AI features blocked (chat, DJ generation, art generation, announcements)
+
 ---
 
 ## Phase 1: Backend Foundation (Hierarchical DB)
