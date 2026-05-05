@@ -1120,3 +1120,58 @@ Consolidate overlapping PR rules, enforce entity constraints at database layer, 
 **Status**: ✅ Alpha ⏳ Beta (pending actions) ⏳ Main (pending actions)
 
 ---
+
+## Session 10: Google Cloud API Offline (2026-05-04)
+
+### Objective
+Diagnose and resolve Google Cloud API connectivity issue blocking all AI features.
+
+### Issue: Google Cloud API Offline ❌
+
+**Symptoms**:
+- Settings page shows: "API Status: ❌ Offline"
+- ChatAssistant cannot reach Gemini API
+- No AI features functional (chat, DJ generation, announcements, art generation)
+
+**Root Cause Analysis Required**:
+1. **Environment**: Is GOOGLE_API_KEY set in `.env`?
+   - Check: `echo $GOOGLE_API_KEY` (should not be empty)
+   - If missing: Add key from Google Cloud Console
+   
+2. **API Permissions**: Does the key have access to required APIs?
+   - Gemini (text generation)
+   - Lyria (audio synthesis)
+   - Nano Banana 2 (image generation)
+   - Check: Google Cloud Console → APIs & Services → Enabled APIs
+
+3. **Billing & Quotas**: Is the project in good standing?
+   - Billing enabled? (Check Google Cloud Console)
+   - Quotas available? (Not exceeded or rate-limited)
+   - Test: `curl -H "Authorization: Bearer <KEY>" https://generativelanguage.googleapis.com/v1/models:list`
+
+4. **Network**: Can backend reach googleapis.com?
+   - Test from boris.local: `curl -v https://generativelanguage.googleapis.com`
+   - Check firewall rules (if applicable)
+   - Check DNS resolution
+
+5. **Backend Validation**: Is `/api/v1/settings/api-key` endpoint responding?
+   - Test: `curl http://localhost:8000/api/v1/settings/api-key`
+   - Expected: `{"valid": true}` or `{"valid": false, "error": "..."}`
+
+**Impact**:
+- 🔴 CRITICAL: All AI features blocked
+- ChatAssistant cannot generate DJ suggestions
+- DJ announcement generation unavailable
+- Art generation (station logos, DJ portraits) unavailable
+- Universe research unavailable
+
+**Next Steps**:
+- [ ] User verifies GOOGLE_API_KEY in `.env`
+- [ ] User tests API key validity via curl
+- [ ] User checks Google Cloud Console (billing, APIs, quotas)
+- [ ] Report findings: "API key valid but endpoint unreachable" vs "API key invalid" vs "quota exceeded"
+- [ ] AI fixes backend connectivity or provides troubleshooting steps
+
+---
+
+---
