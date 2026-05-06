@@ -517,7 +517,7 @@ export const api = {
       "/api/v1/settings/api-key",
     ),
 
-  exportData: () => request<any>("/api/v1/settings/export"),
+  exportData: () => request<Record<string, unknown>>("/api/v1/settings/export"),
 
   getLogs: (lines: number = 500) =>
     request<{ logs: string }>(`/api/v1/settings/logs?lines=${lines}`),
