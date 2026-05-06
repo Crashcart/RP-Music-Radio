@@ -56,7 +56,7 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 TARGET_BRANCH="${TARGET_BRANCH:-$CURRENT_BRANCH}"
 
 case "$TARGET_BRANCH" in
-  main|test|dev|claude/*) ;;
+  main|alpha|beta|test|dev|claude/*) ;;
   *)
     warn "Unusual target branch '$TARGET_BRANCH' — proceeding with caution"
     ;;
