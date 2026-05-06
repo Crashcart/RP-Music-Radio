@@ -139,7 +139,34 @@ genre: [Primary music genre]
 signature_sound: [What makes their sound unique]
 backstory: [Brief in-universe backstory]
 
-Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.`;
+Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.
+
+OPTIONAL: When the user asks about colors or styling (e.g. "what colors would suit this station", "pick a color scheme"), respond with a JSON proposal in this format:
+
+\`\`\`json
+{
+  "action": "propose_colors",
+  "entity": "station",
+  "data": {
+    "color_primary": "#hex_code",
+    "color_secondary": "#hex_code",
+    "color_accent": "#hex_code"
+  }
+}
+\`\`\`
+
+Example colors for a synthwave station:
+\`\`\`json
+{
+  "action": "propose_colors",
+  "entity": "station",
+  "data": {
+    "color_primary": "#ff006e",
+    "color_secondary": "#0f3460",
+    "color_accent": "#00d4ff"
+  }
+}
+\`\`\``;
   }
 
   return prompt;
@@ -201,6 +228,27 @@ export function ChatAssistant({
               .replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, "")
               .trim()
           : replyText;
+
+      // Handle color proposals automatically
+      if (data.proposal?.action === "propose_colors" && selectedStation) {
+        try {
+          const colorData = data.proposal.data as Record<string, string>;
+          const colorPalette = [
+            colorData.color_primary,
+            colorData.color_secondary,
+            colorData.color_accent,
+          ]
+            .filter((c) => c)
+            .join("|");
+
+          await api.updateStation(selectedStation.id, {
+            color_palette: colorPalette,
+          });
+          onEntityCreated?.();
+        } catch (err) {
+          console.error("Failed to apply colors:", err);
+        }
+      }
 
       const newMsg: ChatMessage = {
         role: "assistant",
