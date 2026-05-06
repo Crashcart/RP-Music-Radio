@@ -537,6 +537,14 @@
   - Users can start app and configure key via Settings page
   - Created GEMINI_SETUP.md with setup instructions
 - [ ] First-time user onboarding flow (Settings → "Please add API key to continue")
+- [ ] **Universe as top-level container — schema migration**:
+  - Add `universe_id` FK (NOT NULL) to `stations` table
+  - Add `universe_id` FK (NOT NULL) to `brands` table
+  - Artists/Jingles scoped through Station → no direct FK needed
+  - Write Alembic migration (nullable first, backfill, then NOT NULL)
+  - Update all `POST /stations` and `POST /brands` to require `universe_id`
+  - Update all `GET /stations` and `GET /brands` to filter by `universe_id`
+  - Add `GET /universes/{id}/stations` and `GET /universes/{id}/brands` convenience routes
 - [ ] **Universe selection gate (NOT the main/stations page)**: The universe context is a separate layer — the main page (Stations) is not where universes are set. On first load with no universes configured, the app should route to the Universes page or show a dedicated prompt/wizard before the user reaches Stations. The main nav page remains Stations; universe setup is a prerequisite layer that sits above it.
 
 ---
