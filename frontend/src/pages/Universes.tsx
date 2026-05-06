@@ -447,7 +447,7 @@ function UniverseDetail({
                     </ul>
                   );
                 }
-              } catch (e) {
+              } catch {
                 // Invalid JSON
               }
               return <p style={{ color: "var(--text-muted)" }}>No links yet</p>;
