@@ -98,6 +98,7 @@
 ### Frontend Tasks
 
 - [x] Create `frontend/` directory structure and `index.css` design system (dark sci-fi)
+- [x] Build **Galaxy Opening Splash Screen** (`SplashScreen.tsx`) — canvas starfield warp animation on every load
 - [x] Build **Stations Dashboard** (`Stations.tsx`) with nested DJ & Jingle sub-lists
 - [x] Build **Artists Gallery** (`Artists.tsx`) with deep-field forms (22 fields) and portrait generation
 - [x] Build **Brands Portal** (`Brands.tsx`) for fictional sponsors and ad settings
