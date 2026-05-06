@@ -142,6 +142,7 @@ class Artist(Base):
     accent = Column(String, default="")  # British, Southern, robotic, etc.
     age = Column(String, default="")  # Character age or range
     gender = Column(String, default="")  # For voice generation
+    announcement_script = Column(Text, default="")  # AI-generated 30-second intro
 
     # Voice DNA
     voice_seed = Column(String, default=_new_uuid)  # Persistent voice consistency

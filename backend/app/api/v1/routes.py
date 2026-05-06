@@ -635,6 +635,60 @@ def generate_artist_portrait(artist_id: str, db: Session = Depends(get_db)):
         raise HTTPException(500, f"Portrait generation error: {exc}")
 
 
+@router.post("/artists/{artist_id}/announcement")
+def generate_artist_announcement(artist_id: str, db: Session = Depends(get_db)):
+    """Generate a 30-second radio announcement/intro script for an artist."""
+    artist = db.query(Artist).filter(Artist.id == artist_id).first()
+    if not artist:
+        raise HTTPException(404, "Artist not found")
+
+    api_key = os.getenv("GOOGLE_API_KEY", "")
+    if not api_key:
+        raise HTTPException(400, "Google API key not configured")
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+
+        # Build context for announcement
+        station_name = ""
+        if artist.station_id:
+            station = db.query(Station).filter(Station.id == artist.station_id).first()
+            station_name = station.name if station else ""
+
+        prompt = (
+            f"Create a 30-second radio announcement introducing this artist:\n"
+            f"Name: {artist.name}\n"
+            f"Display Name: {artist.display_name or artist.name}\n"
+            f"Type: {artist.artist_type}\n"
+            f"Personality: {artist.personality}\n"
+            f"Station: {station_name or 'Independent'}\n\n"
+            f"Write ONLY the announcement text, no explanations. Keep it under 75 words (≈30 seconds spoken)."
+        )
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[types.Content(role="user", parts=[types.Part(text=prompt)])],
+            config=types.GenerateContentConfig(
+                temperature=0.8,
+                max_output_tokens=256,
+            ),
+        )
+
+        announcement = response.text.strip()
+        artist.announcement_script = announcement
+        db.commit()
+
+        return {"announcement_script": announcement}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Announcement generation failed: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Announcement generation error: {exc}")
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Brands
 # ═══════════════════════════════════════════════════════════════════
