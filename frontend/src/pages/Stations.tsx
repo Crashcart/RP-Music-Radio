@@ -546,7 +546,6 @@ function StationDetail({
                     border: "2px solid var(--border-color)",
                     borderRadius: "4px",
                     cursor: "pointer",
-                    title: color,
                   }}
                   title={`Copy: ${color}`}
                   onClick={() => navigator.clipboard.writeText(color)}

@@ -1680,3 +1680,119 @@ div.form-ai-filled .form-input {
   background: hsla(0, 80%, 50%, 0.05);
 }
 }
+
+/* ── Splash / Galaxy Opening Screen ──────────────────────────────── */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  background: hsl(225, 30%, 4%);
+  z-index: 9999;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.75s cubic-bezier(0.4, 0, 0.8, 1),
+              opacity 0.75s cubic-bezier(0.4, 0, 0.8, 1);
+}
+
+.splash-exit {
+  transform: scale(8);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.splash-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.splash-nebula {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    hsla(175, 85%, 50%, 0.08) 0%,
+    hsla(260, 70%, 55%, 0.05) 45%,
+    transparent 70%
+  );
+  animation: nebulaPulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes nebulaPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50%       { transform: scale(1.15); opacity: 1; }
+}
+
+.splash-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.88) translateY(14px);
+  transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+}
+
+.splash-logo-in {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.splash-ring {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-border);
+  box-shadow: 0 0 36px var(--accent-glow), inset 0 0 36px var(--accent-glow);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: ringPulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ringPulse {
+  0%, 100% { opacity: 0.35; transform: translate(-50%, -50%) scale(1); }
+  50%       { opacity: 0.85; transform: translate(-50%, -50%) scale(1.08); }
+}
+
+.splash-logo-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), hsl(260, 70%, 60%));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: hsl(225, 30%, 4%);
+  box-shadow: 0 0 28px var(--accent-glow), 0 8px 32px hsla(0,0%,0%,0.5);
+}
+
+.splash-wordmark {
+  font-size: 2.4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), hsl(260, 70%, 70%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.splash-tagline {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
