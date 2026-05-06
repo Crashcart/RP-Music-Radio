@@ -60,8 +60,12 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
         return next;
       });
       onRefresh();
-    } catch (err: Error) {
-      alert(`Couldn't delete draft: ${err.message || "Please try again."}`);
+    } catch (err: unknown) {
+      alert(
+        `Couldn't delete draft: ${
+          err instanceof Error ? err.message : "Please try again."
+        }`,
+      );
     }
   };
 
@@ -69,8 +73,12 @@ export function DraftingTable({ drafts, onRefresh }: Props) {
     try {
       await api.retryDraft(id);
       onRefresh();
-    } catch (err: Error) {
-      alert(`Couldn't retry draft: ${err.message || "Please try again."}`);
+    } catch (err: unknown) {
+      alert(
+        `Couldn't retry draft: ${
+          err instanceof Error ? err.message : "Please try again."
+        }`,
+      );
     }
   };
 
