@@ -44,35 +44,56 @@ def get_db():
 
 
 def init_db():
-    """Migrate the database to the latest schema at startup.
+    """Initialise or migrate the database at startup.
 
-    Runs `alembic upgrade head` so that any missing columns (e.g. added to
-    ORM models but not yet present in an existing SQLite file) are applied
-    automatically.  Falls back to create_all() if Alembic is unavailable or
-    the alembic.ini cannot be located (e.g. during unit tests).
+    Strategy:
+      - Fresh database (no tables yet): create all tables from ORM models via
+        create_all(), then stamp Alembic to 'head' so future runs know all
+        migrations have already been applied.
+      - Existing database: run 'alembic upgrade head' to apply any missing
+        column additions without touching existing rows.
+
+    This avoids the "no such table: artists" error that occurs when Alembic
+    tries to ALTER TABLE on a table that hasn't been created yet.
     """
     import logging
 
+    import sqlalchemy as sa
+
     logger = logging.getLogger(__name__)
+
+    # Detect fresh database by checking for a core table.
+    with engine.connect() as conn:
+        result = conn.execute(
+            sa.text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='stations'"
+            )
+        )
+        is_fresh = result.fetchone() is None
 
     try:
         from alembic import command
         from alembic.config import Config
 
-        # Locate alembic.ini relative to this file: backend/alembic.ini
         ini_path = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
         ini_path = os.path.abspath(ini_path)
 
-        if os.path.exists(ini_path):
-            alembic_cfg = Config(ini_path)
-            # Override the DB URL so Alembic uses the same connection as the app
-            alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
-            command.upgrade(alembic_cfg, "head")
-            logger.info("Database migrations applied (alembic upgrade head)")
-            return
-    except Exception as exc:
-        logger.warning("Alembic migration failed, falling back to create_all: %s", exc)
+        if not os.path.exists(ini_path):
+            raise FileNotFoundError(f"alembic.ini not found at {ini_path}")
 
-    # Fallback: create tables from ORM definitions (won't add missing columns)
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created via create_all fallback")
+        alembic_cfg = Config(ini_path)
+        alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+        if is_fresh:
+            # Create all tables from ORM, then stamp so migrations don't re-run
+            Base.metadata.create_all(bind=engine)
+            command.stamp(alembic_cfg, "head")
+            logger.info("Fresh database: tables created and stamped at head")
+        else:
+            # Existing database: apply any missing column migrations
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Existing database: alembic upgrade head complete")
+
+    except Exception as exc:
+        logger.warning("Alembic unavailable, using create_all fallback: %s", exc)
+        Base.metadata.create_all(bind=engine)
