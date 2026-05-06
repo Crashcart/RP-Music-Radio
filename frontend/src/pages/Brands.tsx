@@ -50,8 +50,10 @@ export function Brands() {
       await api.deleteBrand(id);
       if (selected?.id === id) setSelected(null);
       refresh();
-    } catch (e: any) {
-      alert(`Failed to delete brand: ${e.message || String(e)}`);
+    } catch (e: unknown) {
+      alert(
+        `Failed to delete brand: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   };
 
@@ -446,8 +448,8 @@ function BrandForm({
         await api.createBrand(form);
       }
       onSave();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }

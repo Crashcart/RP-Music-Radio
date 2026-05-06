@@ -12,7 +12,6 @@ interface UndoToast {
 }
 
 export function Stations({
-  isMobile: _isMobile,
   onStationSelect,
 }: {
   isMobile?: boolean;

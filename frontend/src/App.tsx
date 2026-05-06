@@ -5,7 +5,6 @@ import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
 import { Universes } from "./pages/Universes";
 import { DraftingTable } from "./pages/DraftingTable";
-// @ts-ignore - Suppress TS false positive, file exists
 import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
