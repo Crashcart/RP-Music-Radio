@@ -29,30 +29,36 @@ export function SettingsPage({ apiOk }: SettingsProps) {
     setError("");
     setSavedMessage("");
 
-    try {
-      // Save API key to localStorage (client-side only)
-      if (apiKey) {
-        localStorage.setItem("google_api_key", apiKey);
-      }
-      if (googleProject) {
-        localStorage.setItem("google_project", googleProject);
-      }
+    // Always persist to localStorage first — works regardless of API state
+    if (apiKey) localStorage.setItem("google_api_key", apiKey);
+    if (googleProject) localStorage.setItem("google_project", googleProject);
 
-      // Validate API key with backend if provided
-      if (apiKey) {
-        const response = await api.setApiKey(apiKey);
-        if (response.valid) {
-          setSavedMessage("✅ API key validated and saved successfully");
-        } else {
-          setError("⚠️ API key validation failed. Please check your key.");
-        }
+    // Skip backend validation when the API is known to be offline
+    if (!apiKey) {
+      setSavedMessage("✅ Settings saved");
+      setLoading(false);
+      return;
+    }
+
+    if (apiOk === false) {
+      setSavedMessage(
+        "✅ API key saved locally. Backend is offline — validation will run when it comes back.",
+      );
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await api.setApiKey(apiKey);
+      if (response.valid) {
+        setSavedMessage("✅ API key validated and saved successfully");
       } else {
-        setSavedMessage("✅ Settings saved (API key is optional)");
+        setError(`⚠️ API key validation failed: ${response.message}`);
       }
-    } catch (err) {
-      console.error("Failed to save settings:", err);
+    } catch (err: unknown) {
+      console.error("Settings save error:", err);
       setError(
-        "Failed to save settings. Check console for details. API key saved locally.",
+        "Could not reach the backend to validate the key. It has been saved locally.",
       );
     } finally {
       setLoading(false);

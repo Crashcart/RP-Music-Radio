@@ -1089,23 +1089,42 @@ def export_data(db: Session = Depends(get_db)):
 
 @router.get("/settings/logs")
 def get_system_logs(lines: int = 500):
-    """Retrieve the last N lines of the backend log for debugging."""
-    try:
-        import os
+    """Retrieve the last N log entries from the SQLite app_logs table."""
+    import sqlite3
 
-        log_path = "logs/backend.log"
-        if not os.path.exists(log_path):
-            return {
-                "logs": "Log file not found. System is waiting for the first error or log entry."
-            }
+    for db_path in [
+        "/app/data/aetherwave.db",
+        "../data/aetherwave.db",
+        "data/aetherwave.db",
+    ]:
+        if not os.path.exists(db_path):
+            continue
+        try:
+            with sqlite3.connect(db_path) as conn:
+                rows = conn.execute(
+                    """
+                    SELECT timestamp, level, component, message
+                    FROM app_logs
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (lines,),
+                ).fetchall()
 
-        # Read the last N lines safely
-        with open(log_path, "r", encoding="utf-8") as f:
-            all_lines = f.readlines()
-            return {"logs": "".join(all_lines[-lines:])}
-    except Exception as exc:
-        logger.error("Failed to read logs: %s", exc, exc_info=True)
-        return {"logs": f"Error reading logs: {exc}"}
+            if not rows:
+                return {"logs": "No log entries found yet."}
+
+            # Format newest-last so the viewer scrolls to the bottom
+            formatted = "\n".join(
+                f"[{ts}] {level:<8} {component}: {msg}"
+                for ts, level, component, msg in reversed(rows)
+            )
+            return {"logs": formatted}
+        except Exception as exc:
+            logger.error("Failed to read logs from SQLite: %s", exc, exc_info=True)
+            return {"logs": f"Error reading logs: {exc}"}
+
+    return {"logs": "Database not found. The backend may still be initialising."}
 
 
 # ═══════════════════════════════════════════════════════════════════
