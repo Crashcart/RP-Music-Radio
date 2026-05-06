@@ -1174,4 +1174,48 @@ Diagnose and resolve Google Cloud API connectivity issue blocking all AI feature
 
 ---
 
+## Architectural Decision: Universe as Top-Level Container (2026-05-06)
+
+### Decision
+**All entities exist within a Universe.** Stations, Artists, Brands, Jingles, and Drafts are scoped to a Universe and cannot exist outside one. The Universe is the root of the entity hierarchy.
+
+```
+Universe
+  └── Station
+        ├── Artist (DJ/Host)
+        └── Jingle
+  └── Brand
+  └── Draft
+```
+
+### Current State (Gap)
+The `Universe` model exists in the database but has **no foreign key relationships** to any other entity. Stations, Artists, Brands, and Brands are currently unscoped — they float outside any Universe context. This must be corrected.
+
+### Required Schema Changes
+1. Add `universe_id` FK to `Station` (NOT NULL — every station belongs to a universe)
+2. Add `universe_id` FK to `Brand` (NOT NULL — every brand belongs to a universe)
+3. `Artist` and `Jingle` are scoped via their `station_id` → Station → Universe (no direct FK needed)
+4. `Draft` scoped via `station_id` → Station → Universe
+
+### Required API Changes
+- All list endpoints (`GET /stations`, `GET /brands`) must accept `universe_id` filter
+- Create endpoints (`POST /stations`, `POST /brands`) must require `universe_id`
+- Universe-scoped queries: `GET /universes/{id}/stations`, `GET /universes/{id}/brands`
+
+### Required Frontend Changes
+- Universe selection gate: app checks for universes on load; if none, routes to Universe setup before Stations
+- All entity creation forms include Universe context (auto-injected from active universe)
+- Nav/sidebar shows active Universe name
+
+### Migration Plan
+1. Add `universe_id` column (nullable initially) to `stations` and `brands`
+2. If existing data: prompt user to assign to a Universe or auto-create a default Universe
+3. Flip to NOT NULL once all rows are assigned
+4. Update all API routes and frontend forms
+
+### Rationale
+- Radio content is universe-specific (a synthwave universe has different stations than a cyberpunk universe)
+- Without universe scoping, all stations/brands mix together with no context separation
+- Universe gate at app load ensures users always have context before creating content
+
 ---
