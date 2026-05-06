@@ -519,6 +519,7 @@
   - Users can start app and configure key via Settings page
   - Created GEMINI_SETUP.md with setup instructions
 - [ ] First-time user onboarding flow (Settings → "Please add API key to continue")
+- [ ] **Welcome page — Universe selection gate**: On first load (no universes configured), the app should prompt the user to create a Universe before anything else. Landing at http://boris.local:8432/ should detect zero universes and show a "Create your first Universe" call-to-action/wizard instead of the empty Stations page. This is the natural entry point for new users to set context for all generated content.
 
 ---
 
