@@ -33,25 +33,33 @@
 
 ### 🚨 Active Blockers (User-Reported)
 
-**API Failure on boris.local (Cr-Level — Reported 2026-05-03)**
-- [ ] **BLOCKER**: API is failing on boris.local deployment
-- [ ] Gather logs to diagnose root cause (Claude Code sandbox cannot reach boris.local)
-- [ ] User action required: Run log gathering commands locally:
-  ```bash
-  # On boris.local, run any of these to capture logs:
-  docker-compose logs --tail=200 api          # FastAPI service logs
-  docker-compose logs --tail=200 worker       # Celery worker logs
-  docker-compose ps                           # Service status
-  curl -v http://localhost:8000/health        # Health endpoint check
-  curl -v http://localhost:8000/api/v1/stations  # Sample API call
-  ```
-- [ ] Common failure modes to check:
-  - Database connection (SQLite file permissions, Redis reachable?)
-  - Port conflicts (8000 already in use?)
-  - Missing env vars (GOOGLE_API_KEY, REDIS_URL, DATABASE_URL)
-  - Recent deploy broke schema (Artist.station_id NOT NULL migration needed?)
-  - Celery worker can't reach Redis
-- [ ] Once logs available: paste in chat or commit to `.github/PLANNING.md` for analysis
+**API Startup Hang on boris.local (Cr-Level — 2026-05-07 Root Cause Found)**
+
+**ROOT CAUSE IDENTIFIED**: SQLiteHandler deadlock during logger.info() calls
+
+**Discovery Timeline:**
+1. API returns empty response on /health (curl: 56 connection reset)
+2. Container logs show only "Static files mounted at /output" then silence
+3. Health check marked container as "unhealthy"
+4. Manual uvicorn start with timeout hangs after mount log
+5. Traced to logging_config.py line 65: `with self.lock:` in SQLiteHandler.emit()
+6. Lock acquisition blocking infinitely during logger.info() calls
+7. Disabling SQLiteHandler via comment didn't fix (rebuild issue)
+8. Root cause: SQLiteHandler trying to write to database during app initialization
+
+**Current Status:**
+- [x] Root cause identified: SQLiteHandler lock deadlock
+- [x] Temporary fix verified: Disabling SQLiteHandler allows app to start
+- [ ] Permanent fix: Rebuild containers without cache + verify SQLiteHandler is disabled
+- [ ] Next: Run `docker compose down && docker compose build --no-cache aetherwave-api && docker compose up -d`
+- [ ] Verify: `docker compose exec aetherwave-api grep "# root.addHandler" /app/app/logging_config.py` shows commented line
+- [ ] Test: `curl http://localhost:8433/health` returns JSON response
+
+**Technical Details:**
+- SQLiteHandler.emit() acquires a Lock() and writes to /app/data/aetherwave.db
+- During app module import, logger.info("Static files mounted") triggers emit()
+- Lock may be held by another thread or deadlock in SQLite transaction
+- Solution: Either (a) disable SQLiteHandler completely, or (b) defer DB writes until after lifespan startup
 
 **Google Cloud API Offline (Cr-Level — Reported 2026-05-04)**
 - [ ] **BLOCKER**: Google Cloud API status shows ❌ Offline in Settings UI
