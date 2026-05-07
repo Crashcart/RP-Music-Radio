@@ -33,6 +33,17 @@
 
 ### 🚨 Active Blockers (User-Reported)
 
+**CRITICAL: Google API Key Missing (2026-05-06)**
+- [ ] **BLOCKER**: GOOGLE_API_KEY in `.env` is placeholder value (`your-api-key-here`)
+- [ ] **Impact**: All Google Cloud services offline (Gemini, Lyria, image generation)
+- [ ] **Action Required**: User must:
+  1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+  2. Create/copy API key from **APIs & Services → Credentials**
+  3. Update `.env`: `GOOGLE_API_KEY=<your-real-key>`
+  4. Run: `docker compose down && docker compose up -d`
+  5. Verify: `curl http://localhost:8000/api/v1/settings/api-key`
+- [ ] Expected result: API health check passes, ChatAssistant can reach Gemini
+
 **API Failure on boris.local (Cr-Level — Reported 2026-05-03)**
 - [ ] **BLOCKER**: API is failing on boris.local deployment
 - [ ] Gather logs to diagnose root cause (Claude Code sandbox cannot reach boris.local)
