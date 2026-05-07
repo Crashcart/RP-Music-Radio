@@ -158,9 +158,17 @@ def create_station(payload: StationCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/stations", response_model=list[StationOut])
-def list_stations(db: Session = Depends(get_db)):
-    """List all stations."""
-    stations = db.query(Station).order_by(Station.created_at.desc()).all()
+def list_stations(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
+    """List stations with pagination. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
+    stations = (
+        db.query(Station)
+        .order_by(Station.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return [StationOut.model_validate(s) for s in stations]
 
 
@@ -247,14 +255,18 @@ def list_artists(
     station_id: str | None = None,
     status: str | None = None,
     created_by: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
 ):
     """
-    List artists with optional filters.
+    List artists with optional filters and pagination.
 
     When called without filters, returns only published artists (legacy behaviour).
     Pass status=draft to retrieve staged AI-generated DJs pending review.
     """
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Artist)
     if station_id:
         query = query.filter(Artist.station_id == station_id)
@@ -265,7 +277,7 @@ def list_artists(
         query = query.filter(Artist.status == "published")
     if created_by:
         query = query.filter(Artist.created_by == created_by)
-    artists = query.order_by(Artist.created_at.desc()).all()
+    artists = query.order_by(Artist.created_at.desc()).limit(limit).offset(offset).all()
     return [ArtistOut.model_validate(a) for a in artists]
 
 
@@ -706,9 +718,17 @@ def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/brands", response_model=list[BrandOut])
-def list_brands(db: Session = Depends(get_db)):
-    """List all brands."""
-    brands = db.query(Brand).order_by(Brand.created_at.desc()).all()
+def list_brands(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
+    """List brands with pagination. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
+    brands = (
+        db.query(Brand)
+        .order_by(Brand.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return [BrandOut.model_validate(b) for b in brands]
 
 
@@ -869,17 +889,21 @@ def ingest_seeds(payload: IngestRequest, db: Session = Depends(get_db)):
 def list_drafts(
     status: str | None = None,
     station_id: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    """List all drafts, optionally filtered by status or station."""
+    """List drafts with pagination, optionally filtered by status or station. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Draft)
     if status:
         query = query.filter(Draft.status == status)
     if station_id:
         query = query.filter(Draft.station_id == station_id)
-    drafts = query.order_by(Draft.created_at.desc()).all()
+    drafts = query.order_by(Draft.created_at.desc()).limit(limit).offset(offset).all()
     return DraftListResponse(
-        total=len(drafts),
+        total=query.count(),  # Count total without limit
         drafts=[DraftOut.model_validate(d) for d in drafts],
     )
 
@@ -1157,7 +1181,8 @@ def check_api_key():
 
 @router.get("/settings/export")
 def export_data(db: Session = Depends(get_db)):
-    """Export all relational data to a JSON object."""
+    """Export relational data to JSON (max 1000 records per table for safety)."""
+    MAX_EXPORT_PER_TABLE = 1000
 
     def to_dict(obj):
         d = {}
@@ -1172,13 +1197,24 @@ def export_data(db: Session = Depends(get_db)):
         "version": "1.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": {
-            "stations": [to_dict(x) for x in db.query(Station).all()],
-            "artists": [to_dict(x) for x in db.query(Artist).all()],
-            "brands": [to_dict(x) for x in db.query(Brand).all()],
-            "jingles": [to_dict(x) for x in db.query(Jingle).all()],
-            "drafts": [to_dict(x) for x in db.query(Draft).all()],
+            "stations": [
+                to_dict(x) for x in db.query(Station).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "artists": [
+                to_dict(x) for x in db.query(Artist).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "brands": [
+                to_dict(x) for x in db.query(Brand).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "jingles": [
+                to_dict(x) for x in db.query(Jingle).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "drafts": [
+                to_dict(x) for x in db.query(Draft).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
             "generation_history": [
-                to_dict(x) for x in db.query(GenerationHistory).all()
+                to_dict(x)
+                for x in db.query(GenerationHistory).limit(MAX_EXPORT_PER_TABLE).all()
             ],
         },
     }
@@ -1271,12 +1307,21 @@ def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/universes", response_model=list[UniverseOut])
-def list_universes(status: str | None = None, db: Session = Depends(get_db)):
-    """List all universes with optional status filter."""
+def list_universes(
+    status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    """List universes with pagination and optional status filter. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Universe)
     if status:
         query = query.filter(Universe.status == status)
-    universes = query.order_by(Universe.created_at.desc()).all()
+    universes = (
+        query.order_by(Universe.created_at.desc()).limit(limit).offset(offset).all()
+    )
     return [UniverseOut.model_validate(u) for u in universes]
 
 

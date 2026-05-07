@@ -55,9 +55,12 @@ def synthesize_track(self, draft_id: str) -> dict:
         db.commit()
 
         # ── Step 1: Resolve DNA ───────────────────────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "resolving_dna", "progress": 10})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "resolving_dna", "progress": 10}
+        )
 
         from app.utils.dna_manager import DNAManager
+
         dna = DNAManager()
         persona = dna.get_or_create_persona(draft.artist_name)
         station = dna.get_or_create_station(draft.station_name, mood=draft.mood)
@@ -67,9 +70,12 @@ def synthesize_track(self, draft_id: str) -> dict:
         db.commit()
 
         # ── Step 2: Generate script via Gemini ────────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "generating_script", "progress": 25})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "generating_script", "progress": 25}
+        )
 
         from app.integrations.gemini_client import GeminiClient
+
         gemini = GeminiClient()
         script_result = gemini.generate_script(
             station_name=draft.station_name,
@@ -86,17 +92,24 @@ def synthesize_track(self, draft_id: str) -> dict:
         if not draft.script:
             draft.script = script_result.get("script", "")
             draft.backstory = script_result.get("backstory", draft.backstory)
-            draft.market_research = script_result.get("market_research", draft.market_research)
+            draft.market_research = script_result.get(
+                "market_research", draft.market_research
+            )
             db.commit()
 
-        track_title = script_result.get("track_title", f"{draft.station_name} - {draft.artist_name}")
+        track_title = script_result.get(
+            "track_title", f"{draft.station_name} - {draft.artist_name}"
+        )
         history.track_title = track_title
         db.commit()
 
         # ── Step 3: Generate audio via Lyria ──────────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "generating_audio", "progress": 50})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "generating_audio", "progress": 50}
+        )
 
         from app.utils.audio_generator import AudioGenerator, AudioType
+
         audio_gen = AudioGenerator()
         audio_path, license_info = audio_gen.generate(
             AudioType.FULL_TRACK,
@@ -108,9 +121,12 @@ def synthesize_track(self, draft_id: str) -> dict:
         )
 
         # ── Step 4: Generate art via Nano Banana 2 ────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "generating_art", "progress": 70})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "generating_art", "progress": 70}
+        )
 
         from app.utils.art_generator import ArtGenerator, ArtType
+
         art_gen = ArtGenerator()
         art_path = art_gen.generate(
             ArtType.ALBUM_COVER,
@@ -121,7 +137,9 @@ def synthesize_track(self, draft_id: str) -> dict:
         )
 
         # ── Step 5: Imprint metadata into MP3 ─────────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "imprinting", "progress": 85})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "imprinting", "progress": 85}
+        )
 
         if audio_path:
             from app.utils.mutagen_handler import imprint
@@ -148,7 +166,9 @@ def synthesize_track(self, draft_id: str) -> dict:
             )
 
         # ── Step 6: Update records ────────────────────────────────
-        self.update_state(state="PROGRESS", meta={"stage": "finalizing", "progress": 95})
+        self.update_state(
+            state="PROGRESS", meta={"stage": "finalizing", "progress": 95}
+        )
 
         # Update persona history
         persona.history.append(track_title)
@@ -193,8 +213,10 @@ def synthesize_track(self, draft_id: str) -> dict:
                 history.error_message = str(exc)
 
             db.commit()
-        except Exception:
-            pass
+        except Exception as cleanup_err:
+            logger.warning(
+                "Failed to log synthesis error to DB: %s", cleanup_err, exc_info=True
+            )
 
         raise
 
