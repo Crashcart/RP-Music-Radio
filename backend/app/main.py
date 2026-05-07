@@ -35,6 +35,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("AetherWave API starting up")
     init_db()
+
+    # Check Google API key at startup
+    api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is not set. AI features (Gemini, image generation) will be offline."
+        )
+    elif api_key == "your-api-key-here" or api_key.startswith("your-"):
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is set to a placeholder value (%s). Replace with a real key from Google Cloud Console.",
+            api_key,
+        )
+
     # Ensure output directory exists for static file serving
     try:
         output_dir = Path("/app/output")

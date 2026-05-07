@@ -1087,10 +1087,11 @@ def set_api_key(payload: ApiKeyRequest):
 
 @router.get("/settings/api-key")
 def check_api_key():
-    """Check if an API key is currently configured."""
+    """Check if an API key is currently configured and valid."""
     import json
+    import google.generativeai as genai
 
-    key = os.getenv("GOOGLE_API_KEY", "")
+    key = os.getenv("GOOGLE_API_KEY", "").strip()
 
     # Check persistent storage if not in env
     if not key:
@@ -1099,16 +1100,59 @@ def check_api_key():
                 try:
                     with open(path, "r") as f:
                         data = json.load(f)
-                        key = data.get("GOOGLE_API_KEY", "")
+                        key = data.get("GOOGLE_API_KEY", "").strip()
                         if key:
                             os.environ["GOOGLE_API_KEY"] = key
                             break
                 except Exception:
                     pass
 
-    has_key = bool(key)
-    masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else ("****" if key else "")
-    return {"configured": has_key, "masked_key": masked}
+    # Check if key is a placeholder
+    is_placeholder = key in ["", "your-api-key-here"] or (
+        key and key.startswith("your-")
+    )
+    if is_placeholder:
+        masked = "****" if key else ""
+        return {
+            "configured": False,
+            "valid": False,
+            "masked_key": masked,
+            "error": "placeholder" if key else "missing",
+            "message": "Please set GOOGLE_API_KEY to a real API key from Google Cloud Console",
+        }
+
+    if not key:
+        return {
+            "configured": False,
+            "valid": False,
+            "masked_key": "",
+            "error": "missing",
+            "message": "GOOGLE_API_KEY is not set. See https://console.cloud.google.com for setup.",
+        }
+
+    # Try to validate the key against Google API
+    try:
+        masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "****"
+        genai.configure(api_key=key)
+        # Test by listing models (lightweight validation)
+        genai.list_models()
+        return {
+            "configured": True,
+            "valid": True,
+            "masked_key": masked,
+            "error": None,
+            "message": "API key is valid and working",
+        }
+    except Exception as e:
+        masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "****"
+        logger.warning("API key validation failed: %s", str(e))
+        return {
+            "configured": True,
+            "valid": False,
+            "masked_key": masked,
+            "error": "invalid",
+            "message": f"API key exists but is invalid or unreachable: {str(e)[:100]}",
+        }
 
 
 @router.get("/settings/export")
