@@ -685,6 +685,190 @@ Artists.csv:
 
 ---
 
+---
+
+## Feature: Universe Selector Home Page (🔧 Fix & Enhancement)
+
+**Current UX Problem**: 
+- Splash screen appears and vanishes in ~2.6 seconds
+- User lands directly on Stations page (no context)
+- If user has multiple universes (Star Wars, Star Citizen), they all show mixed together
+- No way to switch universes after login without editing URL or context
+
+**Desired UX**:
+- After splash screen, show **Universe Selector** page
+- User picks which universe to work in (e.g., "Star Wars Universe" or "Star Citizen Universe")
+- Selected universe becomes active context for entire session
+- All pages (Stations, Artists, Brands) scoped to that universe
+- Easy universe switching via dropdown or modal (don't require page reload)
+- If no universes exist: Show onboarding wizard to create first universe
+
+### Implementation Plan
+
+**Phase 1: Universe Selector Component** (1-2 days)
+- [ ] Create `UniverseSelector.tsx` component
+  - Display grid/list of user's universes (name, description, entity counts)
+  - Show "Create Universe" button if none exist
+  - Click to select → store in `localStorage.selectedUniverseId`
+  - Show active universe badge (checkmark, highlight)
+  - Delete button per universe (with confirmation)
+  
+- [ ] Onboarding flow (first-time user)
+  - If no universes exist → show "Welcome!" modal
+  - Prompt: "Create your first universe" (name + description)
+  - POST /api/v1/universes → create → auto-select → proceed
+  
+- [ ] Universe switcher in main nav
+  - Dropdown or icon in header showing current universe
+  - Click → open UniverseSelector modal
+  - Quick-switch without leaving current page
+  - Shows universe name + count (e.g., "Star Wars (12 stations)")
+
+**Phase 2: App Routing** (1 day)
+- [ ] Update App.tsx routing logic
+  - After splash screen: Route to UniverseSelector (not Stations)
+  - Check `localStorage.selectedUniverseId` on app load
+  - If no selection or invalid ID: Show UniverseSelector modal
+  - If valid: Set context and route to Stations
+  - Persist selection across sessions/refreshes
+
+- [ ] Add universe context to React Context/Zustand store
+  - `selectedUniverseId: string | null`
+  - `setSelectedUniverse(id: string)` action
+  - Access from any component: `useUniverse().selectedUniverseId`
+
+**Phase 3: API Filtering** (2 days)
+- [ ] Update all GET endpoints to filter by `universe_id`
+  - `GET /api/v1/stations` → add query param: `?universe_id={id}`
+  - `GET /api/v1/brands` → same
+  - `GET /api/v1/universes` → list all (no filter)
+  - Backend: Add WHERE clause: `WHERE universe_id = :universe_id`
+  
+- [ ] Update all POST endpoints to accept `universe_id`
+  - `POST /api/v1/stations` → require body: `{ ..., universe_id }`
+  - `POST /api/v1/brands` → same
+  - Frontend: Auto-inject current universe: `{ name: "...", universe_id: selectedUniverse }`
+  
+- [ ] Update DELETE endpoints
+  - Validate that entity belongs to selected universe (prevent cross-universe deletion)
+  - `DELETE /api/v1/stations/{id}` → check Station.universe_id matches selectedUniverseId
+
+**Phase 4: UI Updates** (1 day)
+- [ ] Update page headers to show active universe
+  - Stations page: "Star Wars Universe — 12 Stations"
+  - Click universe name → open switcher modal
+  
+- [ ] Update entity creation forms
+  - Don't prompt for universe (auto-set from context)
+  - Show universe context above form: "Creating station in: Star Wars Universe"
+  
+- [ ] Update entity cards/tables
+  - Don't show universe column (implied by context)
+  - If viewing mixed entities: Add universe tag as badge
+
+**Phase 5: Settings & Preferences** (1 day)
+- [ ] Add to Settings page
+  - "Current Universe: [Star Wars Universe]" (with change button)
+  - List of all universes (name, count, actions)
+  - Create new universe button
+  - Delete universe button (with cascade warning)
+  
+- [ ] Add to Drafts
+  - Show universe context: "Drafts for Star Wars Universe"
+  - Filter by universe: Only drafts for selected universe
+
+### Splash Screen Timing Fix
+
+**Current Issue**: Splash screen duration (2.6s) is arbitrary and feels rushed
+
+**Fix**:
+- [ ] Increase splash screen duration to 4-5 seconds (feels more intentional)
+- [ ] OR: Keep duration but don't auto-dismiss — require user click (more intentional)
+- [ ] Add "Skip" button to splash screen (small, bottom-right)
+- [ ] Smooth transition to UniverseSelector (fade, not instant)
+
+### Data Model Requirements
+
+**Database Schema** (if not already present):
+- [ ] Universe table: `id (PK), name, description, created_at, updated_at`
+- [ ] Stations: Add `universe_id (FK)` — NOT NULL, indexed
+- [ ] Brands: Add `universe_id (FK)` — NOT NULL, indexed
+- [ ] Drafts: Query universe via Station relationship (no direct FK needed)
+- [ ] GenerationHistory: Query universe via Draft/Station (no direct FK needed)
+
+**Alembic Migration**:
+- [ ] Create migration: `add_universe_id_to_stations_and_brands.py`
+  - Add nullable columns first
+  - Backfill existing data (default to first universe or system universe)
+  - Add NOT NULL constraint
+  - Add index: `CREATE INDEX idx_stations_universe_id ON stations(universe_id)`
+
+### API Endpoints (New or Updated)
+
+**Universe Management**:
+- [ ] `GET /api/v1/universes` — List all universes (no pagination limit, typically <20)
+- [ ] `POST /api/v1/universes` — Create new universe
+  - Body: `{ name: string, description?: string }`
+- [ ] `GET /api/v1/universes/{id}` — Get universe details (name, created_at, counts)
+- [ ] `PATCH /api/v1/universes/{id}` — Update universe (name, description)
+- [ ] `DELETE /api/v1/universes/{id}` — Delete universe (cascade delete all children)
+
+**Updated Endpoints**:
+- [ ] `GET /api/v1/stations?universe_id={id}` — Filter by universe
+- [ ] `GET /api/v1/brands?universe_id={id}` — Filter by universe
+- [ ] `POST /api/v1/stations` — Require `universe_id` in body
+- [ ] `POST /api/v1/brands` — Require `universe_id` in body
+
+### Use Cases
+
+**Use Case 1: Multi-Universe User**
+1. Alice creates "Star Wars Universe" (10 stations)
+2. Alice creates "Star Citizen Universe" (8 stations)
+3. On app load: See both universes in selector
+4. Click "Star Wars" → view 10 stations
+5. Click universe dropdown → switch to "Star Citizen" instantly
+6. View 8 Star Citizen stations
+7. Create new station "UEE News" → auto-scoped to Star Citizen
+
+**Use Case 2: Onboarding (First-Time User)**
+1. User lands on app → splash screen
+2. After splash: UniverseSelector shows "No universes yet"
+3. Click "Create Your First Universe"
+4. Modal: "New Universe: ___" (text input)
+5. User types "My Sci-Fi Universe"
+6. Auto-created → auto-selected → lands on Stations (empty)
+7. User creates first station
+
+**Use Case 3: Accidentally Created in Wrong Universe**
+1. User is in "Star Wars Universe"
+2. Accidentally creates station "Interstellar News" 
+3. Realizes it should be in "Star Citizen Universe"
+4. Goes to Settings → See station listed under "Star Wars"
+5. Click station → Edit → No universe picker (shows read-only "Star Wars Universe")
+6. Workaround: Delete station, switch universe, recreate
+7. Future feature: Allow moving entity between universes (Phase 6)
+
+### Timeline & Priority
+
+**Estimate**: 4-5 days (selector 1d + routing 1d + API filtering 2d + UI 1d + settings 1d)  
+**Priority**: High (critical UX for multi-universe users, prevents data confusion)  
+**Dependency**: None (can be done independently, but pairs well with import/export)  
+**Testing**: Unit tests for context/filtering, integration test for universe switching, UAT with multi-universe scenario
+
+### Success Criteria
+
+- [x] User sees UniverseSelector after splash screen
+- [x] User can click to select a universe
+- [x] Selection persists across page reloads (localStorage)
+- [x] All stations/brands filtered by selected universe
+- [x] Universe dropdown in header shows current context
+- [x] Creating new station auto-scopes to selected universe
+- [x] No data leakage between universes (A's stations never appear when B is selected)
+- [x] Onboarding flow guides new user to create first universe
+- [x] Splash screen feels natural (not rushed)
+
+---
+
 ## Immediate Actions (Next Session)
 
 ### Settings Page Implementation (✅ Complete — cac63a9)
