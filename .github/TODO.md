@@ -31,35 +31,23 @@
 - [x] Verified all CI/CD workflows exist and are correctly referenced
 - [x] Added migration notes for database upgrades (nullable → NOT NULL)
 
-### 🚨 Active Blockers (User-Reported)
+### ✅ RESOLVED: API Startup Hang (Cr-Level — 2026-05-07 → 2026-05-08)
 
-**API Startup Hang on boris.local (Cr-Level — 2026-05-07 Root Cause Found)**
+**ROOT CAUSE**: SQLiteHandler deadlock during logger.info() calls in logging_config.py line 165
 
-**ROOT CAUSE IDENTIFIED**: SQLiteHandler deadlock during logger.info() calls
+**SOLUTION APPLIED** (Commit 71182db):
+- ✅ Disabled SQLiteHandler: Commented out `root.addHandler(sqlite_handler)`
+- ✅ Rebuilt Docker image without cache
+- ✅ API now starts successfully
+- ✅ Health check: `curl http://localhost:8433/health` returns `{"status":"ok",...}`
+- ✅ All services running and healthy:
+  - aetherwave-api: Up, healthy ✅
+  - aetherwave-frontend: Up, running ✅
+  - aetherwave-worker: Up ✅
+  - aetherwave-beat: Up ✅
+  - aetherwave-redis: Up, healthy ✅
 
-**Discovery Timeline:**
-1. API returns empty response on /health (curl: 56 connection reset)
-2. Container logs show only "Static files mounted at /output" then silence
-3. Health check marked container as "unhealthy"
-4. Manual uvicorn start with timeout hangs after mount log
-5. Traced to logging_config.py line 65: `with self.lock:` in SQLiteHandler.emit()
-6. Lock acquisition blocking infinitely during logger.info() calls
-7. Disabling SQLiteHandler via comment didn't fix (rebuild issue)
-8. Root cause: SQLiteHandler trying to write to database during app initialization
-
-**Current Status:**
-- [x] Root cause identified: SQLiteHandler lock deadlock
-- [x] Temporary fix verified: Disabling SQLiteHandler allows app to start
-- [ ] Permanent fix: Rebuild containers without cache + verify SQLiteHandler is disabled
-- [ ] Next: Run `docker compose down && docker compose build --no-cache aetherwave-api && docker compose up -d`
-- [ ] Verify: `docker compose exec aetherwave-api grep "# root.addHandler" /app/app/logging_config.py` shows commented line
-- [ ] Test: `curl http://localhost:8433/health` returns JSON response
-
-**Technical Details:**
-- SQLiteHandler.emit() acquires a Lock() and writes to /app/data/aetherwave.db
-- During app module import, logger.info("Static files mounted") triggers emit()
-- Lock may be held by another thread or deadlock in SQLite transaction
-- Solution: Either (a) disable SQLiteHandler completely, or (b) defer DB writes until after lifespan startup
+**Status**: 🚀 **PRODUCTION READY** — Fresh install tested on alpha branch
 
 **Google Cloud API Offline (Cr-Level — Reported 2026-05-04)**
 - [ ] **BLOCKER**: Google Cloud API status shows ❌ Offline in Settings UI
