@@ -455,6 +455,236 @@
 
 ---
 
+## Future Major Feature: Data Import/Export System (🔄 Planning Phase)
+
+**Scope**: Complete data portability for AetherWave universes, stations, artists, brands, jingles, drafts, and generated media.
+
+**Purpose**:
+- Backup/restore entire universes (disaster recovery)
+- Share universes between AetherWave instances (dev ↔ prod)
+- Bulk editing workflow (export → edit CSV/JSON → import)
+- Data migration between environments
+- Archival and long-term storage
+- Collaborative universe sharing
+
+### Export Strategy
+
+**Export Formats** (user selects at download time):
+1. **JSON-Only** (metadata only, no media)
+   - Compact, human-readable, git-friendly
+   - Use case: version control universes, share templates
+   - Size: ~100KB per 100 entities
+   - Include: all entity relationships, metadata, seeds, IDs
+
+2. **ZIP (JSON + Media)**
+   - Complete data + all generated assets (MP3s, images)
+   - Use case: full backup, cross-instance migration
+   - Size: varies (MP3s are ~5-10MB each)
+   - Include: folder structure matching AetherWave hierarchy
+
+3. **CSV (Bulk Edit)**
+   - Spreadsheet format for each entity type (Stations.csv, Artists.csv, etc.)
+   - Use case: bulk rename, update descriptions, change genres
+   - Relationships: ForeignKey IDs preserved as columns
+   - Re-import via CSV uploader → validates → applies changes
+
+4. **SQL Dump** (advanced users)
+   - Raw SQLite export for developers
+   - Use case: direct database migration, advanced analysis
+
+**Export Scopes**:
+- [ ] **Full Database**: Everything (all universes, stations, artists, brands, jingles, drafts, history)
+- [ ] **Universe-Level**: Single universe + all children (stations, DJs, brands, jingles)
+- [ ] **Station-Level**: Single station + DJs + jingles only
+- [ ] **Selective**: User checkboxes to pick specific entities
+- [ ] **Timeline**: Export drafts+history from date range (e.g., "last 30 days")
+
+**Export Implementation**:
+- [ ] `POST /api/v1/export` endpoint
+  - Query params: `format=json|zip|csv|sql`, `scope=full|universe|station|selective`
+  - Body (selective): `{ entity_ids: [list of UUIDs to export] }`
+  - Response: File download with proper MIME type + Content-Disposition header
+  - Rate limit: 1 export per 60s per user (prevent DOS)
+  
+- [ ] Frontend Export UI (Settings page)
+  - Radio buttons: Choose format (JSON / ZIP / CSV / SQL)
+  - Radio buttons: Choose scope (Full / Universe / Station / Selective)
+  - If selective: Entity picker (checkbox tree: Universes → Stations → Artists)
+  - Download button → triggers `POST /api/v1/export` → saves file
+  - Progress bar (streaming for large ZIP files)
+  - "Exporting..." spinner during compression
+
+**Export File Structure** (ZIP):
+```
+aetherwave-backup-2026-05-08.zip
+├── metadata.json                 # Export timestamp, version, scope
+├── entities/
+│   ├── universes.json
+│   ├── stations.json
+│   ├── artists.json
+│   ├── brands.json
+│   ├── jingles.json
+│   ├── drafts.json
+│   └── generation_history.json
+└── media/
+    ├── stations/
+    │   └── {station_id}/
+    │       └── logo.jpg
+    ├── artists/
+    │   └── {artist_id}/
+    │       └── portrait.jpg
+    └── audio/
+        └── {draft_id}/
+            ├── track.mp3
+            └── album_art.jpg
+```
+
+### Import Strategy
+
+**Import Workflow**:
+1. User uploads file (JSON/ZIP/CSV or drag-drop)
+2. Validation phase: Check schema, relationships, IDs
+3. Conflict resolution: Detect duplicate IDs → prompt user
+4. Dry-run preview: Show what will be created/updated
+5. Atomic transaction: All-or-nothing import (no partial state)
+6. Post-import: Verify relationships, log audit trail
+
+**Conflict Resolution Modes**:
+- [ ] **Skip** (default): If entity exists, skip it
+- [ ] **Update**: Overwrite existing entity with imported data
+- [ ] **Rename**: Auto-rename duplicates (append timestamp, e.g., "Station (2026-05-08 15:30)")
+- [ ] **Merge**: For draft entities, combine with existing (track union)
+
+**Import Implementation**:
+- [ ] `POST /api/v1/import` endpoint
+  - Multipart form: `file` (JSON/ZIP/CSV), `conflict_mode` (skip|update|rename|merge)
+  - Response: Dry-run preview with counts (created, updated, skipped)
+  - Query param: `?confirm=true` to actually execute (prevents accidental imports)
+  
+- [ ] `POST /api/v1/import?confirm=true` (execute)
+  - Performs actual import in transaction
+  - Returns: Import summary with IDs of created/updated entities
+  - Logs: audit entry with user, timestamp, imported entities
+  - Rate limit: 1 import per 5 minutes per user (prevent abuse)
+
+- [ ] Validation layer (Pydantic schemas for import)
+  - Schema check: All required fields present
+  - Type check: station_id is UUID, genre is valid enum
+  - Relationship check: All FK references exist in target or import file
+  - Media check: If ZIP, verify all referenced files present
+  - Reject malformed imports with detailed error messages
+
+- [ ] Frontend Import UI (Settings page)
+  - File upload (drag-drop + click-to-browse)
+  - Show file preview (entity counts, relationships)
+  - Conflict mode selector (radio buttons)
+  - "Preview Import" button → shows what will happen
+  - "Confirm Import" button (disabled until preview runs)
+  - Progress bar + cancel button during import
+  - Success/error toast with summary
+
+**Import File Structure** (CSV):
+```
+Stations.csv:
+  id,universe_id,name,frequency,genre,mood,status,created_at
+  12345,uu-001,Nebula FM,99.8,synthwave,chill,published,2026-05-01T10:00:00Z
+
+Artists.csv:
+  id,station_id,artist_name,type,personality,voice_description,backstory,status
+  aa-001,12345,Vance Rikard,dj,"Mysterious synthwave...",Deep laid-back,Took over Nebula...,published
+```
+
+### Data Integrity & Safety
+
+**Atomicity**:
+- [ ] Wrap import in `BEGIN TRANSACTION ... COMMIT / ROLLBACK`
+- [ ] If any validation fails at any step, rollback entire transaction
+- [ ] Prevent partial imports (no orphaned FKs)
+
+**Backup Before Import**:
+- [ ] Auto-backup database before each import (`.backup/{timestamp}.db`)
+- [ ] Retention policy: Keep last 10 backups (auto-delete older)
+- [ ] Manual rollback: User can restore from backup via UI
+
+**Audit Trail**:
+- [ ] Log each import in `app_logs` table with:
+  - User ID, timestamp, import file name, conflict mode
+  - Entities created/updated/skipped counts
+  - Any validation errors encountered
+- [ ] Log each export with user, format, scope
+
+**Data Validation**:
+- [ ] Verify all ForeignKeys resolve (station_id → actual Station)
+- [ ] Verify no circular dependencies (Station A references Brand from Universe B)
+- [ ] Verify media files match references (if album_art.jpg referenced, must exist in ZIP)
+- [ ] Verify seeds/IDs are valid UUIDs
+- [ ] Verify enums (genre, mood, type, status) are valid values
+
+### Use Cases & Examples
+
+**Use Case 1: Full Disaster Recovery**
+1. User exports full database as ZIP (weekly automated backup)
+2. Production instance crashes
+3. User imports ZIP with `conflict_mode=update`
+4. All universes, stations, DJs, drafts restored
+5. Audio/images restored to `/radio_vault/`, `/output/`
+
+**Use Case 2: Bulk Editing**
+1. User exports "Nebula FM" station as CSV
+2. Opens `Artists.csv` in Excel
+3. Updates 5 DJ descriptions, changes 2 genres
+4. Saves CSV file
+5. Imports CSV with `conflict_mode=update`
+6. All DJ changes applied atomically
+
+**Use Case 3: Share Universe Template**
+1. User exports "Cyberpunk Universe" as JSON (no media)
+2. Pushes to GitHub (easy versioning)
+3. Another user imports JSON into their instance
+4. All station/brand/artist templates available
+5. User can then customize and generate media
+
+**Use Case 4: Environment Migration**
+1. Dev instance exports full database as ZIP
+2. Staging instance imports ZIP with `conflict_mode=skip` (preserves staging-specific data)
+3. Prod instance imports selective station as ZIP (just the "News FM" universe)
+4. All universes, DJs, drafts migrated correctly
+
+### Technical Challenges & Solutions
+
+| Challenge | Solution |
+|-----------|----------|
+| Large ZIP files (1GB+) | Stream ZIP creation, use chunked multipart upload |
+| ID collisions on import | UUIDs are globally unique; conflict_mode handles remapping |
+| Media file paths change | Store relative paths in JSON; remap on import based on entity_id |
+| Circular relationships | Validate import graph before committing transaction |
+| CSV encoding issues | Enforce UTF-8; validate on upload; show errors to user |
+| Performance (100K+ entities) | Pagination, batch operations, index optimization |
+| Sensitive data in exports | Option to exclude passwords, API keys (always excluded) |
+
+### Testing Requirements
+
+- [ ] Unit tests: Validation logic, schema checks, FK resolution
+- [ ] Integration tests: Full import/export round-trip (A → export → B → import → verify identical)
+- [ ] Edge cases: Empty exports, circular refs, mixed entity types, large files
+- [ ] Security: Malformed ZIP, SQL injection via CSV, path traversal
+- [ ] Performance: Import 10K entities, export with 1GB media
+- [ ] Rollback: Verify backup/rollback restores state exactly
+
+### Timeline & Priority
+
+**Estimate**: 2-3 weeks (backend 1 week + frontend 1 week + testing 1 week)  
+**Priority**: High (essential for production reliability, user data independence)  
+**Blocker**: None (can be implemented in parallel with other features)
+
+**Proposed Implementation Order**:
+1. Phase 1 (Week 1): JSON export/import (metadata only)
+2. Phase 2 (Week 2): ZIP export/import (with media), CSV export
+3. Phase 3 (Week 3): CSV import, conflict resolution modes, atomic transactions, backups
+4. Phase 4 (Testing): Full test coverage, edge cases, security audit
+
+---
+
 ## Immediate Actions (Next Session)
 
 ### Settings Page Implementation (✅ Complete — cac63a9)
