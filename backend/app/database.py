@@ -30,6 +30,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
     """Shared declarative base for all ORM models."""
+
     pass
 
 
@@ -43,5 +44,56 @@ def get_db():
 
 
 def init_db():
-    """Create all tables (used at startup if no Alembic migrations yet)."""
-    Base.metadata.create_all(bind=engine)
+    """Initialise or migrate the database at startup.
+
+    Strategy:
+      - Fresh database (no tables yet): create all tables from ORM models via
+        create_all(), then stamp Alembic to 'head' so future runs know all
+        migrations have already been applied.
+      - Existing database: run 'alembic upgrade head' to apply any missing
+        column additions without touching existing rows.
+
+    This avoids the "no such table: artists" error that occurs when Alembic
+    tries to ALTER TABLE on a table that hasn't been created yet.
+    """
+    import logging
+
+    import sqlalchemy as sa
+
+    logger = logging.getLogger(__name__)
+
+    # Detect fresh database by checking for a core table.
+    with engine.connect() as conn:
+        result = conn.execute(
+            sa.text(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='stations'"
+            )
+        )
+        is_fresh = result.fetchone() is None
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        ini_path = os.path.join(os.path.dirname(__file__), "..", "alembic.ini")
+        ini_path = os.path.abspath(ini_path)
+
+        if not os.path.exists(ini_path):
+            raise FileNotFoundError(f"alembic.ini not found at {ini_path}")
+
+        alembic_cfg = Config(ini_path)
+        alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+        if is_fresh:
+            # Create all tables from ORM, then stamp so migrations don't re-run
+            Base.metadata.create_all(bind=engine)
+            command.stamp(alembic_cfg, "head")
+            logger.info("Fresh database: tables created and stamped at head")
+        else:
+            # Existing database: apply any missing column migrations
+            command.upgrade(alembic_cfg, "head")
+            logger.info("Existing database: alembic upgrade head complete")
+
+    except Exception as exc:
+        logger.warning("Alembic unavailable, using create_all fallback: %s", exc)
+        Base.metadata.create_all(bind=engine)

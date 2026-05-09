@@ -35,6 +35,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("AetherWave API starting up")
     init_db()
+
+    # Check Google API key at startup
+    api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is not set. AI features (Gemini, image generation) will be offline."
+        )
+    elif api_key == "your-api-key-here" or api_key.startswith("your-"):
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is set to a placeholder value (%s). Replace with a real key from Google Cloud Console.",
+            api_key,
+        )
+
     # Ensure output directory exists for static file serving
     try:
         output_dir = Path("/app/output")
@@ -120,13 +133,20 @@ app.include_router(v1_router)
 
 # ── Static Files (for generated art) ───────────────────────────────────
 # Serve generated images (station art, DJ portraits, brand logos) from /output
+# IMPORTANT: StaticFiles raises RuntimeError if the directory doesn't exist.
+# We catch all exceptions so a missing/unwritable volume never prevents the
+# API from starting — the health endpoint must always be reachable.
 output_dir = Path("/app/output")
 try:
     output_dir.mkdir(parents=True, exist_ok=True)
-except (OSError, PermissionError) as e:
-    logger.warning("Could not create output directory at module load: %s", e)
-app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
-logger.info("Static files mounted at /output")
+    app.mount("/output", StaticFiles(directory=str(output_dir)), name="output")
+    logger.info("Static files mounted at /output")
+except Exception as e:
+    logger.warning(
+        "Static files NOT mounted — /output unavailable: %s. "
+        "Art serving will be disabled until the volume is accessible.",
+        e,
+    )
 
 
 @app.get("/health")

@@ -56,7 +56,7 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 TARGET_BRANCH="${TARGET_BRANCH:-$CURRENT_BRANCH}"
 
 case "$TARGET_BRANCH" in
-  main|test|dev|claude/*) ;;
+  main|alpha|beta|test|dev|claude/*) ;;
   *)
     warn "Unusual target branch '$TARGET_BRANCH' — proceeding with caution"
     ;;
@@ -168,13 +168,8 @@ ok "Images updated"
 # ─── Step 7: Database Migrations ───────────────────────────────────────────
 header "Step 7: Database Migrations"
 
-if [[ -f "$PROJECT_DIR/backend/alembic.ini" ]]; then
-  log "Running database migrations…"
-  docker-compose run --rm aetherwave-api alembic upgrade head 2>/dev/null || \
-    warn "Migrations failed or not yet configured (safe to ignore on first install)"
-else
-  log "No alembic.ini found — skipping migrations"
-fi
+log "Database migrations are handled automatically at API startup (init_db)."
+log "Skipping pre-start alembic run — fresh databases use create_all + stamp, existing use upgrade head."
 
 # ─── Step 8: Launch & Health Check ─────────────────────────────────────────
 header "Step 8: Launch & Health Check"
