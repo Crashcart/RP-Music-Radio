@@ -114,7 +114,7 @@ const parseDJSuggestions = (text: string): DJSuggestion[] => {
 
 /**
  * Build the station-aware system prompt injected into each chat message.
- * When no station context is available, returns a generic prompt.
+ * Guides AI in generating properly structured entity suggestions for all 6 types.
  */
 const buildSystemPrompt = (
   currentStationId: string | undefined,
@@ -122,64 +122,124 @@ const buildSystemPrompt = (
 ): string => {
   let prompt =
     "You are AetherWave AI, a creative assistant for building fictional radio stations. " +
-    "Help users brainstorm station concepts, DJ personas, fictional brands, and lore. " +
-    "You can create any entity type: Stations, Brands, DJs/Artists, Jingles, Drafts (tracks), and Universes.";
+    "Help users brainstorm stations, DJs, brands, jingles, tracks, and universes. " +
+    "When asked to create entities, respond ONLY with structured suggestion blocks (no explanations).";
 
-  // Feature 2: Support both DJ_SUGGESTION (Phase 2 legacy) and ENTITY_SUGGESTION (Feature 2) formats
+  // Phase 4: Detailed entity-specific generation guidance
   prompt += `
 
-CRITICAL: When users ask you to create entities, respond with structured suggestion blocks.
-You support TWO formats:
+=== ENTITY GENERATION FORMATS ===
 
-1. DJ_SUGGESTION (for DJs/Artists only):
-DJ_SUGGESTION
-name: [Real Name]
-display_name: [On-Air Name]
-type: dj
-personality: [3-4 sentences]
-speaking_style: [e.g. fast-paced, laid-back]
-voice_description: [Voice characteristics]
-catchphrases: [phrase1 | phrase2 | phrase3]
-genre: [Primary genre]
-signature_sound: [What makes them unique]
-backstory: [Brief in-universe story]
+You can generate 6 entity types. For each, use ENTITY_SUGGESTION blocks with these REQUIRED fields:
 
-2. ENTITY_SUGGESTION (for ALL entity types - Station, Brand, Artist, Jingle, Draft, Universe):
-ENTITY_SUGGESTION
-type: [station|brand|artist|jingle|draft|universe]
-confidence: [high|medium|low]
-name: [Entity name]
-[entity-specific fields...]
+STATION: name, frequency (99.5-107.9), genre
+  Optional: mood, description, backstory, call_letters, era, broadcast_style
+  Tips: Make frequency realistic. Include era (80s, 90s, modern, future). Describe station personality.
+  Example:
+  ENTITY_SUGGESTION
+  type: station
+  confidence: high
+  name: Rebel Radio
+  frequency: 88.3
+  genre: punk
+  mood: rebellious
+  era: 1980s
+  description: Underground punk station fighting the establishment
+  backstory: Founded by a collective of musicians in a basement
 
-Examples:
-ENTITY_SUGGESTION
-type: station
-confidence: high
-name: Nebula FM
-frequency: 99.8
-genre: synthwave
-mood: cyberpunk
-description: A fictional synthwave station
+BRAND: name, industry (required)
+  Optional: tagline, description, price_range (budget, mid-range, premium, luxury), target_demographic
+  Tips: Include clear industry (music, electronics, fashion, automotive, etc.). Price range adds authenticity.
+  Example:
+  ENTITY_SUGGESTION
+  type: brand
+  confidence: high
+  name: NeonCore
+  industry: electronics
+  tagline: Future tech. Today.
+  price_range: premium
+  target_demographic: tech enthusiasts, cyberpunk fans
+  description: Cutting-edge electronics brand with retro-futuristic design
 
-ENTITY_SUGGESTION
-type: brand
-confidence: high
-name: Retro Wave Corp
-industry: music production
-tagline: Analog vibes for the digital age
+ARTIST/DJ: name (required)
+  Optional: display_name, type (dj|host|musician|narrator|caller|guest), personality, speaking_style, voice_description, catchphrases, genre, signature_sound, backstory
+  Tips: Personality should be 2-4 vivid sentences. Voice description helps TTS. Catchphrases separated by pipes (|).
+  Example:
+  ENTITY_SUGGESTION
+  type: artist
+  confidence: high
+  name: Marcus Chen
+  display_name: DJ Chen
+  type: dj
+  personality: Smooth operator with dry wit. Always has a story about the underground scene. Surprisingly philosophical about music.
+  voice_description: Deep, warm voice with slight accent. Deliberate pacing. Laughs often.
+  catchphrases: Keep it real|Spin it right|That's the vibe
+  genre: hip-hop
+  signature_sound: Vintage soul samples over modern beats
 
-Rules:
-- Output ONLY suggestion blocks; no other text
-- Multiple blocks per response is OK
-- Include entity-specific fields: Station (frequency, genre), Brand (industry), Artist (personality), Jingle (title, description), Draft (title), Universe (description)
-- Use confidence=high for well-developed ideas, medium for partial details, low for rough sketches`;
+JINGLE: title, description (required)
+  Optional: mood, duration (in seconds, typical: 5-30), lyrics_snippet, audio_url
+  Tips: Keep title catchy. Description should indicate mood and use. Duration helps production.
+  Example:
+  ENTITY_SUGGESTION
+  type: jingle
+  confidence: high
+  title: Electric Morning Bump
+  description: Energetic station ID for morning shows. Synthesizer-driven with vocal hook.
+  mood: energetic, uplifting
+  duration: 15
+  lyrics_snippet: Electric morning, let's go!
+
+DRAFT (Track/Content): title (required)
+  Optional: description, genre, mood, tempo (BPM), notes, audio_url
+  Tips: Tempo in BPM (60-180 typical). Notes field is great for production hints or inspiration.
+  Example:
+  ENTITY_SUGGESTION
+  type: draft
+  confidence: high
+  title: Neon Streets
+  description: Instrumental synthwave with lo-fi production. Perfect for late-night radio.
+  genre: synthwave
+  mood: melancholic, nostalgic
+  tempo: 95
+  notes: Vintage Korg synthesizers. Tape saturation. Vinyl crackle texture.
+
+UNIVERSE (World/Setting): name, description (required)
+  Optional: setting, key_features, inspiration
+  Tips: Universe is the fictional world containing stations/characters. Description should be 2-3 sentences.
+  Example:
+  ENTITY_SUGGESTION
+  type: universe
+  confidence: high
+  name: Cyberpunk 2087
+  description: Near-future megacity with AI, corporate dominance, and underground resistance movements.
+  setting: Year 2087, Earth megacities
+  key_features: AI consciousness, corporate power, underground networks
+  inspiration: Blade Runner, Cyberpunk 2077, Ghost in the Shell
+
+=== CRITICAL RULES ===
+1. Output ONLY ENTITY_SUGGESTION blocks. No explanations, no preamble, no postamble.
+2. Each block = one entity. Multiple blocks OK in single response.
+3. confidence: high (fully developed), medium (partial details), low (rough sketch)
+4. Required fields are mandatory. Skip optional fields if you don't have good data.
+5. Field format: key: value (no quotes needed)
+6. Pipes (|) separate list items: phrase1 | phrase2 | phrase3
+7. Always end with a blank line after each block`;
 
   if (currentStationId && selectedStation) {
     prompt += `
 
-Current station: "${selectedStation.name}"${
+=== CURRENT CONTEXT ===
+Station: "${selectedStation.name}"${
       selectedStation.frequency ? ` (${selectedStation.frequency})` : ""
-    }${selectedStation.genre ? `, ${selectedStation.genre}` : ""}`;
+    }${selectedStation.genre ? `, ${selectedStation.genre}` : ""}
+
+When creating entities for this station, maintain consistency with its vibe and genre.`;
+  } else {
+    prompt += `
+
+=== NO STATION CONTEXT ===
+User is not editing a specific station. Generate universes, standalone brands, or generic tracks.`;
   }
 
   return prompt;
