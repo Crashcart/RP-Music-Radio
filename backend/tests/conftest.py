@@ -6,7 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base, get_db
-from app.main import app
+
+# NOTE: app.main import moved to client() fixture to avoid pytest discovery hang
+# See .github/ROOT_CAUSE_API_HANG.md
 
 
 @pytest.fixture(scope="session")
@@ -34,6 +36,8 @@ def db_session(db_engine):
 @pytest.fixture
 def client(db_session):
     """Create a test client with dependency injection."""
+    # Lazy import: only import app when fixture is used (fixes pytest discovery hang)
+    from app.main import app
 
     def override_get_db():
         return db_session
