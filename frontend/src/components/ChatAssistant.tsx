@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { api, type Station } from "../api/client";
+import {
+  parseEntitySuggestions,
+  mapSuggestionByType,
+  type EntitySuggestion,
+} from "../utils/entitySuggestions";
+import { EntitySuggestionCard } from "./EntitySuggestionCard";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -14,6 +20,11 @@ interface ChatMessage {
   djStagingStatuses?: Record<number, "idle" | "staging" | "staged" | "error">;
   djEditingIndex?: number | null;
   djEditingData?: Record<string, string>;
+  entitySuggestions?: EntitySuggestion[];
+  entityStagingStatuses?: Record<
+    number,
+    "idle" | "staging" | "staged" | "error"
+  >;
 }
 
 /** Parsed fields from a DJ_SUGGESTION block in the AI response. */
@@ -192,15 +203,23 @@ export function ChatAssistant({
 
       const replyText: string = data.reply ?? "";
       const djSuggestions = parseDJSuggestions(replyText);
+      const entitySuggestions = parseEntitySuggestions(replyText);
 
-      // Strip DJ_SUGGESTION blocks from the visible reply so the card UI
-      // is the sole presentation for structured suggestions.
-      const visibleReply =
-        djSuggestions.length > 0
-          ? replyText
-              .replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, "")
-              .trim()
-          : replyText;
+      // Strip both DJ_SUGGESTION and ENTITY_SUGGESTION blocks from visible reply
+      let visibleReply = replyText;
+      if (djSuggestions.length > 0) {
+        visibleReply = visibleReply.replace(
+          /DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g,
+          "",
+        );
+      }
+      if (entitySuggestions.length > 0) {
+        visibleReply = visibleReply.replace(
+          /ENTITY_SUGGESTION[\s\S]*?(?=\nENTITY_SUGGESTION|\s*$)/g,
+          "",
+        );
+      }
+      visibleReply = visibleReply.trim();
 
       const newMsg: ChatMessage = {
         role: "assistant",
@@ -211,6 +230,14 @@ export function ChatAssistant({
         djStagingStatuses:
           djSuggestions.length > 0
             ? Object.fromEntries(djSuggestions.map((_, idx) => [idx, "idle"]))
+            : undefined,
+        entitySuggestions:
+          entitySuggestions.length > 0 ? entitySuggestions : undefined,
+        entityStagingStatuses:
+          entitySuggestions.length > 0
+            ? Object.fromEntries(
+                entitySuggestions.map((_, idx) => [idx, "idle"]),
+              )
             : undefined,
       };
       setMessages((prev) => [...prev, newMsg]);
@@ -393,6 +420,123 @@ export function ChatAssistant({
     suggestion: DJSuggestion,
   ) => {
     handleStageDJWithEdits(msgIndex, djIndex, suggestion);
+  };
+
+  /** Stage a generic entity suggestion (Station, Brand, Jingle, Draft, Universe) */
+  const handleStageEntity = async (
+    msgIndex: number,
+    entityIndex: number,
+    suggestion: EntitySuggestion,
+  ) => {
+    const payload = mapSuggestionByType(suggestion, currentStationId);
+
+    // Mark as staging
+    setMessages((prev) => {
+      const copy = [...prev];
+      copy[msgIndex] = {
+        ...copy[msgIndex],
+        entityStagingStatuses: {
+          ...copy[msgIndex].entityStagingStatuses,
+          [entityIndex]: "staging",
+        },
+      };
+      return copy;
+    });
+
+    try {
+      const { entityType } = suggestion;
+
+      // Route to appropriate staging endpoint
+      if (entityType === "station") {
+        await api.stageStation(payload);
+      } else if (entityType === "brand") {
+        await api.stageBrand(payload);
+      } else if (entityType === "artist") {
+        await api.stageArtist(payload);
+      } else if (entityType === "jingle") {
+        await api.stageJingle(payload);
+      } else if (entityType === "draft") {
+        await api.stageDraft(payload);
+      } else if (entityType === "universe") {
+        await api.stageUniverse(payload);
+      }
+
+      // Mark as staged on success
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[msgIndex] = {
+          ...copy[msgIndex],
+          entityStagingStatuses: {
+            ...copy[msgIndex].entityStagingStatuses,
+            [entityIndex]: "staged",
+          },
+        };
+        return copy;
+      });
+
+      if (onEntityCreated) {
+        onEntityCreated();
+      }
+    } catch (err: unknown) {
+      setMessages((prev) => {
+        const copy = [...prev];
+        copy[msgIndex] = {
+          ...copy[msgIndex],
+          entityStagingStatuses: {
+            ...copy[msgIndex].entityStagingStatuses,
+            [entityIndex]: "error",
+          },
+        };
+        return copy;
+      });
+
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      const entityLabel =
+        suggestion.entityType.charAt(0).toUpperCase() +
+        suggestion.entityType.slice(1);
+
+      if (
+        errMsg.includes("429") ||
+        errMsg.includes("Rate limit") ||
+        errMsg.includes("Too many")
+      ) {
+        alert(
+          `Rate limit: too many pending ${suggestion.entityType}s. Approve or reject existing drafts first.`,
+        );
+      } else if (errMsg.includes("422") || errMsg.includes("validation")) {
+        alert(
+          `Validation error: ${entityLabel} data is incomplete. Please review the suggestion.`,
+        );
+      } else {
+        alert(`Failed to stage ${entityLabel}: ${errMsg}`);
+      }
+    }
+  };
+
+  /** Reject/discard a staged entity suggestion */
+  const handleRejectEntity = (msgIndex: number, entityIndex: number) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const msg = copy[msgIndex];
+      if (msg.entitySuggestions) {
+        msg.entitySuggestions = msg.entitySuggestions.filter(
+          (_, idx) => idx !== entityIndex,
+        );
+        if (msg.entitySuggestions.length === 0) {
+          msg.entitySuggestions = undefined;
+          msg.entityStagingStatuses = undefined;
+        } else {
+          // Rebuild staging statuses for remaining entities
+          msg.entityStagingStatuses = Object.fromEntries(
+            msg.entitySuggestions.map((_, idx) => [
+              idx,
+              msg.entityStagingStatuses?.[idx] ?? "idle",
+            ]),
+          );
+        }
+      }
+      return copy;
+    });
   };
 
   /** Confirm a manual proposal (existing Station / Brand / Artist creation flow). */
@@ -1187,6 +1331,35 @@ export function ChatAssistant({
                         </span>
                       )}
                     </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Feature 2: Generic entity suggestion cards (Station, Brand, Jingle, Draft, Universe) */}
+            {msg.entitySuggestions && msg.entitySuggestions.length > 0 && (
+              <div style={{ marginTop: "var(--space-md)" }}>
+                {msg.entitySuggestions.map((suggestion, entityIdx) => {
+                  const status =
+                    msg.entityStagingStatuses?.[entityIdx] ?? "idle";
+                  return (
+                    <EntitySuggestionCard
+                      key={entityIdx}
+                      suggestion={suggestion}
+                      index={entityIdx}
+                      status={status}
+                      onEdit={() => {
+                        // TODO: Implement edit modal for generic entities
+                        alert(
+                          `Edit ${suggestion.entityType} - feature coming soon`,
+                        );
+                      }}
+                      onStage={() =>
+                        handleStageEntity(msgIdx, entityIdx, suggestion)
+                      }
+                      onReject={() => handleRejectEntity(msgIdx, entityIdx)}
+                      loading={status === "staging"}
+                    />
                   );
                 })}
               </div>
