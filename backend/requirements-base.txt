@@ -15,4 +15,8 @@ python-json-logger>=2.0.7
 # Audio/Media
 mutagen==1.47.0
 
+# Web scraping & data collection
+aiohttp==3.9.1
+beautifulsoup4==4.12.2
+
 # Install with: pip install -r requirements-base.txt
