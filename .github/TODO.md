@@ -108,6 +108,120 @@
 
 ## CURRENT SPRINT: Welcome Screen & Natural Language Chat Interface
 
+## PHASE 2: FormManager & Multi-Entity Form Filling (✅ Implementation Complete — 🔄 Testing in Progress)
+
+**Status**: Code complete, code reviewed (junior, mid-level, senior approved), testing in progress
+
+**Completed Commits**:
+- `e9aec69` — Phase 1: Multi-entity suggestion parsing + FormPreviewDialog
+- `bea6db1` — Phase 2: FormManager context + form opening logic
+
+**Code Review Results**: ✅ APPROVED (all three levels)
+- Junior: Clear naming, good comments, hook pattern is clean
+- Mid-Level: Well-designed context, good separation of concerns, minor optimizations possible
+- Senior: Approved for production, architecture sound, extensible design
+
+### Testing Phase 2 (🔄 IN PROGRESS)
+
+**Unit Tests**:
+- [ ] FormManagerContext: openForm/closeForm/confirmForm state transitions
+- [ ] useFormInitialData: returns correct data for matching entity type
+- [ ] useFormInitialData: returns null/empty for non-matching entity type
+- [ ] getFormPageRoute: maps all 6 entity types to correct routes
+- [ ] requiresFormPreview: identifies major entities (Station, Brand, Universe)
+- [ ] AIFormNavigator: navigates when isOpen && request change
+
+**Integration Tests**:
+- [ ] ChatAssistant parses ENTITY_SUGGESTION blocks correctly
+- [ ] ChatAssistant renders entity suggestion cards for all 6 types
+- [ ] Entity suggestion "Open Form" button calls handleOpenFormForEntity
+- [ ] handleOpenFormForEntity shows FormPreviewDialog for major entities
+- [ ] handleOpenFormForEntity auto-opens form for quick-create entities (DJ, Jingle, Draft)
+- [ ] FormPreviewDialog shows correct summary for each entity type
+- [ ] FormPreviewDialog "Confirm" button calls openFormWithSuggestion
+- [ ] openFormWithSuggestion calls formManager.openForm with correct parameters
+- [ ] FormManager stores request in context
+- [ ] AIFormNavigator navigates to correct route based on entity type
+
+**E2E Tests** (Manual browser testing):
+- [ ] User clicks "Open Form" on DJ suggestion
+  - [ ] FormPreviewDialog appears (or auto-opens for DJ)
+  - [ ] Navigates to /artists page
+  - [ ] Form fields are pre-filled with AI data
+  - [ ] AI-generated banner shows at top of form
+  - [ ] User can edit fields
+  - [ ] Submit button creates artist
+  - [ ] Form closes and returns to chat
+- [ ] User clicks "Open Form" on Station suggestion
+  - [ ] FormPreviewDialog appears (requires confirmation)
+  - [ ] User confirms in dialog
+  - [ ] Navigates to /stations page
+  - [ ] Form fields pre-filled
+  - [ ] User submits → station created
+- [ ] User cancels in FormPreviewDialog
+  - [ ] Dialog closes
+  - [ ] No navigation
+  - [ ] FormManager state cleared
+- [ ] Legacy DJ_SUGGESTION format still works (backward compatibility)
+  - [ ] Old DJ cards render alongside new entity cards
+  - [ ] Old "Stage DJ" button (now "Open Form") still works
+
+**Regression Tests**:
+- [ ] Existing manual DJ creation still works (no FormManager needed)
+- [ ] Existing manual Station creation still works
+- [ ] Existing ChatAssistant features not broken
+  - [ ] Chat input/output working
+  - [ ] System intro message shows
+  - [ ] Error handling for API failures
+- [ ] Phase 1 features still work
+  - [ ] FormPreviewDialog component renders
+  - [ ] Entity suggestion parser works for all entity types
+  - [ ] stripEntityBlocks removes all blocks correctly
+
+**Browser/Mobile Tests**:
+- [ ] FormPreviewDialog renders correctly on desktop (≥768px)
+- [ ] FormPreviewDialog renders correctly on mobile (<768px)
+- [ ] All buttons have 44px min tap target on mobile
+- [ ] Chat panel scrolls correctly with new entity cards
+- [ ] Form fields pre-fill correctly on all browsers (Chrome, Firefox, Safari)
+
+**Test Files to Create**:
+- `frontend/src/contexts/FormManagerContext.test.tsx` — Context provider tests
+- `frontend/src/hooks/useFormInitialData.test.ts` — Hook tests
+- `frontend/src/components/ChatAssistant.test.tsx` — Chat entity rendering tests
+- `frontend/src/components/FormPreviewDialog.test.tsx` — Dialog rendering tests
+- `frontend/src/utils/entitySuggestionParser.test.ts` — Parser tests (if not already done)
+- `frontend/src/__tests__/e2e/form-filling.test.tsx` — Full E2E integration tests
+
+**Manual Testing Checklist**:
+- [ ] Run dev server: `npm run dev`
+- [ ] Navigate to chat
+- [ ] Ask AI to create DJs: "Create 3 DJs for this station"
+- [ ] Click "Open Form" on DJ suggestion
+- [ ] Verify form pre-fills with AI data
+- [ ] Edit a field manually
+- [ ] Submit → verify artist created in DB
+- [ ] Create Station via chat (requires FormPreviewDialog confirmation)
+- [ ] Create Jingle via chat (if implemented)
+- [ ] Test FormPreviewDialog cancellation
+- [ ] Test on mobile browser (devtools mobile view)
+- [ ] Test on multiple browsers
+
+**Documentation Tasks**:
+- [x] Add Phase 2 decision to PLANNING.md
+- [x] Update TODO.md with testing tasks
+- [ ] Create TESTING.md with test strategy
+- [ ] Create PHASE2_REVIEW.md with code review summary
+- [ ] Update CLAUDE.md with FormManager integration pattern
+
+**Known Issues to Track**:
+1. useFormInitialData could be optimized (remove useState/useEffect)
+2. AIFormNavigator needs error handling for failed navigation
+3. FormPreviewDialog CSS classes must exist in stylesheet
+4. FormManager state not persisted (lost on refresh) — nice-to-have for later
+
+---
+
 ### Feature 1: Welcome Screen with Universe Selector & API Key Setup (HIGH PRIORITY — 4-5 days)
 
 **Scope**: Replace auto-closing splash screen with an interactive welcome flow where users can:

@@ -1219,3 +1219,78 @@ The `Universe` model exists in the database but has **no foreign key relationshi
 - Universe gate at app load ensures users always have context before creating content
 
 ---
+
+## Architectural Decision: FormManager Context for AI-Guided Form Filling (2026-05-09)
+
+### Decision (Phase 2)
+**Forms receive AI-generated data via React Context, not via direct API staging.**
+
+Previously (Phase 1): ChatAssistant parsed AI suggestions → directly staged entities in database
+Now (Phase 2): ChatAssistant parses AI suggestions → FormManager context → form components read initial data → user reviews → form submits to API
+
+### Flow
+
+```
+User: "Create 3 DJs for this station"
+  ↓
+ChatAssistant sends message to Gemini
+  ↓
+Gemini returns ENTITY_SUGGESTION blocks (3 DJs)
+  ↓
+ChatAssistant parses suggestions, renders cards
+  ↓
+User clicks "Open Form" on DJ suggestion
+  ↓
+ChatAssistant calls formManager.openForm({
+  entityType: "dj",
+  initialData: { name: "Vance", personality: "...", ... },
+  aiGenerated: true
+})
+  ↓
+AIFormNavigator navigates to /artists
+  ↓
+ArtistForm component calls useFormInitialData("artist")
+  ↓
+Form pre-fills fields: value={initialData?.name ?? ""}
+  ↓
+User reviews, edits, clicks Save
+  ↓
+ArtistForm submits to API: POST /api/v1/artists
+  ↓
+API creates artist in database
+  ↓
+formManager.confirmForm() closes form and refreshes UI
+```
+
+### Rationale
+
+1. **User Review Gate**: No entities enter database without explicit user approval. AI data is a suggestion, not a command.
+2. **Form Reusability**: Forms don't know they're AI-fed. Same form works for manual entry and AI suggestions.
+3. **Extensibility**: Adding new entity type = add FormManager mapping + wire up useFormInitialData in form. No API changes.
+4. **Decoupling**: Chat doesn't know about database. Forms don't know about chat. They communicate via context.
+
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `FormManagerContext` | Singleton context storing current form request (entityType, initialData, callbacks) |
+| `useFormManager()` | Hook to call `openForm()`, `closeForm()`, `confirmForm()` |
+| `useFormInitialData(entityType)` | Hook for forms to read initial data + AI-generated flag |
+| `AIFormNavigator` | Silent component that navigates to form page when form is opened |
+| `FormPreviewDialog` | Confirmation dialog for major entities (Station, Brand, Universe) before form opens |
+
+### Integration with Phases
+
+**Phase 1** → Parse AI suggestions into EntitySuggestion objects  
+**Phase 2** (This) → Route suggestions through FormManager to forms ← **YOU ARE HERE**  
+**Phase 3** → Forms create staged entities (status="draft") in database  
+**Phase 4** → Update system prompt to output ENTITY_SUGGESTION blocks  
+
+### Future Considerations
+
+- **Phase 3**: Forms will transition from `createArtist()` to `stageArtist()` + approval workflow
+- **Serialization**: Consider sessionStorage persistence for form state (nice-to-have)
+- **Error tracking**: Add `errorMessage` to FormManager for error logging/analytics
+- **Multi-form support**: Current design supports one form open at a time. Future: support draft carousel?
+
+---
