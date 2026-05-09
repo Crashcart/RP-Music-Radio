@@ -70,6 +70,78 @@ class StationOut(BaseModel):
     founded_year: str
     owner: str
     lore_notes: str
+    # AI staging workflow fields
+    status: str = "published"
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StationDraftCreate(BaseModel):
+    """
+    Schema for staging an AI-generated station.
+
+    Accepts partial data (AI may not fill all fields), but requires
+    at minimum a name. All fields are validated before any database write
+    to prevent malformed AI output from persisting.
+    """
+
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="Station name (required)"
+    )
+    tagline: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=5000)
+    frequency: str = Field(default="", max_length=50)
+    genre: str = Field(default="", max_length=200)
+    sub_genres: str = Field(
+        default="", max_length=500, description="Pipe-separated sub-genres"
+    )
+    mood: str = Field(default="", max_length=200)
+    era: str = Field(default="", max_length=200)
+    broadcast_style: str = Field(default="", max_length=200)
+    color_palette: str = Field(
+        default="", max_length=500, description="Pipe-separated hex colors"
+    )
+    location: str = Field(default="", max_length=500)
+    founded_year: str = Field(default="", max_length=50)
+    owner: str = Field(default="", max_length=200)
+    lore_notes: str = Field(default="", max_length=3000)
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+
+class StationDraftResponse(BaseModel):
+    """
+    Response returned after successfully staging an AI-generated station.
+
+    Extends StationOut with staging-specific metadata that the frontend
+    needs to render the review UI and countdown timer.
+    """
+
+    id: str
+    name: str
+    tagline: str
+    description: str
+    frequency: str
+    genre: str
+    sub_genres: str
+    mood: str
+    era: str
+    broadcast_style: str
+    color_palette: str
+    art_path: Optional[str] = None
+    style_seed: str
+    location: str
+    founded_year: str
+    owner: str
+    lore_notes: str
+    status: str
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -355,6 +427,79 @@ class BrandOut(BaseModel):
     reputation: str
     controversies: str
     lore_notes: str
+    # AI staging workflow fields
+    status: str = "published"
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BrandDraftCreate(BaseModel):
+    """
+    Schema for staging an AI-generated brand.
+
+    Accepts partial data (AI may not fill all fields), but requires
+    at minimum a name. All fields are validated before any database write
+    to prevent malformed AI output from persisting.
+    """
+
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="Brand name (required)"
+    )
+    slogan: str = Field(default="", max_length=500)
+    industry: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=5000)
+    tone: str = Field(default="", max_length=200)
+    target_audience: str = Field(default="", max_length=500)
+    ad_style: str = Field(default="", max_length=200)
+    products: str = Field(
+        default="", max_length=2000, description="Pipe-separated product list"
+    )
+    product_descriptions: str = Field(default="", max_length=3000)
+    color_primary: str = Field(default="", max_length=100)
+    color_secondary: str = Field(default="", max_length=100)
+    founded_year: str = Field(default="", max_length=50)
+    headquarters: str = Field(default="", max_length=500)
+    reputation: str = Field(default="", max_length=500)
+    controversies: str = Field(default="", max_length=2000)
+    lore_notes: str = Field(default="", max_length=3000)
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+
+class BrandDraftResponse(BaseModel):
+    """
+    Response returned after successfully staging an AI-generated brand.
+
+    Extends BrandOut with staging-specific metadata that the frontend
+    needs to render the review UI and countdown timer.
+    """
+
+    id: str
+    name: str
+    slogan: str
+    industry: str
+    description: str
+    tone: str
+    target_audience: str
+    ad_style: str
+    products: str
+    product_descriptions: str
+    logo_path: Optional[str] = None
+    color_primary: str
+    color_secondary: str
+    founded_year: str
+    headquarters: str
+    reputation: str
+    controversies: str
+    lore_notes: str
+    status: str
+    created_by: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    undo_expires_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
