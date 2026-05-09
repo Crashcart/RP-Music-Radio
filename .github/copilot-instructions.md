@@ -1,8 +1,9 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.0** | **Last Updated**: 2026-05-03  
+**Version 3.1** | **Last Updated**: 2026-05-09  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.0**: Consolidated Rules 12-P1 and Rule 12 into single cohesive rule; fixed entity constraint in database schema; added explicit escalation procedures.
+**Changes in v3.1**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches during active sessions; updated Phase 0 and Phase 2 with branch verification checkpoints.
+**Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12 into single cohesive rule; fixed entity constraint in database schema; added explicit escalation procedures.
 
 ---
 
@@ -30,6 +31,17 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
 - **ENFORCEMENT**: Branch protection rules block direct commits to `main`
 - **CONSEQUENCE**: PR rejection; manual escalation required
+
+### Rule 1.5: Session Work ONLY to Designated Branch (CRITICAL)
+- **REQUIREMENT**: All commits during active session MUST push to the designated branch specified in session header. NO exceptions for governance, documentation, or planning.
+- **SESSION BRANCH IDENTIFICATION**: Read session header at start for designated branch (e.g., `alpha`, `claude/issue-N`, etc.). This is the ONLY branch where session work is pushed. If unclear, STOP and ask human.
+- **ENFORCEMENT CHECKPOINT**: Before EVERY push, verify branch:
+  - Run: `git branch -vv`
+  - Confirm current branch matches session designation
+  - If wrong: `git checkout <correct-branch>` then push
+- **SCOPE**: Applies to ALL changes (code, governance files, documentation, planning)
+- **CONSEQUENCE**: Commits to wrong branch = Cr-level blocker; must revert and re-push to correct branch
+- **RATIONALE**: Prevents accidental merges of unfinished work; keeps session work isolated until human review; ensures correct review gates
 
 ### Rule 2: Never Close Issues Without Human Approval
 - **REQUIREMENT**: Only humans close issues
@@ -187,11 +199,13 @@ If an issue persists across check cycles:
 
 ### Phase 0: Orientation (Before Writing Code)
 1. Read all `.github/` governance files
-2. Review issue context and requirements
-3. Check `PLANNING.md` for related work
-4. Identify dependencies and blockers
-5. Run `./scripts/branch-status.sh` to verify current branch and available commands
-6. **STOP** — ask human if unclear on any requirement
+2. **Identify Session Branch** (Rule 1.5): Read session header for designated branch name. Write it down. Never assume.
+3. Review issue context and requirements
+4. Check `PLANNING.md` for related work
+5. Identify dependencies and blockers
+6. Run `./scripts/branch-status.sh` to verify current branch and available commands
+7. **Verify you are on correct branch**: `git branch -vv` → confirm matches session designation
+8. **STOP** — ask human if unclear on any requirement or branch designation
 
 ### Phase 1: Planning (Immediate)
 1. Break task into 3–5 subtasks
@@ -210,10 +224,11 @@ If an issue persists across check cycles:
 2. Make targeted changes (single concern per commit)
 3. Run full test suite: `npm test` (or project equivalent)
 4. Commit with conventional prefix: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`
-5. **PUSH IMMEDIATELY** — do not batch changes
-6. Verify: `git pull origin <branch>` — check for conflicts
-7. Update `.github/TODO.md` — mark subtask `in_progress` → `completed`
-8. Update `.github/PLANNING.md` — log decision/output for each subtask
+5. **Verify Branch Before Push** (Rule 1.5): Run `git branch -vv` → confirm current branch matches session designation. If wrong, `git checkout <correct-branch>`.
+6. **PUSH IMMEDIATELY** — do not batch changes
+7. Verify: `git pull origin <branch>` — check for conflicts
+8. Update `.github/TODO.md` — mark subtask `in_progress` → `completed`
+9. Update `.github/PLANNING.md` — log decision/output for each subtask
 
 ### Phase 3: Verification (Before PR Submission)
 1. Run full test suite: ensure all tests pass
