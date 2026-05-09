@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { api, type Station } from "../api/client";
+import { FormPreviewDialog } from "./FormPreviewDialog";
+import {
+  parseEntitySuggestions,
+  parseDJSuggestions,
+  stripEntityBlocks,
+  type EntitySuggestion,
+  type EntityType,
+} from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -10,23 +18,14 @@ interface ChatMessage {
     data: Record<string, string>;
   };
   proposalStatus?: "pending" | "success" | "error";
-  djSuggestions?: DJSuggestion[];
+  entitySuggestions?: EntitySuggestion[];
+  entityStagingStatuses?: Record<
+    number,
+    "idle" | "staging" | "staged" | "error"
+  >;
+  // Legacy DJ suggestions (for backward compatibility)
+  djSuggestions?: EntitySuggestion[];
   djStagingStatuses?: Record<number, "idle" | "staging" | "staged" | "error">;
-}
-
-/** Parsed fields from a DJ_SUGGESTION block in the AI response. */
-interface DJSuggestion {
-  name: string;
-  display_name: string;
-  type: string;
-  personality: string;
-  speaking_style: string;
-  voice_description: string;
-  catchphrases: string;
-  genre: string;
-  signature_sound: string;
-  backstory: string;
-  [key: string]: string;
 }
 
 const SYSTEM_INTRO =
@@ -64,40 +63,6 @@ const parseApiError = (error: string): string => {
  *   ```
  * Tolerant of extra blank lines and whitespace within blocks.
  */
-const parseDJSuggestions = (text: string): DJSuggestion[] => {
-  const suggestions: DJSuggestion[] = [];
-  // Split on DJ_SUGGESTION sentinel — handles leading/trailing whitespace
-  const parts = text.split(/DJ_SUGGESTION/g);
-  // parts[0] is text before the first sentinel; skip it
-  for (let i = 1; i < parts.length; i++) {
-    const block = parts[i];
-    const fields: Record<string, string> = {};
-    for (const line of block.split("\n")) {
-      const colonIdx = line.indexOf(":");
-      if (colonIdx === -1) continue;
-      const key = line.slice(0, colonIdx).trim().toLowerCase();
-      const value = line.slice(colonIdx + 1).trim();
-      if (key && value) {
-        fields[key] = value;
-      }
-    }
-    if (fields["name"]) {
-      suggestions.push({
-        name: fields["name"] ?? "",
-        display_name: fields["display_name"] ?? "",
-        type: fields["type"] ?? "dj",
-        personality: fields["personality"] ?? "",
-        speaking_style: fields["speaking_style"] ?? "",
-        voice_description: fields["voice_description"] ?? "",
-        catchphrases: fields["catchphrases"] ?? "",
-        genre: fields["genre"] ?? "",
-        signature_sound: fields["signature_sound"] ?? "",
-        backstory: fields["backstory"] ?? "",
-      });
-    }
-  }
-  return suggestions;
-};
 
 /**
  * Build the station-aware system prompt injected into each chat message.
@@ -165,6 +130,9 @@ export function ChatAssistant({
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [formPreviewOpen, setFormPreviewOpen] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] =
+    useState<EntitySuggestion | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -194,22 +162,34 @@ export function ChatAssistant({
       });
 
       const replyText: string = data.reply ?? "";
-      const djSuggestions = parseDJSuggestions(replyText);
 
-      // Strip DJ_SUGGESTION blocks from the visible reply so the card UI
-      // is the sole presentation for structured suggestions.
-      const visibleReply =
-        djSuggestions.length > 0
-          ? replyText
-              .replace(/DJ_SUGGESTION[\s\S]*?(?=\nDJ_SUGGESTION|\s*$)/g, "")
-              .trim()
-          : replyText;
+      // Parse both new generic ENTITY_SUGGESTION and legacy DJ_SUGGESTION blocks
+      const entitySuggestions = parseEntitySuggestions(replyText);
+      // Only try legacy DJ_SUGGESTION parsing if no new ENTITY_SUGGESTION blocks found
+      const djSuggestions =
+        entitySuggestions.length === 0 ? parseDJSuggestions(replyText) : [];
+
+      // Use new entity suggestions if available, otherwise fall back to DJ suggestions
+      const allSuggestions =
+        entitySuggestions.length > 0 ? entitySuggestions : djSuggestions;
+
+      // Strip all suggestion blocks from visible text
+      const visibleReply = stripEntityBlocks(replyText);
 
       const newMsg: ChatMessage = {
         role: "assistant",
         content: visibleReply,
         proposal: data.proposal,
         proposalStatus: data.proposal ? "pending" : undefined,
+        entitySuggestions:
+          entitySuggestions.length > 0 ? entitySuggestions : undefined,
+        entityStagingStatuses:
+          entitySuggestions.length > 0
+            ? Object.fromEntries(
+                entitySuggestions.map((_, idx) => [idx, "idle"]),
+              )
+            : undefined,
+        // Legacy support
         djSuggestions: djSuggestions.length > 0 ? djSuggestions : undefined,
         djStagingStatuses:
           djSuggestions.length > 0
