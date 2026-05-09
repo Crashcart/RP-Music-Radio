@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, type Brand } from "../api/client";
+import { useFormInitialData } from "../hooks/useFormInitialData";
 
 export function Brands() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -409,25 +410,39 @@ function BrandForm({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const { initialData, isAiGenerated, hasInitialData } =
+    useFormInitialData("brand");
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+
   const [form, setForm] = useState({
-    name: existing?.name || "",
-    slogan: existing?.slogan || "",
-    industry: existing?.industry || "",
-    description: existing?.description || "",
-    tone: existing?.tone || "",
-    target_audience: existing?.target_audience || "",
-    ad_style: existing?.ad_style || "",
-    products: existing?.products || "",
-    product_descriptions: existing?.product_descriptions || "",
-    color_primary: existing?.color_primary || "",
-    color_secondary: existing?.color_secondary || "",
-    founded_year: existing?.founded_year || "",
-    headquarters: existing?.headquarters || "",
-    reputation: existing?.reputation || "",
-    controversies: existing?.controversies || "",
-    lore_notes: existing?.lore_notes || "",
+    name: existing?.name || initialData?.name || "",
+    slogan: existing?.slogan || initialData?.slogan || "",
+    industry: existing?.industry || initialData?.industry || "",
+    description: existing?.description || initialData?.description || "",
+    tone: existing?.tone || initialData?.tone || "",
+    target_audience:
+      existing?.target_audience || initialData?.target_audience || "",
+    ad_style: existing?.ad_style || initialData?.ad_style || "",
+    products: existing?.products || initialData?.products || "",
+    product_descriptions:
+      existing?.product_descriptions || initialData?.product_descriptions || "",
+    color_primary: existing?.color_primary || initialData?.color_primary || "",
+    color_secondary:
+      existing?.color_secondary || initialData?.color_secondary || "",
+    founded_year: existing?.founded_year || initialData?.founded_year || "",
+    headquarters: existing?.headquarters || initialData?.headquarters || "",
+    reputation: existing?.reputation || initialData?.reputation || "",
+    controversies: existing?.controversies || initialData?.controversies || "",
+    lore_notes: existing?.lore_notes || initialData?.lore_notes || "",
   });
   const [saving, setSaving] = useState(false);
+
+  // Track which fields were AI-generated when initialData changes
+  useEffect(() => {
+    if (hasInitialData && !existing) {
+      setAiFilledFields(new Set(Object.keys(initialData || {})));
+    }
+  }, [hasInitialData, initialData, existing]);
 
   const set =
     (field: string) =>
@@ -462,6 +477,13 @@ function BrandForm({
           🏢 {existing ? "Edit Brand" : "New Brand"}
         </h3>
       </div>
+
+      {/* AI-generated warning banner */}
+      {isAiGenerated && (
+        <div className="ai-review-banner" role="alert">
+          ⚠️ AI-generated brand. Please review and edit before saving.
+        </div>
+      )}
 
       <div className="form-section">
         <div className="form-section-title">Brand Identity</div>

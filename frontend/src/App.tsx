@@ -1,6 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useIsMobile } from "./hooks/useIsMobile";
-import { FormManagerProvider } from "./context/FormManagerContext";
+import {
+  FormManagerProvider,
+  FormManagerContext,
+  getFormPageRoute,
+} from "./context/FormManagerContext";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
@@ -19,6 +23,38 @@ type Page =
   | "drafts"
   | "queue"
   | "settings";
+
+/**
+ * FormNavigator — listens to FormManager and updates the page state.
+ * Handles navigation to form pages when AI-generated entities are being created.
+ */
+function FormNavigator({
+  onPageChange,
+}: {
+  onPageChange: (page: Page) => void;
+}) {
+  const formManager = useContext(FormManagerContext);
+
+  useEffect(() => {
+    if (formManager && formManager.isOpen && formManager.request) {
+      const route = getFormPageRoute(formManager.request.entityType);
+      // Map route to page type
+      const pageMap: Record<string, Page> = {
+        "/stations": "stations",
+        "/artists": "artists",
+        "/brands": "brands",
+        "/universes": "universes",
+        "/drafts": "drafts",
+      };
+      const page = pageMap[route];
+      if (page) {
+        onPageChange(page);
+      }
+    }
+  }, [formManager?.isOpen, formManager?.request, onPageChange]);
+
+  return null; // This component doesn't render anything
+}
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "stations", label: "Stations", icon: "📻" },
@@ -108,6 +144,7 @@ export default function App() {
 
   return (
     <FormManagerProvider>
+      <FormNavigator onPageChange={setPage} />
       <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
         {/* Desktop Sidebar */}
         {!isMobile && (
