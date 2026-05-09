@@ -27,8 +27,15 @@ from threading import Lock
 class SQLiteHandler(logging.Handler):
     """Log handler that persists records to SQLite for analysis."""
 
-    def __init__(self, db_path: str = "/app/data/aetherwave.db"):
+    def __init__(self, db_path: str | None = None):
         super().__init__()
+        # Use provided path, or detect environment-appropriate default
+        if db_path is None:
+            if os.path.exists("/app/data"):
+                db_path = "/app/data/aetherwave.db"
+            else:
+                db_path = "./data/aetherwave.db"
+                os.makedirs("./data", exist_ok=True)
         self.db_path = db_path
         self.lock = Lock()
         self._init_table()
