@@ -6,6 +6,12 @@ import {
   type EntitySuggestion,
 } from "../utils/entitySuggestions";
 import { EntitySuggestionCard } from "./EntitySuggestionCard";
+import { FormPreviewDialog } from "./FormPreviewDialog";
+import {
+  useFormManager,
+  requiresFormPreview,
+} from "../contexts/FormManagerContext";
+import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -263,6 +269,14 @@ export function ChatAssistant({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Form preview dialog state
+  const [selectedSuggestionForPreview, setSelectedSuggestionForPreview] =
+    useState<EntitySuggestionNew | null>(null);
+  const [showFormPreview, setShowFormPreview] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const formManager = useFormManager();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -626,6 +640,74 @@ export function ChatAssistant({
       }
       return copy;
     });
+  };
+
+  /**
+   * Handle opening a form for an entity suggestion.
+   * Shows FormPreviewDialog for major entities (Station, Brand, Universe).
+   * Auto-opens form for quick-creates (DJ, Jingle, Draft).
+   */
+  const handleOpenFormForEntity = async (
+    suggestion: EntitySuggestion,
+  ): Promise<void> => {
+    // Convert to new format for FormManager
+    const newFormatSuggestion: EntitySuggestionNew = {
+      type: suggestion.entityType as any,
+      data: suggestion.fields,
+      confidence: suggestion.confidence,
+    };
+
+    // Check if this entity type requires preview dialog
+    const needsPreview = requiresFormPreview(suggestion.entityType as any);
+
+    if (needsPreview) {
+      // Show preview dialog for major entities
+      setSelectedSuggestionForPreview(newFormatSuggestion);
+      setShowFormPreview(true);
+    } else {
+      // Auto-open form for quick-creates
+      setPreviewLoading(true);
+      try {
+        formManager.openForm({
+          entityType: suggestion.entityType as any,
+          initialData: suggestion.fields,
+          aiGenerated: true,
+          sourceUniverse: currentStationId,
+        });
+      } finally {
+        setPreviewLoading(false);
+      }
+    }
+  };
+
+  /**
+   * Handle form preview confirmation.
+   * Called when user confirms in FormPreviewDialog.
+   */
+  const handleFormPreviewConfirm = async (): Promise<void> => {
+    if (!selectedSuggestionForPreview) return;
+
+    setPreviewLoading(true);
+    try {
+      formManager.openForm({
+        entityType: selectedSuggestionForPreview.type,
+        initialData: selectedSuggestionForPreview.data,
+        aiGenerated: true,
+        sourceUniverse: currentStationId,
+      });
+      setShowFormPreview(false);
+      setSelectedSuggestionForPreview(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  /**
+   * Handle form preview cancellation.
+   */
+  const handleFormPreviewCancel = (): void => {
+    setShowFormPreview(false);
+    setSelectedSuggestionForPreview(null);
   };
 
   /** Confirm a manual proposal (existing Station / Brand / Artist creation flow). */
@@ -1437,12 +1519,7 @@ export function ChatAssistant({
                       suggestion={suggestion}
                       index={entityIdx}
                       status={status}
-                      onEdit={() => {
-                        // TODO: Implement edit modal for generic entities
-                        alert(
-                          `Edit ${suggestion.entityType} - feature coming soon`,
-                        );
-                      }}
+                      onEdit={() => handleOpenFormForEntity(suggestion)}
                       onStage={() =>
                         handleStageEntity(msgIdx, entityIdx, suggestion)
                       }
@@ -1506,6 +1583,17 @@ export function ChatAssistant({
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Form Preview Dialog for opening forms with AI-generated data */}
+      {selectedSuggestionForPreview && (
+        <FormPreviewDialog
+          suggestion={selectedSuggestionForPreview}
+          isOpen={showFormPreview}
+          onConfirm={handleFormPreviewConfirm}
+          onCancel={handleFormPreviewCancel}
+          isLoading={previewLoading}
+        />
+      )}
 
       <div className="chat-input-row">
         <input
