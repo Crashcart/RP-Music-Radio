@@ -865,6 +865,249 @@ User:  [Reviews form, edits a few fields, clicks Save]
 
 ---
 
+## Future Major Feature: Llama Fallback & Server Cycling (🔄 Planning Phase)
+
+**Scope**: Implement multi-server LLM architecture with fallback redundancy and flexible provider cycling (Llama → Google or configurable order).
+
+**Purpose**:
+- Prevent single-point-of-failure if primary Llama server goes down
+- Reduce latency by allowing users to configure multiple Llama endpoints
+- Implement intelligent cycling: try Llama first, fall back to Google on failure
+- Allow users to customize provider order (Llama first/Google first/alternating)
+- Maintain session continuity when providers are unavailable
+- Cost optimization: use cheaper Llama when available, expensive Google as fallback
+
+### Architecture Design
+
+**Server Configuration**:
+- [ ] `LlamaServerConfig` interface:
+  ```typescript
+  {
+    url: string;           // e.g., "http://llama1.example.com:8000"
+    name: string;          // e.g., "Llama Primary"
+    priority: number;      // 1 = highest, 3 = lowest
+    enabled: boolean;      // enable/disable per server
+    timeout: number;       // 5000ms default
+    healthCheckInterval: number; // check every 30s
+  }
+  ```
+
+- [ ] Server rotation utility:
+  - Track current index in server list
+  - Track failure count per server (exponential backoff)
+  - Health check cache (1min TTL to avoid redundant pings)
+  - Fallback chain: `[Llama1, Llama2, Llama3, Google]`
+  - On failure, skip to next server in chain
+
+**User Configuration (Settings Page)**:
+- [ ] Add "LLM Providers" section in Settings
+  - Server list table: name, URL, priority, enabled toggle, health status (🟢 Online / 🔴 Offline / 🟡 Slow)
+  - Add/Edit/Delete server buttons
+  - Reorder servers via drag-drop (determines cycling order)
+  - Default provider toggle: "Llama first" vs "Google first"
+  
+- [ ] Provider settings:
+  - [ ] Cycling strategy dropdown: 
+    - "Cycle through servers" (Llama1 → Llama2 → Llama3 → Google)
+    - "Llama first, Google fallback" (try all Llamas, then Google)
+    - "Custom order" (user drag-drop)
+  - [ ] Timeout per server (default 5s, adjustable 1s-30s)
+  - [ ] Health check frequency (default 30s)
+  - [ ] Cost ceiling alert (warn if Llama not available, Google will be used)
+
+**Health Checking**:
+- [ ] Ping endpoint (lightweight request, <1s response)
+  - Llama: `GET /health` → `{ "status": "ok" }`
+  - Google: cached (no ping, assume OK)
+- [ ] Run health checks on app startup
+- [ ] Periodic background checks (every 30s)
+- [ ] Cache health status with 1min TTL
+- [ ] Skip already-failed servers for 1min (exponential backoff)
+
+### Implementation Details
+
+**Backend API Changes** (routes.py):
+- [ ] Update `POST /api/v1/chat` endpoint:
+  - Accept `provider_preference` param (optional, defaults to user settings)
+  - Route to `api.chat()` with provider list + fallback chain
+  - Log which provider was used (for analytics)
+  - Return provider name in response metadata
+
+- [ ] New endpoints for server management:
+  - [ ] `GET /api/v1/llm/servers` → list configured servers + health status
+  - [ ] `POST /api/v1/llm/servers` → add new Llama server
+  - [ ] `PATCH /api/v1/llm/servers/{id}` → update (URL, priority, enabled)
+  - [ ] `DELETE /api/v1/llm/servers/{id}` → remove server
+  - [ ] `GET /api/v1/llm/servers/{id}/health` → manual health check
+  - [ ] `POST /api/v1/llm/servers/reorder` → save new priority order
+
+**Frontend API Client (client.ts)**:
+- [ ] Create `ServerRotation` class:
+  ```typescript
+  class ServerRotation {
+    servers: LlamaServerConfig[];
+    currentIndex: number;
+    failureCounts: Map<string, number>;
+    lastHealthCheck: Map<string, number>; // timestamp
+    
+    async getNextServer(): Promise<Server>
+    async markServerFailed(url: string): void
+    async checkServerHealth(server: Server): Promise<boolean>
+    async rotateThroughServers(): Promise<Server>
+  }
+  ```
+
+- [ ] Update `api.chat()` method:
+  - Call `serverRotation.getNextServer()`
+  - Try current server with timeout
+  - On failure: log error, mark server failed, retry with next
+  - Max retries: 3 (try all Llamas, then Google)
+  - Exponential backoff: 100ms, 200ms, 400ms between retries
+
+**Settings UI (Settings.tsx)**:
+- [ ] New "LLM Providers" tab:
+  - Server list with health indicators
+  - Add server form: URL + name
+  - Delete button per server (confirm before deleting)
+  - Reorder via drag handles
+  - Provider preference radio: "Llama First" / "Google First" / "Smart Cycling"
+  - Test connection button (health check)
+  - Last health check timestamp + status
+
+**Storage & Persistence**:
+- [ ] Store server config in `localStorage`:
+  ```typescript
+  {
+    servers: [
+      { url: "http://...", name: "Llama Primary", priority: 1, ... },
+      { url: "http://...", name: "Llama Backup", priority: 2, ... },
+      { url: "google", name: "Google Gemini", priority: 3, ... }
+    ],
+    providerStrategy: "llama_first", // or "google_first", "cycling"
+    lastHealthCheckTime: 1715000000000
+  }
+  ```
+
+- [ ] Also store in user Settings API (backend):
+  - [ ] Add `user_llm_config` table or column
+  - [ ] Save user's server preferences
+  - [ ] Sync localStorage ↔ backend on login
+
+### Error Handling & User Experience
+
+**Graceful Degradation**:
+- [ ] If all Llama servers fail → show warning banner: "Llama unavailable, using Google Gemini (higher cost)"
+- [ ] If Google also fails → error state: "No LLM providers available"
+- [ ] Retry button in chat: "Retry with different provider"
+
+**Transparency**:
+- [ ] In chat messages, show which provider was used (footer icon)
+  - 🦙 = Llama used
+  - 🔷 = Google used
+  - ⏳ = Currently trying (show which server)
+  
+- [ ] Optional: Show latency per provider in Settings (avg response time)
+
+**Cost Warnings**:
+- [ ] If Llama down → warn user that Google charges money
+- [ ] Show estimated cost per message if using Google
+- [ ] Daily cost estimate (based on message count)
+- [ ] Cost ceiling setting (warn/block at $X/day)
+
+### Testing Requirements
+
+- [ ] Unit tests:
+  - [ ] ServerRotation logic (next server selection, failure tracking)
+  - [ ] Health check caching (1min TTL enforced)
+  - [ ] Exponential backoff timing
+  - [ ] Server priority ordering
+
+- [ ] Integration tests:
+  - [ ] Chat request with all Llama servers online (use Llama)
+  - [ ] Chat request with Llama servers down (fall back to Google)
+  - [ ] Chat request with slow Llama (timeout, retry)
+  - [ ] Health check failure handling
+  - [ ] Concurrent requests (multiple users, staggered provider failures)
+
+- [ ] Manual testing:
+  - [ ] Add multiple Llama servers in Settings
+  - [ ] Disable one, verify chat uses remaining
+  - [ ] Disable all Llama, verify chat uses Google
+  - [ ] Add bad URL, verify timeout → retry
+  - [ ] Network offline → offline error handling
+  - [ ] Drag-drop reorder servers → verify order persisted
+
+### Implementation Timeline
+
+**Estimate**: 3-4 days
+- Phase 1 (1 day): Backend API + ServerRotation logic
+- Phase 2 (1 day): Frontend Settings UI + localStorage
+- Phase 3 (0.5 days): Health checking + error handling
+- Phase 4 (0.5-1 day): Testing + documentation
+
+**Priority**: Medium (quality-of-life improvement, not critical for MVP)  
+**Blocker**: None (can run in parallel with other features)  
+**Dependency**: Requires stable LLM chat infrastructure (already in place)
+
+---
+
+## Future Feature: Token Counting Display UI (📊 Quick Win)
+
+**Scope**: Display remaining token budget on UI screens to help users track API usage and plan sessions.
+
+**Purpose**:
+- Give users visibility into token consumption (Gemini API uses token-based rate limiting)
+- Prevent surprise "quota exceeded" errors
+- Enable informed planning of AI generation tasks
+- Show which features consume most tokens (TTS synthesis, image generation, etc.)
+
+### Implementation Plan
+
+**Display Locations**:
+- [ ] Chat panel header: Show current token budget (e.g., "1,500 tokens remaining today")
+- [ ] Settings page: Token usage dashboard
+  - Current day: X tokens used / Y tokens available
+  - Last 7 days: graph of daily consumption
+  - Top features by token cost (TTS, images, chat, etc.)
+  - Estimated tokens per operation (TTS ~100 tokens/min, image ~500 tokens/image)
+  
+- [ ] Generation Queue: Per-task token cost estimate
+  - Before synthesis: "This synthesis will use ~500 tokens"
+  - Progress indicator: "123 / 500 tokens used"
+
+**Backend API**:
+- [ ] New endpoints:
+  - [ ] `GET /api/v1/tokens/status` → { available, used_today, limit, reset_time }
+  - [ ] `GET /api/v1/tokens/history` → { daily: [{ date, tokens_used }, ...] }
+  - [ ] `GET /api/v1/tokens/breakdown` → { chat: 50, tts: 300, images: 200, other: 50 }
+
+**Frontend Components**:
+- [ ] `TokenStatus.tsx` component:
+  - Compact display: "1.2K / 2K tokens" with progress bar
+  - Tooltip: shows breakdown (chat, TTS, images)
+  - Color coding: green (>50%), yellow (20-50%), red (<20%)
+
+- [ ] `TokenHistory.tsx` (Settings page):
+  - Daily bar chart (last 7 days)
+  - Table: operation type, count, tokens used
+  - Estimate for next month based on trend
+
+**Token Tracking**:
+- [ ] Log every API call with token cost:
+  - Store in `api_logs` table: operation, tokens_used, timestamp
+  - Calculate daily/hourly aggregates
+  - Reset counter daily at 00:00 UTC (configurable)
+
+**Testing**:
+- [ ] Unit: Token calculation accuracy
+- [ ] Integration: Token tracking across multiple requests
+- [ ] Manual: Verify counters update correctly after chat/generation
+
+**Estimate**: 2-3 days (backend logging + API + frontend components)  
+**Priority**: Low (nice-to-have, not blocking)
+
+---
+
 ## Future Major Feature: Data Import/Export System (🔄 Planning Phase)
 
 **Scope**: Complete data portability for AetherWave universes, stations, artists, brands, jingles, drafts, and generated media.
