@@ -52,7 +52,9 @@ class TestWebScraper:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
+        with patch(
+            "app.utils.web_scraper.aiohttp.ClientSession", return_value=mock_session
+        ):
             result = await scrape_website("bbc_news", WEBSITES["bbc_news"])
 
             assert result is not None
@@ -75,7 +77,9 @@ class TestWebScraper:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
+        with patch(
+            "app.utils.web_scraper.aiohttp.ClientSession", return_value=mock_session
+        ):
             result = await scrape_website("bbc_news", WEBSITES["bbc_news"])
             assert result is None
 
@@ -87,7 +91,9 @@ class TestWebScraper:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
+        with patch(
+            "app.utils.web_scraper.aiohttp.ClientSession", return_value=mock_session
+        ):
             result = await scrape_website("bbc_news", WEBSITES["bbc_news"])
             assert result is None
 
@@ -109,7 +115,9 @@ class TestWebScraper:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
 
-        with patch("aiohttp.ClientSession", return_value=mock_session):
+        with patch(
+            "app.utils.web_scraper.aiohttp.ClientSession", return_value=mock_session
+        ):
             results = await scrape_all_websites()
 
             # Should attempt to scrape all 40 websites
