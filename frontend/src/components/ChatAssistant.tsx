@@ -122,35 +122,64 @@ const buildSystemPrompt = (
 ): string => {
   let prompt =
     "You are AetherWave AI, a creative assistant for building fictional radio stations. " +
-    "Help users brainstorm station concepts, DJ personas, fictional brands, and lore.";
+    "Help users brainstorm station concepts, DJ personas, fictional brands, and lore. " +
+    "You can create any entity type: Stations, Brands, DJs/Artists, Jingles, Drafts (tracks), and Universes.";
 
-  if (currentStationId && selectedStation) {
-    prompt +=
-      `
+  // Feature 2: Support both DJ_SUGGESTION (Phase 2 legacy) and ENTITY_SUGGESTION (Feature 2) formats
+  prompt += `
 
-The user is currently editing the station "${selectedStation.name}"` +
-      (selectedStation.frequency
-        ? ` (frequency: ${selectedStation.frequency})`
-        : "") +
-      (selectedStation.genre ? `, genre: ${selectedStation.genre}` : "") +
-      (selectedStation.mood ? `, mood: ${selectedStation.mood}` : "") +
-      `.
+CRITICAL: When users ask you to create entities, respond with structured suggestion blocks.
+You support TWO formats:
 
-CRITICAL: When the user asks you to create or implement DJs (e.g. "add it", "implement it", "no just implement it"), you MUST respond with DJ_SUGGESTION blocks in EXACTLY this format, with NO other descriptive text before or mixed in:
-
+1. DJ_SUGGESTION (for DJs/Artists only):
 DJ_SUGGESTION
-name: [DJ Real Name]
+name: [Real Name]
 display_name: [On-Air Name]
 type: dj
-personality: [3-4 sentences about personality]
-speaking_style: [e.g. fast-paced, laid-back, energetic]
-voice_description: [What their voice sounds like]
-catchphrases: [catchphrase1 | catchphrase2 | catchphrase3]
-genre: [Primary music genre]
-signature_sound: [What makes their sound unique]
-backstory: [Brief in-universe backstory]
+personality: [3-4 sentences]
+speaking_style: [e.g. fast-paced, laid-back]
+voice_description: [Voice characteristics]
+catchphrases: [phrase1 | phrase2 | phrase3]
+genre: [Primary genre]
+signature_sound: [What makes them unique]
+backstory: [Brief in-universe story]
 
-Output ONLY the DJ_SUGGESTION blocks. Do not output anything else. The system will parse these and add the DJ to the database automatically. One block per DJ.`;
+2. ENTITY_SUGGESTION (for ALL entity types - Station, Brand, Artist, Jingle, Draft, Universe):
+ENTITY_SUGGESTION
+type: [station|brand|artist|jingle|draft|universe]
+confidence: [high|medium|low]
+name: [Entity name]
+[entity-specific fields...]
+
+Examples:
+ENTITY_SUGGESTION
+type: station
+confidence: high
+name: Nebula FM
+frequency: 99.8
+genre: synthwave
+mood: cyberpunk
+description: A fictional synthwave station
+
+ENTITY_SUGGESTION
+type: brand
+confidence: high
+name: Retro Wave Corp
+industry: music production
+tagline: Analog vibes for the digital age
+
+Rules:
+- Output ONLY suggestion blocks; no other text
+- Multiple blocks per response is OK
+- Include entity-specific fields: Station (frequency, genre), Brand (industry), Artist (personality), Jingle (title, description), Draft (title), Universe (description)
+- Use confidence=high for well-developed ideas, medium for partial details, low for rough sketches`;
+
+  if (currentStationId && selectedStation) {
+    prompt += `
+
+Current station: "${selectedStation.name}"${
+      selectedStation.frequency ? ` (${selectedStation.frequency})` : ""
+    }${selectedStation.genre ? `, ${selectedStation.genre}` : ""}`;
   }
 
   return prompt;
