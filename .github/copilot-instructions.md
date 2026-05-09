@@ -225,7 +225,7 @@ If an issue persists across check cycles:
 
 ### Rule 14: Autocompact Threshold for Multi-Session Stability
 
-**REQUIREMENT**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` to trigger context compaction at 70% capacity instead of default 85%.
+**REQUIREMENT**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50` to trigger context compaction at 50% capacity instead of default 85%.
 
 **PURPOSE**: 
 - Prevents context window bloat in long-running sessions
@@ -238,7 +238,7 @@ If an issue persists across check cycles:
   ```json
   {
     "env": {
-      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
     }
   }
   ```
@@ -246,19 +246,19 @@ If an issue persists across check cycles:
   ```json
   {
     "env": {
-      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
     }
   }
   ```
 
 **VERIFICATION**:
 - Run: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`
-- Expected output: `70`
-- Check timing: Context should compact when reaching ~70% of limit, not 85%
+- Expected output: `50`
+- Check timing: Context should compact when reaching ~50% of limit, not 85%
 
 **APPLIES TO**: All Claude Code agents/bots working on RP-Music-Radio project
 
-**RATIONALE**: At 70% threshold, context remains clean and compactable. Default 85% risks exhaustion in long sessions where multiple agents hand off work.
+**RATIONALE**: At 50% threshold, context compacts aggressively before reaching danger zone. Prevents bloat in long sessions with multiple agent handoffs; ensures maximum clean context available for new agents.
 
 ---
 

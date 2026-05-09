@@ -14,21 +14,21 @@
 
 **Issue**: Long-running sessions risk context window exhaustion without explicit autocompact trigger; prevents effective handoffs between AI agents.
 
-**Decision**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in both global user settings (~/.claude/settings.json) and project settings (.claude/settings.json).
+**Decision**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50` in both global user settings (~/.claude/settings.json) and project settings (.claude/settings.json).
 
 **Rationale**: 
 - Default 85% threshold too aggressive for multi-agent workflows
-- 70% threshold ensures clean compaction before context exhaustion
-- Enables predictable session boundaries and AI agent handoffs
-- Reduces friction in long-running development cycles
+- 50% threshold ensures aggressive compaction, maximum clean context for new agents
+- Enables predictable session boundaries with fresh context on every compaction
+- Reduces friction and ensures stability in long-running development cycles
 
 **Implementation**:
 - Added Rule 14 to `.github/copilot-instructions.md` (v3.3)
 - Configured `~/.claude/settings.json` with env var
 - Configured `.claude/settings.json` (project) with env var  
-- Verified with: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` → outputs `70`
+- Verified with: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` → outputs `50`
 
-**Impact**: All Claude Code agents/bots working on RP-Music-Radio will use 70% autocompact threshold. Sessions will compact more frequently but maintain cleaner context for handoffs.
+**Impact**: All Claude Code agents/bots working on RP-Music-Radio will use 50% autocompact threshold. Sessions will compact aggressively, providing fresh clean context for each new agent session; maximizes stability in multi-agent workflows.
 
 ---
 
