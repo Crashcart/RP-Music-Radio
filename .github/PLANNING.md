@@ -8,7 +8,37 @@
 
 ## Session 2: Feature 2 (Multi-Entity Form Filling) & Docker Cleanup (2026-05-09)
 
+### Governance & Configuration
+
+#### Decision: Autocompact Override for Multi-Session Stability (Rule 14 — 2026-05-09)
+
+**Issue**: Long-running sessions risk context window exhaustion without explicit autocompact trigger; prevents effective handoffs between AI agents.
+
+**Decision**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in both global user settings (~/.claude/settings.json) and project settings (.claude/settings.json).
+
+**Rationale**: 
+- Default 85% threshold too aggressive for multi-agent workflows
+- 70% threshold ensures clean compaction before context exhaustion
+- Enables predictable session boundaries and AI agent handoffs
+- Reduces friction in long-running development cycles
+
+**Implementation**:
+- Added Rule 14 to `.github/copilot-instructions.md` (v3.3)
+- Configured `~/.claude/settings.json` with env var
+- Configured `.claude/settings.json` (project) with env var  
+- Verified with: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` → outputs `70`
+
+**Impact**: All Claude Code agents/bots working on RP-Music-Radio will use 70% autocompact threshold. Sessions will compact more frequently but maintain cleaner context for handoffs.
+
+---
+
 ### Completed
+- ✅ **Governance (Rule 14)**: Autocompact threshold for multi-session stability
+  - Added Rule 14 to copilot-instructions.md (v3.3)
+  - Updated global and project settings with env var
+  - Version bumped: 3.2 → 3.3
+  - Decision logged in PLANNING.md
+
 - ✅ **Feature 2 Frontend**: Complete 4-phase implementation
   - Phase 1: Extended ChatAssistant parsing for 6 entity types (ENTITY_SUGGESTION blocks)
   - Phase 2: FormManager context router for pre-filling forms with AI data

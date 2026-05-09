@@ -18,7 +18,16 @@
 - [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
 - [x] Update TODO list to reflect the new hierarchical DB architecture
 
-### Governance Refinement (✅ SR-Level Cleanup Completed)
+### Governance Refinement (✅ Ongoing)
+
+**Session 2026-05-09: Added Rule 14 — Autocompact Override**
+- [x] Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to copilot-instructions.md
+- [x] Configured `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in ~/.claude/settings.json (global user)
+- [x] Configured `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in .claude/settings.json (project)
+- [x] Updated copilot-instructions.md version: 3.2 → 3.3
+- [x] Updated header with Rule 14 change summary
+- [x] Added decision log to PLANNING.md with rationale and impact
+- [x] Verified env var configuration in both settings files
 
 **Session 2026-05-03: Consolidated PR Rules & Entity Constraints**
 - [x] Identified and fixed rule numbering chaos ("10 rules" → "12 core rules")

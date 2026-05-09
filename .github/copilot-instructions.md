@@ -1,8 +1,9 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.2** | **Last Updated**: 2026-05-09  
+**Version 3.3** | **Last Updated**: 2026-05-09  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.2**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
+**Changes in v3.3**: Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to enable aggressive context compaction at 70% in long-running sessions across multiple AI agents.
+**Previous (v3.2)**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
 **Previous (v3.1)**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches; updated Phase 0 and Phase 2 with checkpoints.
 **Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12; fixed entity constraint in database schema; added explicit escalation procedures.
 
@@ -24,9 +25,9 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ---
 
-## The 12 Core Governance Rules
+## The Governance Rules (14 Rules + 1 Sub-rule)
 
-**Summary**: 12 rules establish mandatory workflow discipline. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle.
+**Summary**: 14 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions.
 
 ### Rule 1: Never Push to Main
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
@@ -219,6 +220,45 @@ If an issue persists across check cycles:
   - Stopping at first green = Cr-level violation, escalate to human
   - Unresolved blockers after Cr escalation = human review required
 - **TIMING**: Continuous 1-minute check cycles until ALL GREEN or Cr escalation triggered
+
+---
+
+### Rule 14: Autocompact Threshold for Multi-Session Stability
+
+**REQUIREMENT**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` to trigger context compaction at 70% capacity instead of default 85%.
+
+**PURPOSE**: 
+- Prevents context window bloat in long-running sessions
+- Enables cleaner handoffs between AI agents/bots
+- Avoids token exhaustion near 100% limit
+- Maintains predictable compaction cycles
+
+**CONFIGURATION**:
+- **Global User Setting** (`~/.claude/settings.json`):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+    }
+  }
+  ```
+- **Project Setting** (`.claude/settings.json` in repo):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+    }
+  }
+  ```
+
+**VERIFICATION**:
+- Run: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`
+- Expected output: `70`
+- Check timing: Context should compact when reaching ~70% of limit, not 85%
+
+**APPLIES TO**: All Claude Code agents/bots working on RP-Music-Radio project
+
+**RATIONALE**: At 70% threshold, context remains clean and compactable. Default 85% risks exhaustion in long sessions where multiple agents hand off work.
 
 ---
 
