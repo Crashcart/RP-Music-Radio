@@ -93,10 +93,6 @@ describe("FormManagerContext", () => {
       expect(getFormPageRoute("dj")).toBe("/artists");
     });
 
-    it("should map artist to /artists", () => {
-      expect(getFormPageRoute("artist")).toBe("/artists");
-    });
-
     it("should map station to /stations", () => {
       expect(getFormPageRoute("station")).toBe("/stations");
     });

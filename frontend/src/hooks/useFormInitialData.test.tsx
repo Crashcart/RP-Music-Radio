@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { ReactNode } from "react";
 import { FormManagerProvider } from "../contexts/FormManagerContext";
@@ -23,10 +23,13 @@ describe("useFormInitialData hook", () => {
   });
 
   it("should return initial data when entity type matches current form request", async () => {
-    const { result: formManagerResult } = renderHook(() => {
-      const fm = require("../contexts/FormManagerContext").useFormManager();
-      return fm;
-    }, { wrapper });
+    const { result: formManagerResult } = renderHook(
+      () => {
+        const fm = require("../contexts/FormManagerContext").useFormManager();
+        return fm;
+      },
+      { wrapper },
+    );
 
     // This test would need to mock FormManager state changes
     // For now, testing the hook structure
@@ -34,7 +37,9 @@ describe("useFormInitialData hook", () => {
   });
 
   it("should return empty data when entity type does not match", () => {
-    const { result } = renderHook(() => useFormInitialData("station"), { wrapper });
+    const { result } = renderHook(() => useFormInitialData("station"), {
+      wrapper,
+    });
 
     expect(result.current.initialData).toBeNull();
     expect(result.current.isAiGenerated).toBe(false);
@@ -50,7 +55,9 @@ describe("useFormInitialData hook", () => {
 
 describe("useFormField hook", () => {
   it("should return empty string for non-existent field when no data", () => {
-    const { result } = renderHook(() => useFormField("dj", "name"), { wrapper });
+    const { result } = renderHook(() => useFormField("dj", "name"), {
+      wrapper,
+    });
 
     expect(result.current).toBe("");
   });
@@ -61,7 +68,9 @@ describe("useFormField hook", () => {
   });
 
   it("should return empty string for non-matching entity types", () => {
-    const { result } = renderHook(() => useFormField("station", "name"), { wrapper });
+    const { result } = renderHook(() => useFormField("station", "name"), {
+      wrapper,
+    });
 
     expect(result.current).toBe("");
   });

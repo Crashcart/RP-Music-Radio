@@ -10,7 +10,6 @@ import {
   parseDJSuggestions,
   stripEntityBlocks,
   type EntitySuggestion,
-  type EntityType,
 } from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
@@ -174,10 +173,6 @@ export function ChatAssistant({
       const djSuggestions =
         entitySuggestions.length === 0 ? parseDJSuggestions(replyText) : [];
 
-      // Use new entity suggestions if available, otherwise fall back to DJ suggestions
-      const allSuggestions =
-        entitySuggestions.length > 0 ? entitySuggestions : djSuggestions;
-
       // Strip all suggestion blocks from visible text
       const visibleReply = stripEntityBlocks(replyText);
 
@@ -225,7 +220,7 @@ export function ChatAssistant({
   const handleStageDJ = async (
     msgIndex: number,
     djIndex: number,
-    suggestion: DJSuggestion,
+    suggestion: EntitySuggestion,
   ) => {
     if (!currentStationId) return;
 
@@ -244,8 +239,8 @@ export function ChatAssistant({
 
     try {
       await api.stageArtist({
-        name: suggestion.name,
-        display_name: suggestion.display_name || suggestion.name,
+        name: suggestion.data.name,
+        display_name: suggestion.data.display_name || suggestion.data.name,
         artist_type: ([
           "dj",
           "musician",
@@ -257,13 +252,13 @@ export function ChatAssistant({
           ? suggestion.type
           : "dj") as string,
         station_id: currentStationId,
-        bio: suggestion.backstory,
-        personality: suggestion.personality,
-        catchphrases: suggestion.catchphrases,
-        speaking_style: suggestion.speaking_style,
-        voice_description: suggestion.voice_description,
-        genre: suggestion.genre,
-        signature_sound: suggestion.signature_sound,
+        bio: suggestion.data.backstory,
+        personality: suggestion.data.personality,
+        catchphrases: suggestion.data.catchphrases,
+        speaking_style: suggestion.data.speaking_style,
+        voice_description: suggestion.data.voice_description,
+        genre: suggestion.data.genre,
+        signature_sound: suggestion.data.signature_sound,
       });
 
       setMessages((prev) => {
@@ -306,7 +301,7 @@ export function ChatAssistant({
           "Rate limit: too many pending DJs. Approve or reject existing drafts first.",
         );
       } else {
-        alert(`Failed to stage ${suggestion.name}: ${errMsg}`);
+        alert(`Failed to stage ${suggestion.data.name}: ${errMsg}`);
       }
     }
   };
@@ -518,18 +513,19 @@ export function ChatAssistant({
                       }}
                     >
                       <div style={{ marginBottom: "var(--space-xs)" }}>
-                        <strong>{dj.display_name || dj.name}</strong>
-                        {dj.display_name && dj.name !== dj.display_name && (
-                          <span
-                            style={{
-                              fontSize: "0.8em",
-                              color: "var(--text-secondary)",
-                              marginLeft: "0.4em",
-                            }}
-                          >
-                            ({dj.name})
-                          </span>
-                        )}
+                        <strong>{dj.data.display_name || dj.data.name}</strong>
+                        {dj.data.display_name &&
+                          dj.data.name !== dj.data.display_name && (
+                            <span
+                              style={{
+                                fontSize: "0.8em",
+                                color: "var(--text-secondary)",
+                                marginLeft: "0.4em",
+                              }}
+                            >
+                              ({dj.data.name})
+                            </span>
+                          )}
                         <span
                           style={{
                             marginLeft: "0.5em",
@@ -542,7 +538,7 @@ export function ChatAssistant({
                           {dj.type || "dj"}
                         </span>
                       </div>
-                      {dj.personality && (
+                      {dj.data.personality && (
                         <p
                           style={{
                             fontSize: "0.82em",
@@ -550,12 +546,12 @@ export function ChatAssistant({
                             margin: "0 0 var(--space-xs) 0",
                           }}
                         >
-                          {dj.personality.length > 120
-                            ? `${dj.personality.slice(0, 120)}…`
-                            : dj.personality}
+                          {dj.data.personality.length > 120
+                            ? `${dj.data.personality.slice(0, 120)}…`
+                            : dj.data.personality}
                         </p>
                       )}
-                      {dj.genre && (
+                      {dj.data.genre && (
                         <span
                           style={{
                             fontSize: "0.75em",
@@ -564,7 +560,7 @@ export function ChatAssistant({
                             marginBottom: "var(--space-xs)",
                           }}
                         >
-                          Genre: {dj.genre}
+                          Genre: {dj.data.genre}
                         </span>
                       )}
 

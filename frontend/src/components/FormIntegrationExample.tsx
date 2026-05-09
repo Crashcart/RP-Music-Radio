@@ -12,90 +12,79 @@
  * 5. Apply visual styling to AI-filled fields
  */
 
+import { useState } from "react";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 
 /**
  * Example: ArtistForm component updated to accept AI-generated data
+ *
+ * Usage:
+ * - When FormManager.openForm({ entityType: "dj", initialData: {...} }) is called
+ * - This component will receive the AI-generated data via the useFormInitialData hook
+ * - Pre-fill all form fields with the initial data
+ * - Show a warning banner if isAiGenerated is true
+ * - User can edit any field before submitting
  */
 export function ArtistFormExample() {
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("artist");
-  const [formData, setFormData] = React.useState(() => ({
-    name: initialData?.name ?? "",
-    display_name: initialData?.display_name ?? "",
-    personality: initialData?.personality ?? "",
-    voice_description: initialData?.voice_description ?? "",
-    catchphrases: initialData?.catchphrases ?? "",
-    genre: initialData?.genre ?? "",
-    // ... other fields
-  }));
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // Create artist via API
-    // Then call formManager.confirmForm() to close the form
-  };
+  const { initialData, isAiGenerated } = useFormInitialData("dj");
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [personality, setPersonality] = useState(
+    initialData?.personality ?? "",
+  );
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form>
       {isAiGenerated && (
         <div className="alert alert-warning">
           ⚠️ AI-generated DJ. Please review and edit all fields before saving.
         </div>
       )}
 
-      <div className={isAiGenerated ? "form-ai-filled" : ""}>
-        <label htmlFor="artist-name">Artist Name</label>
-        <input
-          id="artist-name"
-          name="artist_name"
-          data-field="name"
-          data-section="identity"
-          data-type="artist"
-          aria-label="Artist Name"
-          value={formData.name}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, name: e.target.value }))
-          }
-          required
-        />
-      </div>
+      <label htmlFor="name">Artist Name</label>
+      <input
+        id="name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className={isAiGenerated ? "form-ai-filled" : ""}
+      />
 
-      <div className={isAiGenerated ? "form-ai-filled" : ""}>
-        <label htmlFor="display-name">Display Name</label>
-        <input
-          id="display-name"
-          name="display_name"
-          data-field="display_name"
-          data-section="identity"
-          data-type="artist"
-          aria-label="Display Name"
-          value={formData.display_name}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, display_name: e.target.value }))
-          }
-        />
-      </div>
+      <label htmlFor="personality">Personality</label>
+      <textarea
+        id="personality"
+        value={personality}
+        onChange={(e) => setPersonality(e.target.value)}
+        className={isAiGenerated ? "form-ai-filled" : ""}
+      />
 
-      <div className={isAiGenerated ? "form-ai-filled" : ""}>
-        <label htmlFor="personality">Personality</label>
-        <textarea
-          id="personality"
-          name="personality"
-          data-field="personality"
-          data-section="personality"
-          data-type="artist"
-          aria-label="Personality traits and quirks"
-          value={formData.personality}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, personality: e.target.value }))
-          }
-        />
-      </div>
+      <button type="submit">Save DJ</button>
+    </form>
+  );
+}
 
-      {/* Additional fields... */}
+/**
+ * Example: StationForm updated for AI-generated initial data
+ */
+export function StationFormExample() {
+  const { initialData, isAiGenerated } = useFormInitialData("station");
+  const [name, setName] = useState(initialData?.name ?? "");
 
-      <button type="submit">Create Artist</button>
+  return (
+    <form>
+      {isAiGenerated && (
+        <div className="alert alert-warning">
+          ⚠️ AI-generated Station. Please review before saving.
+        </div>
+      )}
+
+      <label htmlFor="station-name">Station Name</label>
+      <input
+        id="station-name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className={isAiGenerated ? "form-ai-filled" : ""}
+      />
+
+      <button type="submit">Create Station</button>
     </form>
   );
 }
@@ -111,15 +100,6 @@ export function ArtistFormExample() {
  *   margin-bottom: var(--space-md);
  * }
  *
- * .form-ai-filled::before {
- *   content: "AI-Generated";
- *   display: block;
- *   font-size: 0.75rem;
- *   color: #92400e;
- *   font-weight: 600;
- *   margin-bottom: var(--space-sm);
- * }
- *
  * .alert-warning {
  *   background-color: #fef3c7;
  *   border: 1px solid #fbbf24;
@@ -131,30 +111,11 @@ export function ArtistFormExample() {
  */
 
 /**
- * Example: StationForm updated for AI-generated initial data
- */
-export function StationFormExample() {
-  const { initialData, isAiGenerated } = useFormInitialData("station");
-  const [formData, setFormData] = React.useState(() => ({
-    name: initialData?.name ?? "",
-    frequency: initialData?.frequency ?? "",
-    genre: initialData?.genre ?? "",
-    backstory: initialData?.backstory ?? "",
-    // ... other fields
-  }));
-
-  // Same pattern as ArtistForm
-  // Pre-fill form fields from initialData
-  // Show warning if isAiGenerated
-  // Apply form-ai-filled styling
-}
-
-/**
  * Key points:
  *
- * 1. useFormInitialData("artist") returns { initialData, isAiGenerated, hasInitialData }
+ * 1. useFormInitialData(entityType) returns { initialData, isAiGenerated, hasInitialData }
  * 2. Check isAiGenerated to show warning banner
- * 3. Pre-fill all form fields: value={initialData?.fieldName ?? ""}
+ * 3. Pre-fill all form fields: useState(initialData?.fieldName ?? "")
  * 4. Apply form-ai-filled class to fields for visual distinction
  * 5. User can edit any field before saving
  * 6. On submit, create entity via API
@@ -166,5 +127,5 @@ export function StationFormExample() {
  * - Form pre-fills fields and shows warning
  * - User edits and submits
  * - Form calls formManager.confirmForm() on success
- * - FormManager navigates back and closes dialog
+ * - FormManager closes the form
  */

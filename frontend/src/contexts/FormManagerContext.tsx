@@ -97,7 +97,6 @@ export function useFormManager() {
 export function getFormPageRoute(entityType: FormEntityType): string {
   const routes: Record<FormEntityType, string> = {
     dj: "/artists",
-    artist: "/artists",
     station: "/stations",
     brand: "/brands",
     jingle: "/jingles",
