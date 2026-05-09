@@ -1,9 +1,10 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.1** | **Last Updated**: 2026-05-09  
+**Version 3.2** | **Last Updated**: 2026-05-09  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.1**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches during active sessions; updated Phase 0 and Phase 2 with branch verification checkpoints.
-**Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12 into single cohesive rule; fixed entity constraint in database schema; added explicit escalation procedures.
+**Changes in v3.2**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
+**Previous (v3.1)**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches; updated Phase 0 and Phase 2 with checkpoints.
+**Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12; fixed entity constraint in database schema; added explicit escalation procedures.
 
 ---
 
@@ -180,6 +181,32 @@ If an issue persists across check cycles:
 - **Continuous progress**: No stalled PRs or one-issue-at-a-time fixes
 - **Auditability**: Every fix documented per cycle for review
 - **Quality gate**: All green = production-ready code
+
+---
+
+### Rule 13: Archive Logs in Shared Directory for Multi-AI Access
+
+**REQUIREMENT**: When AI agents receive logs (error outputs, build logs, test failures, API responses, etc.), save them in pure form to `.github/logs/` with a descriptive filename for other AIs and developers to access directly.
+
+**LOG STORAGE**:
+- Directory: `.github/logs/`
+- Filename format: `{YYYY-MM-DD}-{type}-{description}.log` (e.g., `2026-05-09-error-api-deadlock.log`)
+- File format: Pure/original text — no markdown, filtering, or sanitization (preserve full context)
+- When: Any log >5 lines or representing failure/blocker
+- Exclusions: Single-line status messages; sensitive data (sanitize API keys/passwords before saving)
+
+**REFERENCE IN DOCUMENTATION**:
+- In `.github/PLANNING.md`: "See `.github/logs/2026-05-09-error-api-startup.log`"
+- In PR comments: Link to the log file
+- In TODO.md: Reference logs for context
+
+**BENEFIT**:
+- Other AIs can `git clone` and read logs directly without manual re-passing
+- Developers can review logs asynchronously
+- Searchable archive of all issues/errors
+- Historical debugging reference for future sessions
+
+**ENFORCEMENT**: Escalate as Jr-level issue if logs received but not archived
 
 #### Enforcement & Consequences
 
