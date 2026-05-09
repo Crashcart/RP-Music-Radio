@@ -5,6 +5,43 @@
 **Priority**: CRITICAL (blocks all testing)  
 **Branch**: claude/copy-github-rules-w1KTY
 
+**UPDATE**: Beat container also restarting — likely same root cause (app initialization blocking)
+
+---
+
+## Related Issue: Beat Container Restarting
+
+The Celery Beat scheduler container (`aetherwave-beat`) is constantly restarting. This is likely the **same root cause** as the API hang.
+
+**Beat Configuration** (docker-compose.yml lines 81-99):
+```yaml
+aetherwave-beat:
+  command: celery -A app.celery beat --loglevel=info
+  depends_on:
+    - redis
+  restart: unless-stopped
+```
+
+**Why Beat Restarting Indicates Same Problem**:
+- Beat tries to import `app.celery` at startup
+- If app module initialization hangs/blocks, beat can't import
+- Beat crashes, Docker restarts it, infinite loop
+- This confirms the hang is in shared app initialization code
+
+**Beat Restart Cycle**:
+1. Beat container starts
+2. Celery tries: `from app.celery import ...`
+3. App module starts initializing (setup_logging, lifespan, routes, etc.)
+4. Hangs during initialization (same point as API)
+5. Beat times out, exits with error
+6. Docker `restart: unless-stopped` restarts container
+7. Infinite restart cycle
+
+**Implication**: The hang is in **core app initialization**, not uvicorn-specific or API-specific. Affects:
+- API (`python -m uvicorn app.main:app`)
+- Beat (`celery -A app.celery beat`)
+- Worker (`celery -A app.celery worker`)
+
 ---
 
 ## Symptom
