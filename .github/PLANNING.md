@@ -1,8 +1,46 @@
 # AetherWave / RP-Music-Radio — Planning & Decisions Log
 
-**Last Updated**: 2026-04-26  
+**Last Updated**: 2026-05-09  
 **Project**: Headless Media Factory — Procedural Lore-Heavy Radio Content Generator  
 **TDR Version**: 1.0.4 (Reference: `ARCHITECTURE.md`)
+
+---
+
+## Session 2: Feature 2 (Multi-Entity Form Filling) & Docker Cleanup (2026-05-09)
+
+### Completed
+- ✅ **Feature 2 Frontend**: Complete 4-phase implementation
+  - Phase 1: Extended ChatAssistant parsing for 6 entity types (ENTITY_SUGGESTION blocks)
+  - Phase 2: FormManager context router for pre-filling forms with AI data
+  - Phase 3: Backend API staging endpoints (client-side)
+  - Phase 4: Enhanced system prompts with entity generation guidance
+  - Pushed to alpha branch
+
+- ✅ **API Logging Fix**: SQLiteHandler environment detection
+  - Fixed: Hardcoded Docker path `/app/data/` → auto-detect local vs Docker
+  - Now works in both local development and Docker environments
+
+- ✅ **Docker Cleanup Planning**: Comprehensive plan created
+  - Identified unnecessary dependencies: google-cloud-logging (~30MB), grpcio (~10MB)
+  - Planned multi-stage Docker build: 36%+ size reduction (550MB → 350MB)
+  - Created tiered requirements strategy (base/ai/image/cloud/dev)
+  - Documentation: DOCKER_CLEANUP_PLAN.md
+
+### Pending / Blockers
+- 🔴 **API Startup Hang**: App initializes but doesn't bind to port 8000
+  - Root cause: Unknown (not in app import, not in lifespan, not in logging)
+  - Impact: Cannot test Feature 2 backend or verify health check
+  - Investigation status: Blocks further testing
+
+- ⏳ **Feature 2 Backend**: Staging endpoints not yet implemented
+  - Depends on: API startup fix
+  - Tasks: POST /staged endpoints for Station, Brand, Jingle, Draft, Universe
+
+### Next Steps
+1. **CRITICAL**: Investigate and fix API startup hang
+2. **HIGH**: Implement Feature 2 backend staging endpoints
+3. **MEDIUM**: Execute Docker cleanup plan (5-6 days effort)
+4. **LOW**: Polish and optimization tasks
 
 ---
 
