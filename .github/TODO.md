@@ -998,6 +998,219 @@ Artists.csv:
 
 ---
 
+---
+
+## Future Major Feature: Advanced AetherWave Expansion — Multi-Module Content Generation (📋 Planning Complete — See `/root/.claude/plans/calm-soaring-dolphin.md`)
+
+**Scope**: Transform AetherWave into a full-featured procedural radio station factory with real-time data integration, lore synthesis, and extensible plugin architecture. Each universe operates as an isolated sandbox with zero cross-universe data leakage.
+
+**Total Effort**: 4 months (14 weeks), 5-7 developers or 1 dev × 4 months serial
+
+### MODULE 1: Core Talk Radio & News Generation (Weeks 1-7)
+
+**Feature 1.1: Dynamic Market Scraper (In-Universe Economy Index)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseDataSources, configurable parsers (Star Citizen Trade Tools, Eve Online, etc.)
+- [ ] Commodity scraper: extract top 3 margins + optimal routes
+- [ ] LLM prompt: "Write 60s Market Minute in gritty space trucker voice"
+- [ ] API endpoints: POST /universes/{id}/data-sources, GET /universes/{id}/market-report
+- [ ] Frontend: Universe config UI for adding data sources (Universe Settings tab)
+- [ ] Celery beat job: scheduled scraping + report generation
+- [ ] Testing: E2E with live API calls (with fallback/mocking)
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.2: Lore-Driven News Engine (Real-to-Lore Translation)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseNewsSources, GeneratedNewsSegments
+- [ ] RSS parser + feed monitoring (Celery job)
+- [ ] Lore translation prompt: "Translate meta-update into [Universe] lore using attached lore doc"
+- [ ] Example: Real: "Server meshing live" → Lore: "New quantum lanes discovered"
+- [ ] API endpoints: POST /universes/{id}/news-sources, GET /universes/{id}/news
+- [ ] Frontend: News sources management UI
+- [ ] Admin approval queue: show source + translation side-by-side
+- [ ] Testing: Prompt tuning, LLM coherence validation
+- [ ] **Effort**: 4-5 days
+
+**Feature 1.3: Dynamic World Status Alerts (Emergency Broadcasts)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseStatusMonitors, EmergencyAlerts
+- [ ] Status monitor: poll official API (30s or 1m intervals)
+- [ ] Error mapping: "Error30000" → "Sub-Space Anomaly", "ServiceOffline" → "Comm-Relay Network Failure"
+- [ ] Emergency script generation: urgent PSA via LLM
+- [ ] Audio queue integration: INTERRUPT current track, play alert immediately (priority > bumper > track)
+- [ ] API endpoints: POST /universes/{id}/status-monitor, GET /universes/{id}/alerts
+- [ ] Testing: Status API mocking, interrupt timing validation (<2s latency)
+- [ ] **Effort**: 2-3 days
+
+**Feature 1.4: Procedural Call-In Show Segments** ⏳ Priority: MEDIUM
+- [ ] Database schema: CallerArchetypes (personality prompts, voice profiles)
+- [ ] Script generation: LLM dialogue between DJ + random Caller Archetype
+- [ ] Output format: `[{"speaker": "DJ", "emotion": "concerned", "text": "..."}, ...]` for TTS emotion markers
+- [ ] Voice consistency: each Caller has `voice_profile_id` → Lyria seed linking
+- [ ] API endpoints: POST /universes/{id}/caller-archetypes, POST /universes/{id}/call-in-segment
+- [ ] Testing: Multi-character dialogue coherence, emotion modulation
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.5: Extensible Web Scraper (Dynamic Data Extraction)** ⏳ Priority: MEDIUM
+- [ ] Database schema: ScrapeJobs (async job tracking)
+- [ ] Headless browser orchestration (Puppeteer integration)
+- [ ] Boilerplate stripping: remove nav, footer, ads before LLM
+- [ ] LLM-driven extraction: flexible schema validation (user provides goal + expected JSON schema)
+- [ ] Example: "Extract pirate activity mentions from this forum" → structured JSON
+- [ ] API endpoints: POST /universes/{id}/scrape, GET /universes/{id}/scrape/{job_id}
+- [ ] Risks: XSS in scraped content, memory/CPU spike on large pages, robots.txt respect
+- [ ] Testing: Multi-page scraping, LLM callback validation
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.6: Broadcast Memory Ledger (Contextual Continuity)** ⏳ Priority: HIGH
+- [ ] Database schema: `Universe.broadcast_memory` (JSON rolling buffer of 15 events)
+- [ ] Event types: market_report, news, emergency_alert, call_in, podcast_episode
+- [ ] Ledger injection: every LLM prompt includes recent events
+- [ ] LLM continuity prompting: "Reference these past events where natural... (e.g., 'Following up on yesterday's comms blackout...')"
+- [ ] API endpoints: GET /universes/{id}/broadcast-memory, POST /universes/{id}/broadcast-memory/reset (admin)
+- [ ] Snapshot history: weekly backups for rollback (BroadcastMemoryHistory table)
+- [ ] Callback validation: only allow references to events <7 days old
+- [ ] Testing: Ledger persistence, event deduplication, LLM callback accuracy
+- [ ] **Effort**: 2-3 days
+
+**Phase 1 Total**: 2 weeks (17-21 days)
+
+### MODULE 2: Extensions & Plugins (Weeks 8-12)
+
+**Feature 2.1: Opt-In Podcast Integration (Sandboxed Media)** ⏳ Priority: MEDIUM
+- [ ] Database schema: UniversePodcasts (RSS feeds per universe), PodcastEpisodes
+- [ ] RSS parser + daily feed check (Celery job)
+- [ ] Audio downloader: fetch MP3, normalize volume with ffmpeg
+- [ ] Queue rotation: configurable weight (e.g., 1 podcast per 5 tracks)
+- [ ] Syndication bumper generation: LLM creates intro/outro scripts
+- [ ] API endpoints: POST /universes/{id}/podcasts, GET /universes/{id}/podcasts, POST /podcasts/{id}/refresh
+- [ ] Frontend: Podcast management UI (add feed, set rotation weight, view episodes)
+- [ ] Testing: RSS parsing edge cases, audio normalization, bumper coherence
+- [ ] **Effort**: 2-3 days
+
+**Feature 2.2: Extensible Plugin Architecture (The Hook System)** ⏳ Priority: MEDIUM (long-term value)
+- [ ] Event emitter system throughout core app
+  - [ ] Events: onApplicationBoot, onUniverseLoad, onTrackStart, onTrackEnd, onNewsFetch, onEmergencyAlert, onTalkSegmentGenerate, onTTSQueue
+  - [ ] Listener registration: `eventEmitter.on('onTrackStart', (context) => {...})`
+- [ ] Plugin manifest schema (JSON): name, version, author, universes, permissions, entry_point, hooks
+- [ ] Plugin manager (backend):
+  - [ ] Plugin registry: SQLite (InstalledPlugins table)
+  - [ ] Plugin loader: read manifest, validate, load entry point
+  - [ ] Permission enforcer: whitelist network/fs access per permission
+  - [ ] State manager: isolated key-value store per plugin (PluginState table)
+  - [ ] Error isolation: plugin crash doesn't crash core (try-catch wrapper)
+- [ ] VM sandbox (Node.js VM context):
+  - [ ] Each plugin runs in isolated context
+  - [ ] No direct access to other plugins
+  - [ ] Restricted require() (no @aws-sdk, @google-cloud, no fs except /plugins/{name}/)
+  - [ ] Memory limit: 512MB per plugin
+  - [ ] Execution timeout: 10s per hook (kill at 10s)
+- [ ] Plugin state isolation:
+  - [ ] Each plugin has isolated `plugin_state.json`
+  - [ ] Key-value store: `{ "last_market_report": "2026-05-09T14:30:00Z", ... }`
+  - [ ] State persisted to DB (PluginState table)
+- [ ] API endpoints:
+  - [ ] POST /api/v1/plugins/install (upload ZIP, validate, install)
+  - [ ] GET /api/v1/plugins (list installed, with universe scope)
+  - [ ] PATCH /api/v1/plugins/{id} (enable/disable, update config)
+  - [ ] DELETE /api/v1/plugins/{id} (uninstall)
+  - [ ] GET /api/v1/plugins/{id}/logs (realtime console output)
+  - [ ] GET /api/v1/plugins/{id}/state (retrieve key-value store)
+- [ ] Frontend UI (new "Plugins" tab in Settings):
+  - [ ] Grid of installed plugins (icon, name, version, author, enable/disable toggle)
+  - [ ] "Install from GitHub" button (repo URL → clone → extract → validate → install)
+  - [ ] Per-plugin logs viewer (console output, error stream)
+  - [ ] Uninstall button with confirmation
+  - [ ] Permissions disclosure: "This plugin can access network, read memory ledger"
+- [ ] Plugin SDK (npm package: @aetherwave/plugin-sdk):
+  - [ ] Export: `register(app: PluginAPI) → void | Promise<void>`
+  - [ ] Hook interface: `onTrackStart(context: TrackContext) → void | Promise<void>`
+  - [ ] Context object: access to Broadcast Memory Ledger (read), plugin state (read/write), event emitter
+  - [ ] Example plugin skeleton in docs
+- [ ] Documentation:
+  - [ ] Plugin development guide (manifest, hooks, SDK usage)
+  - [ ] Plugin gallery (examples: custom scraper, lore translator, sentiment analyzer)
+  - [ ] Security best practices (no fs access without permission, validate user input)
+  - [ ] Deployment checklist (test in VM, submit to plugin registry — future)
+- [ ] Security testing:
+  - [ ] Sandbox escape attempts (require() breakout, global variable pollution)
+  - [ ] Permission bypass (network access without permission grant)
+  - [ ] Resource limits (512MB heap enforcement, 10s timeout kill)
+  - [ ] Malicious plugin (corrupts state, steals API keys, reads other plugins)
+- [ ] **Effort**: 5-7 days
+
+**Phase 2 Total**: 1-1.5 weeks (7-10 days)
+
+### Integration & Polish (Weeks 12-14)
+
+- [ ] End-to-end testing: all 8 features working together across 3+ test universes
+- [ ] Universe isolation audit: verify NO cross-universe data leakage
+  - [ ] Every API query includes WHERE universe_id = :universe_id
+  - [ ] LLM prompts include explicit universe constraint
+  - [ ] Plugin hooks only fire for subscribed universes
+  - [ ] Memory ledger completely isolated
+- [ ] Performance profiling:
+  - [ ] Market report generation: <30s (polling + LLM synthesis)
+  - [ ] News translation: <60s per article
+  - [ ] Emergency alert: <2s interruption latency
+  - [ ] Lyria synthesis queue: <100 items (auto-pruning if exceeded)
+  - [ ] Plugin hook execution: <10s (timeout at 10s)
+- [ ] Security audit:
+  - [ ] Sandbox escapes, XSS, injection, path traversal
+  - [ ] API rate limiting (third-party services don't block)
+  - [ ] Cost tracking + ceiling enforcement
+- [ ] Load testing: 5 universes running simultaneously, 50 concurrent LLM requests
+- [ ] Rollback plan: corrupted Memory Ledger → restore from weekly snapshot
+- [ ] Documentation:
+  - [ ] Architecture guide (universe isolation, data flows, plugin sandbox)
+  - [ ] Plugin SDK + example plugins
+  - [ ] Deployment checklist
+  - [ ] Troubleshooting guide
+
+**Total Estimate**: 4 months (14 weeks) for full implementation + testing
+
+---
+
+### Critical Database Schema (Summary)
+
+**New Tables**:
+- UniverseDataSources, UniverseNewsSources, UniverseStatusMonitors, UniversePodcasts
+- GeneratedNewsSegments, EmergencyAlerts, CallerArchetypes, ScrapeJobs
+- PodcastEpisodes, InstalledPlugins, PluginState, PluginLogs, BroadcastMemoryHistory
+
+**Universe Table Updates**:
+- Add `broadcast_memory` JSON column (15-event rolling buffer)
+- Existing `lore_document` used for news translation + emergency context
+
+**Schema Constraint**: Every new row MUST have explicit `universe_id` FK + index
+
+---
+
+### Risk Register (Module 1 + 2)
+
+| ID | Risk | Severity | Mitigation |
+|----|------|----------|-----------|
+| 1 | Cross-universe data leak | CRITICAL | WHERE universe_id clause audits + integration tests with 3+ universes |
+| 2 | LLM prompt injection | CRITICAL | Sanitize all user inputs; jinja2 template escaping |
+| 3 | Plugin sandbox escape | CRITICAL | VM isolation tests; restricted require() whitelist; permission enforcement audit |
+| 4 | API rate limit exceeded | HIGH | Cache responses (1h TTL); exponential backoff; admin alert at 80% quota |
+| 5 | LLM cost spiral | HIGH | Cost ceiling per universe + day; detailed logging; alerts at 50%, 80%, 100% |
+| 6 | Memory ledger corruption | MEDIUM | Weekly snapshots; rollback endpoint; validation on append |
+| 7 | Headless browser memory leak | MEDIUM | Process timeout + restart; heap limit; page size <5MB |
+| 8 | Podcast feed validation broken | MEDIUM | Fallback to cached version; admin notification; manual re-parse |
+| 9 | Plugin dependency conflicts | MEDIUM | Audit on install; warn if npm pkg conflicts |
+| 10 | Lyria synthesis queue backlog | MEDIUM | Monitor depth; prioritize emergency > bumper > track |
+
+---
+
+### Implementation Prerequisites
+
+✅ Universe Selector home page (foundation for universe-scoped features)  
+✅ Import/Export system (for backup/recovery)  
+✅ AI DJ staging + ChatAssistant (pattern for generalized entity staging)  
+✅ Broadcast system architecture (queue manager, Lyria integration)
+
+**Ready to start**: After all above features ship to production
+
+---
+
 ## Security Audit Issue (Jr-2) — npm Vulnerabilities in Vite ✅ FIXED
 
 **Identified in PR #36**: npm audit failed with 2 moderate vulnerabilities
