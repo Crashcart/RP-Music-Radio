@@ -2,6 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { api, type Station } from "../api/client";
 import { FormPreviewDialog } from "./FormPreviewDialog";
 import {
+  useFormManager,
+  requiresFormPreview,
+} from "../contexts/FormManagerContext";
+import {
   parseEntitySuggestions,
   parseDJSuggestions,
   stripEntityBlocks,
@@ -134,6 +138,7 @@ export function ChatAssistant({
   const [selectedSuggestion, setSelectedSuggestion] =
     useState<EntitySuggestion | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const formManager = useFormManager();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -306,6 +311,44 @@ export function ChatAssistant({
     }
   };
 
+  /**
+   * Handle opening an AI-suggested entity in a form (Phase 2).
+   * Shows confirmation dialog for major entities (Station, Brand, Universe).
+   * Auto-opens form for quick-create entities (DJ, Jingle, Draft).
+   */
+  const handleOpenFormForEntity = (suggestion: EntitySuggestion) => {
+    // Check if this entity type requires preview dialog
+    if (requiresFormPreview(suggestion.type)) {
+      // Show preview dialog for major entities
+      setSelectedSuggestion(suggestion);
+      setFormPreviewOpen(true);
+    } else {
+      // Direct open for quick-create entities
+      openFormWithSuggestion(suggestion);
+    }
+  };
+
+  /** Open form with AI-generated data via FormManager. */
+  const openFormWithSuggestion = (suggestion: EntitySuggestion) => {
+    formManager.openForm({
+      entityType: suggestion.type,
+      initialData: suggestion.data,
+      aiGenerated: true,
+      onSuccess: () => {
+        // Form created successfully
+        if (onEntityCreated) {
+          onEntityCreated();
+        }
+      },
+      onCancel: () => {
+        // User cancelled form
+        setFormPreviewOpen(false);
+        setSelectedSuggestion(null);
+      },
+    });
+    setFormPreviewOpen(false);
+  };
+
   /** Confirm a manual proposal (existing Station / Brand / Artist creation flow). */
   const confirmProposal = async (
     index: number,
@@ -392,7 +435,73 @@ export function ChatAssistant({
           <div key={msgIdx} className={`chat-message ${msg.role}`}>
             {msg.content}
 
-            {/* Structured DJ suggestion cards */}
+            {/* Structured entity suggestion cards (new multi-entity format) */}
+            {msg.entitySuggestions && msg.entitySuggestions.length > 0 && (
+              <div style={{ marginTop: "var(--space-md)" }}>
+                {msg.entitySuggestions.map((entity, entityIdx) => (
+                  <div
+                    key={entityIdx}
+                    style={{
+                      marginBottom: "var(--space-sm)",
+                      padding: "var(--space-sm) var(--space-md)",
+                      background: "rgba(255,255,255,0.05)",
+                      borderRadius: "var(--radius-sm)",
+                      borderLeft: "3px solid var(--accent)",
+                    }}
+                  >
+                    <div style={{ marginBottom: "var(--space-xs)" }}>
+                      <strong>{entity.data.name || entity.data.title}</strong>
+                      <span
+                        style={{
+                          marginLeft: "0.5em",
+                          fontSize: "0.75em",
+                          color: "var(--text-muted)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {entity.type}
+                      </span>
+                      {entity.confidence && entity.confidence !== "high" && (
+                        <span
+                          style={{
+                            marginLeft: "0.5em",
+                            fontSize: "0.7em",
+                            color: "var(--warning-color, #fbbf24)",
+                          }}
+                        >
+                          {entity.confidence}
+                        </span>
+                      )}
+                    </div>
+
+                    {entity.data.description && (
+                      <p
+                        style={{
+                          fontSize: "0.82em",
+                          color: "var(--text-secondary)",
+                          margin: "0 0 var(--space-xs) 0",
+                        }}
+                      >
+                        {entity.data.description.length > 120
+                          ? `${entity.data.description.slice(0, 120)}…`
+                          : entity.data.description}
+                      </p>
+                    )}
+
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: "var(--space-xs)" }}
+                      onClick={() => handleOpenFormForEntity(entity)}
+                    >
+                      Open Form
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Structured DJ suggestion cards (legacy format for backward compatibility) */}
             {msg.djSuggestions && msg.djSuggestions.length > 0 && (
               <div style={{ marginTop: "var(--space-md)" }}>
                 {msg.djSuggestions.map((dj, djIdx) => {
@@ -459,13 +568,13 @@ export function ChatAssistant({
                         </span>
                       )}
 
-                      {status === "idle" && currentStationId && (
+                      {status === "idle" && (
                         <button
                           className="btn btn-primary btn-sm"
                           style={{ marginTop: "var(--space-xs)" }}
-                          onClick={() => handleStageDJ(msgIdx, djIdx, dj)}
+                          onClick={() => handleOpenFormForEntity(dj)}
                         >
-                          Stage DJ
+                          Open Form
                         </button>
                       )}
                       {status === "staging" && (
@@ -599,6 +708,19 @@ export function ChatAssistant({
           →
         </button>
       </div>
+
+      {/* Form preview dialog for AI-suggested entities */}
+      {selectedSuggestion && (
+        <FormPreviewDialog
+          suggestion={selectedSuggestion}
+          isOpen={formPreviewOpen}
+          onConfirm={() => openFormWithSuggestion(selectedSuggestion)}
+          onCancel={() => {
+            setFormPreviewOpen(false);
+            setSelectedSuggestion(null);
+          }}
+        />
+      )}
     </div>
   );
 }
