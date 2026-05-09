@@ -79,7 +79,7 @@ export const parseEntitySuggestions = (text: string): EntitySuggestion[] => {
  */
 export const stripEntitySuggestions = (text: string): string => {
   return text
-    .replace(/ENTITY_SUGGESTION[\s\S]*?(?=\nENTITY_SUGGESTION|\s*$)/g, "")
+    .replace(/\n?ENTITY_SUGGESTION[\s\S]*?(?=\n\n|\nENTITY_SUGGESTION|$)/g, "")
     .trim();
 };
 

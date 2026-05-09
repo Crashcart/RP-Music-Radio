@@ -168,7 +168,7 @@ BRAND: name, industry (required)
   description: Cutting-edge electronics brand with retro-futuristic design
 
 ARTIST/DJ: name (required)
-  Optional: display_name, type (dj|host|musician|narrator|caller|guest), personality, speaking_style, voice_description, catchphrases, genre, signature_sound, backstory
+  Optional: display_name, artist_type (dj|host|musician|narrator|caller|guest), personality, speaking_style, voice_description, catchphrases, genre, signature_sound, backstory
   Tips: Personality should be 2-4 vivid sentences. Voice description helps TTS. Catchphrases separated by pipes (|).
   Example:
   ENTITY_SUGGESTION
@@ -176,7 +176,7 @@ ARTIST/DJ: name (required)
   confidence: high
   name: Marcus Chen
   display_name: DJ Chen
-  type: dj
+  artist_type: dj
   personality: Smooth operator with dry wit. Always has a story about the underground scene. Surprisingly philosophical about music.
   voice_description: Deep, warm voice with slight accent. Deliberate pacing. Laughs often.
   catchphrases: Keep it real|Spin it right|That's the vibe
