@@ -51,6 +51,61 @@
 
 ---
 
+## MODULE 3: Visuals & Project Governance (🔒 PENDING USER APPROVAL — DO NOT START)
+
+**STATUS**: Planning phase only. Implementation blocked until explicit user permission granted.
+
+### Feature 9: High-Level Project Governance (PLANNING — AWAITING APPROVAL)
+
+**Objective**: Establish governance framework and oversight during planning mode before technical execution.
+
+**Tasks** (DO NOT START):
+- [ ] Define high-level project rules, architecture compliance, state constraints
+- [ ] Create `.github/GOVERNANCE.md` with governance framework
+- [ ] Update `.github/copilot-instructions.md` with Feature 9 checklist
+- [ ] Implement PR governance validation layer
+- [ ] Ensure governance files protected (cannot be deleted until project completion)
+- [ ] Document in PLANNING.md
+
+**Effort**: 2-3 days (planning + documentation only)
+
+**⚠️ CRITICAL**: Governance documentation MUST remain active, pinned, undeleted until explicit project completion signal.
+
+---
+
+### Feature 10: Endless Artwork Regeneration & 5-Step History Buffer (PLANNING — AWAITING APPROVAL)
+
+**Objective**: Enable infinite artwork regeneration with safe 5-state rollback.
+
+**Tasks** (DO NOT START):
+- [ ] Design ArtworkRegenerator component (endless loop UI)
+- [ ] Design ArtworkHistory component (5-step buffer visualization)
+- [ ] Implement state management for history buffer (max 5 items)
+- [ ] Add ⚠️ warning banner (prominent, explains endless loop + rollback limits)
+- [ ] Add Stop button (halts regeneration loop)
+- [ ] Add Undo button (steps back through history, up to 5 steps)
+- [ ] Auto-purge generations older than 5 steps
+- [ ] Implement rate limit monitoring (pause when quota approaching)
+- [ ] Add history tracking to backend API response
+- [ ] Mobile polish (44px buttons, responsive layout)
+- [ ] Integration testing (endless loop, history buffer, undo)
+
+**Frontend Components**:
+- `ArtworkRegenerator.tsx` — Endless loop UI
+- `ArtworkHistory.tsx` — History buffer visualization
+- Update: `Stations.tsx`, `Artists.tsx`, `api/client.ts`
+
+**Effort**: 3-4 days (frontend-heavy, optional backend storage)
+
+**⚠️ SAFEGUARDS REQUIRED**:
+- Prominent warning to user
+- Clear stop button (always visible)
+- Rate limit monitoring + auto-stop
+- Memory limit (5 states only, auto-purge older)
+- No duplicate images in history
+
+---
+
 ## CURRENT SPRINT: Welcome Screen & Natural Language Chat Interface
 
 ### Feature 1: Welcome Screen with Universe Selector & API Key Setup (HIGH PRIORITY — 4-5 days)
