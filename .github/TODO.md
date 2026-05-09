@@ -49,6 +49,239 @@
 
 **Status**: 🚀 **PRODUCTION READY** — Fresh install tested on alpha branch
 
+---
+
+## CURRENT SPRINT: Welcome Screen & Natural Language Chat Interface
+
+### Feature 1: Welcome Screen with Universe Selector & API Key Setup (HIGH PRIORITY — 4-5 days)
+
+**Scope**: Replace auto-closing splash screen with an interactive welcome flow where users can:
+1. Select existing universes
+2. Create new universes
+3. Optionally configure Google API key
+4. Then proceed to main app
+
+**Tasks**:
+- [ ] Create `WelcomeScreen.tsx` component (replaces SplashScreen auto-dismiss)
+  - Display list of existing universes (name, description, entity counts)
+  - "Create New Universe" button → modal form (name + description)
+  - "Skip & Configure Later" → proceed without universe (creates default or prompts later)
+  - "Configure API Key" link → opens API key setup panel inline
+  - Select universe → store in context + localStorage
+  - Auto-proceed to Stations page once universe selected
+
+- [ ] Universe selection logic in App.tsx
+  - Check localStorage for `selectedUniverseId` on boot
+  - If no selection or invalid → show WelcomeScreen
+  - If valid → set context + route to Stations
+  - Persist selection across sessions
+
+- [ ] Integrate API key configuration into welcome flow
+  - Optional step (not required to proceed)
+  - Show helpful message: "Google API key enables AI features (DJ generation, art, chat)"
+  - Link to GEMINI_SETUP.md for detailed setup
+  - "Skip for now" → proceed to app, can configure in Settings later
+
+- [ ] Database / API updates
+  - Ensure Universe table ready (created in Phase 1)
+  - Ensure `POST /api/v1/universes` endpoint exists
+  - Add `GET /api/v1/universes` list endpoint
+
+- [ ] UX/Mobile polish
+  - Desktop (≥768px): Centered card layout, scrollable universe list
+  - Mobile (<768px): Full-screen, accordion/tab interface
+  - Dark sci-fi theme consistent with existing design
+  - Smooth transition to Stations page (fade, not instant)
+  - 44px min tap targets on mobile
+
+- [ ] Testing checklist
+  - [ ] First-time user: WelcomeScreen appears
+  - [ ] Create new universe → auto-selected → proceed to Stations
+  - [ ] Select existing universe → proceed to Stations
+  - [ ] Selection persists after reload
+  - [ ] Skip setup → proceed without API key
+  - [ ] Configure API key in welcome → verified in Settings
+
+**Files to Create/Modify**:
+- `frontend/src/components/WelcomeScreen.tsx` — (New) Welcome flow component
+- `frontend/src/App.tsx` — Route to WelcomeScreen if no universe selected
+- `frontend/src/pages/Stations.tsx` — Ensure universe context filtering works
+- `frontend/src/api/client.ts` — Add `listUniverses()` endpoint
+
+**Effort**: 4-5 days
+
+**Status**: 🔄 **READY FOR IMPLEMENTATION**
+
+---
+
+### Feature 2: Secondary Plan — Natural Language Entity Creation via Chat (HIGH PRIORITY — 1-2 weeks)
+
+**Scope**: Extend ChatAssistant to recognize ANY entity type (station, DJ, brand, jingle, draft, universe) from natural language, ask for confirmation, and populate forms with AI-generated data.
+
+**Example User Flow**:
+```
+User:  "I want to make a country song about life on the road with a trucker vibe"
+AI:    "I can help you create that! Should I fill in the details for a jingle/track?"
+User:  "Yes"
+AI:    [Opens DraftingTable form, pre-fills title, description, mood, etc.]
+User:  [Reviews form, edits a few fields, clicks Save]
+```
+
+**Key Differences from Primary Plan (DJ Staging)**:
+- Works for ALL entity types (not just DJs)
+- Requires confirmation for major entities (Station, Universe, Brand)
+- Auto-opens form without confirmation for quick-creates (DJ, Jingle)
+- Form title shows "Review AI-Generated [Entity Type]"
+- AI-filled fields highlighted (amber background #FBF3C0)
+- No auto-save — user must manually verify + save
+
+**Implementation Phases**:
+
+**Phase 1: Extend ChatAssistant Proposal System** (2-3 days)
+- [ ] Add FormPreviewDialog component
+  - Shows: "I'll fill in a [Entity] form. OK?"
+  - Buttons: "Yes, fill it in" | "No, show me the form" | "Cancel"
+  - Appears for major entities (Station, Brand, Universe)
+  - Auto-proceed for quick-creates (DJ, Jingle)
+- [ ] Expand entity types: station, artist, brand, jingle, draft, universe
+- [ ] Parse ENTITY_SUGGESTION blocks (generic, not just DJ_SUGGESTION)
+  - Support: STATION_SUGGESTION, BRAND_SUGGESTION, JINGLE_SUGGESTION, DRAFT_SUGGESTION, UNIVERSE_SUGGESTION
+
+**Phase 2: Form Manager & Data Passing** (2-3 days)
+- [ ] Create FormManager context in App.tsx
+  - Handles "open form with data" events
+  - Routes to appropriate page (Stations, Artists, Brands, DraftingTable, Universes)
+  - Passes pre-filled data as state
+- [ ] Update all forms to accept `initialData` prop
+  - Pre-fill fields from AI response
+  - Mark AI-filled fields with CSS class `.form-ai-filled`
+  - Show warning banner: "⚠️ AI-generated content. Please review before saving."
+
+**Phase 3: API Support for Multi-Entity Staging** (3-4 days)
+- [ ] Add status fields to Station, Brand, Jingle, Draft models (if not present)
+  - `status` (published | draft | pending_publish)
+  - `created_by`, `expires_at`, `undo_expires_at`
+- [ ] Create /staged endpoints for all entities
+  - `POST /api/v1/stations/staged`
+  - `POST /api/v1/brands/staged`
+  - `POST /api/v1/jingles/staged`
+  - `POST /api/v1/drafts/staged`
+  - `POST /api/v1/universes/staged` (or direct creation)
+- [ ] Reuse existing staging workflow
+  - Rate limiting (20/hour/user, 5 concurrent/type)
+  - Auto-expire drafts (7 days)
+  - 30-second undo window after publish
+
+**Phase 4: Enhanced AI Prompting** (1-2 days)
+- [ ] Update Gemini system prompt
+  - Output ENTITY_SUGGESTION blocks for recognized entity types
+  - Format: type, confidence, fields
+  - Example: "STATION_SUGGESTION\nname: Nebula FM\nfrequency: 99.8\ngenre: synthwave\n..."
+- [ ] Prompt includes universe/station context for smart suggestions
+
+**Phase 5: UX Polish & Testing** (2-3 days)
+- [ ] Confirmation dialogs for major entities
+- [ ] Form headers show "Review AI-Generated [Type]"
+- [ ] AI-filled fields styled with amber background (#FBF3C0) + border (#F39C12)
+- [ ] Mobile-responsive form opening
+- [ ] End-to-end testing (chat → stage → review → save)
+- [ ] Bug audit + code review
+
+**Files to Create/Modify** (See full plan in `/root/.claude/plans/calm-soaring-dolphin.md` — SECONDARY PLAN section):
+- `frontend/src/components/ChatAssistant.tsx` — Parse ENTITY_SUGGESTION blocks
+- `frontend/src/App.tsx` — FormManager context + routing
+- `frontend/src/pages/Stations.tsx`, `Artists.tsx`, `Brands.tsx`, `DraftingTable.tsx` — Accept initialData prop
+- `backend/app/api/v1/routes.py` — /staged endpoints for all entities
+- `frontend/src/api/client.ts` — Add multi-entity staging endpoints
+
+**Effort**: 1-2 weeks
+
+**Status**: 🔄 **PLANNED FOR IMPLEMENTATION AFTER WELCOME SCREEN**
+
+---
+
+### Feature 3: Quaternary Plan — Complete Chat Interface Interaction (MEDIUM PRIORITY — 2-3 weeks)
+
+**Scope**: Comprehensive chat features enabling persistent conversation history, rich message formatting, and seamless entity creation across all types.
+
+**Suitable for**: Junior developer with senior code review oversight (detailed plan provided for independent execution)
+
+**6-Phase Implementation** (2-3 weeks):
+
+**Phase 1: Chat History & Persistence** (3-4 days)
+- [ ] `ChatSession` model + `/api/v1/chat-sessions` endpoints (CRUD)
+- [ ] Chat history sidebar with conversation list
+- [ ] Auto-save to backend every 10s (batched)
+- [ ] Restore conversation on app reload
+- [ ] Database: `ChatSession`, `ChatMessage` tables
+
+**Phase 2: Rich Message Formatting & Previews** (2-3 days)
+- [ ] Markdown support (bold, italics, code blocks, lists) + sanitization (DOMPurify)
+- [ ] Enhanced DJ/Jingle/Proposal cards with previews
+- [ ] Structured message types (text, dj_suggestion, proposal, error, loading, info)
+- [ ] Expand/collapse for long content (backstory, personality)
+
+**Phase 3: Multi-Entity Proposal Workflow** (3-4 days)
+- [ ] Extend parsing: `parseJingleSuggestions()`, `parseDraftSuggestions()`, `parseUniverseSuggestions()`
+- [ ] Staged creation for all entities (Jingle, Draft, Universe)
+- [ ] Confirmation dialogs (major entities) vs auto-stage (quick-creates)
+- [ ] `/api/v1/jingles/staged`, `/drafts/staged`, `/universes/staged` endpoints
+
+**Phase 4: Chat Context & Awareness** (2-3 days)
+- [ ] Universe/station context injection into prompts
+- [ ] Smart prompting (auto-suggest related entities, remember context)
+- [ ] Breadcrumb navigation in chat (clickable, jumps to entity)
+- [ ] Context updates when user navigates
+
+**Phase 5: Search, Export & Advanced Features** (2-3 days)
+- [ ] Full-text search conversations (by title, content, entity names)
+- [ ] Export functionality (JSON, Markdown, PDF)
+- [ ] Keyboard shortcuts (Ctrl+K, Shift+Enter, Escape, etc.)
+- [ ] Accessibility improvements (ARIA labels, keyboard nav, screen reader)
+
+**Phase 6: Testing, Bug Audit & Polish** (2-3 days)
+- [ ] Integration testing (create → stage → navigate → verify)
+- [ ] Bug audit (race conditions, memory leaks, error recovery, XSS)
+- [ ] Performance optimization (virtualize message list, lazy-load history)
+- [ ] Mobile polish (full-height drawer, keyboard above input, 44px tap targets)
+
+**Files to Create/Modify** (See detailed plan in `/root/.claude/plans/calm-soaring-dolphin.md` — QUATERNARY PLAN section):
+- Backend: `ChatSession`, `ChatMessage` models; `/chat-sessions` endpoints
+- Frontend: `ChatAssistant.tsx`, `ChatHistory.tsx`, `ChatMessage.tsx`, enhanced suggestion cards
+- Export utilities, search logic, accessibility enhancements
+
+**Effort**: 2-3 weeks (junior dev + 5-6 days senior review)
+
+**Junior Developer Workflow**:
+1. Read CHAT_DEVELOPMENT.md (architecture overview)
+2. Pick one phase per week
+3. Code → test locally → commit → PR for senior review
+4. Address feedback → rebase + merge
+5. Move to next phase
+
+**Code Review Checklist** (Senior oversight):
+- No SQL injection / XSS vulnerabilities
+- Error handling on all API calls
+- Loading states + user feedback
+- Mobile responsive
+- Accessibility (ARIA, keyboard nav)
+- Performance (no N+1, virtualization)
+- Tests pass (unit + integration)
+
+**Success Criteria**:
+- ✅ Persistent chat history across sessions
+- ✅ Markdown-formatted messages with previews
+- ✅ Multi-entity staging (DJ, Jingle, Draft, Universe)
+- ✅ Search conversations by content
+- ✅ Export as JSON/Markdown/PDF
+- ✅ No race conditions, memory leaks, or XSS
+- ✅ Mobile-responsive chat drawer
+- ✅ Accessibility: keyboard nav + screen reader compat
+
+**Status**: 🔄 **PLANNED FOR IMPLEMENTATION (WEEK 3-4, after Welcome Screen + Secondary Plan)**
+
+---
+
 **Google Cloud API Offline (Cr-Level — Reported 2026-05-04)**
 - [ ] **BLOCKER**: Google Cloud API status shows ❌ Offline in Settings UI
 - [ ] Frontend shows: "API Status: ❌ Offline" on Settings page
