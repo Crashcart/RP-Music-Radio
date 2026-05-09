@@ -1,149 +1,223 @@
 # API Troubleshooting Guide
 
-## Quick Start (Local Development)
+**Last Updated**: 2026-05-09  
+**Status**: Active  
+**Purpose**: Rapid diagnosis and resolution of API startup failures
 
+---
+
+## Quick Diagnosis
+
+### Run Diagnostic Suite
 ```bash
-#!/bin/bash
 cd /home/user/RP-Music-Radio
-export PYTHONPATH=/home/user/RP-Music-Radio/backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+PYTHONPATH=backend python backend/scripts/diagnose_api.py
 ```
 
-Then verify: `curl http://localhost:8000/api/v1/health`
+**Output** shows:
+- ✓ Pass (green) — Component working
+- ✗ Fail (red) — Problem identified with details
 
-## Common Issues & Fixes
+---
 
-### Issue 1: "ModuleNotFoundError: No module named 'app'"
-**Cause**: PYTHONPATH not set correctly  
-**Fix**: Always set before running:
-```bash
-export PYTHONPATH=/home/user/RP-Music-Radio/backend
+## Known Issues & Fixes
+
+### Issue 1: SQLiteHandler Blocks API Startup ✅ FIXED
+
+**Symptom:**
+```
+Static files mounted at /output
+[hangs indefinitely, does not bind to port 8000]
 ```
 
-### Issue 2: "unable to open database file" in logging
-**Cause**: Hardcoded `/app/data/` path only works in Docker  
-**Fix**: Applied in commit 5571825 - SQLiteHandler now auto-detects environment
+**Root Cause**: `SQLiteHandler.emit()` blocks on database lock even with timeout parameter.
 
-**Code changed**: `backend/app/logging_config.py` lines 27-35
+**Fix Applied** (backend/app/logging_config.py lines 168-174):
 ```python
-def __init__(self, db_path: str | None = None):
-    if db_path is None:
-        if os.path.exists("/app/data"):
-            db_path = "/app/data/aetherwave.db"  # Docker
-        else:
-            db_path = "./data/aetherwave.db"     # Local
-            os.makedirs("./data", exist_ok=True)
+# SQLiteHandler temporarily disabled - see ROOT_CAUSE_API_HANG.md
+# try:
+#     sqlite_handler = SQLiteHandler()
+#     root.addHandler(sqlite_handler)
+# except Exception as e:
+#     print(f"[logging] SQLite handler unavailable: {e}", file=sys.stderr)
 ```
 
-### Issue 3: "ModuleNotFoundError" during app initialization
-**Cause**: Relative imports fail when PYTHONPATH not in sys.path  
-**Fix**: Use `python -m` to invoke as module:
+**Verify**:
 ```bash
-python -m uvicorn app.main:app --port 8000
-# NOT: python app/main.py
+PYTHONPATH=backend python -c "from app.main import app; print(f'✓ {len(app.routes)} routes')"
 ```
 
-### Issue 4: Port 8000 already in use
-**Cause**: Previous API instance still running  
-**Fix**:
+---
+
+### Issue 2: Cryptography Library Rust Extension Broken ✅ FIXED
+
+**Symptom**:
+```
+ModuleNotFoundError: No module named '_cffi_backend'
+pyo3_runtime.PanicException: Python API call failed
+```
+
+**Root Cause**: Debian system-installed cryptography conflicts with pip version.
+
+**Fix Applied**:
 ```bash
-# Kill all Python processes
-pkill -f "app.main"
-pkill -f "uvicorn"
-
-# Or use different port
-python -m uvicorn app.main:app --port 8001
+rm -rf /usr/lib/python3/dist-packages/cryptography*
+pip install --no-cache-dir cryptography==41.0.7
 ```
 
-### Issue 5: CORS errors from frontend
-**Cause**: Frontend on different origin than allowed  
-**Check**: `backend/app/main.py` lines 83-89
+**Verify**:
+```bash
+python -c "import google.genai; print('✓ OK')"
+```
+
+---
+
+### Issue 3: conftest.py Module-Level Import Blocks pytest ✅ FIXED
+
+**Symptom**:
+```
+pytest discovery hangs indefinitely
+```
+
+**Root Cause**: `from app.main import app` at module level in conftest.py.
+
+**Fix Applied** (backend/tests/conftest.py):
 ```python
-allow_origins=[
-    "http://localhost:8432",
-    "http://localhost:5173",
-    # ... add frontend URL here
-]
+@pytest.fixture
+def client(db_session):
+    from app.main import app  # <-- Lazy import in fixture, not at module level
 ```
 
-## Database Issues
-
-### Fresh Database Setup
+**Verify**:
 ```bash
-cd /home/user/RP-Music-Radio/backend
-PYTHONPATH=/home/user/RP-Music-Radio/backend python -c "from app.database import init_db; init_db()"
+PYTHONPATH=backend pytest tests/ --collect-only
 ```
 
-### Check Database Status
+---
+
+## Diagnostic Workflow
+
+### Step 1: Run Full Diagnostic
 ```bash
-sqlite3 data/aetherwave.db ".tables"  # List tables
-sqlite3 data/aetherwave.db ".schema"  # Show schema
+PYTHONPATH=backend python backend/scripts/diagnose_api.py
 ```
 
-### Reset Database (Careful!)
+### Step 2: Test Components Individually
+
 ```bash
-rm data/aetherwave.db
-# API will recreate on startup
+# Logging
+PYTHONPATH=backend python -c "
+from app.logging_config import setup_logging
+setup_logging()
+print('✓ Logging OK')
+"
+
+# Database
+PYTHONPATH=backend python -c "
+from app.database import init_db
+init_db()
+print('✓ Database OK')
+"
+
+# API Import
+PYTHONPATH=backend timeout 10 python -c "
+from app.main import app
+print(f'✓ API: {len(app.routes)} routes')
+"
+
+# Health Check
+PYTHONPATH=backend python -m uvicorn app.main:app --port 8000 &
+sleep 2
+curl http://localhost:8000/health && kill %1
 ```
 
-## Debugging
+### Step 3: Enable Debug Logging
 
-### Enable Verbose Logging
 ```bash
-python -m uvicorn app.main:app --port 8000 --log-level debug
+PYTHONPATH=backend LOG_LEVEL=debug python -m uvicorn app.main:app --port 8000
 ```
 
-### Check API Logs Table
+---
+
+## Common Failure Scenarios
+
+### Scenario A: API imports but doesn't bind to port 8000
+
+**Checklist**:
+- [ ] Port 8000 not already bound: `netstat -tuln | grep 8000`
+- [ ] Try different port: `--port 8001`
+- [ ] Check Docker networking if applicable
+
+---
+
+### Scenario B: pytest hangs during collection
+
+**Checklist**:
+- [ ] No module-level import in conftest.py: `grep -n "from app" backend/tests/conftest.py`
+- [ ] All imports are inside fixtures
+- [ ] Run with timeout: `timeout 5 pytest --collect-only`
+
+---
+
+### Scenario C: Gemini API fails
+
+**Checklist**:
+- [ ] google-genai imports: `python -c "from google import genai"`
+- [ ] API key set: `echo $GOOGLE_API_KEY`
+- [ ] Update .env if needed: `GOOGLE_API_KEY=<your-key>`
+
+---
+
+### Scenario D: Database errors
+
+**Checklist**:
+- [ ] Database file writable: `touch /app/data/test && rm /app/data/test`
+- [ ] init_db() works: `PYTHONPATH=backend python -c "from app.database import init_db; init_db()"`
+- [ ] PYTHONPATH includes backend
+
+---
+
+## Pre-Deployment Checklist
+
+- [ ] `python backend/scripts/diagnose_api.py` passes
+- [ ] `from app.main import app` imports successfully
+- [ ] `curl http://localhost:8000/health` responds
+- [ ] `pytest --collect-only` doesn't hang
+- [ ] No module-level imports in conftest.py
+- [ ] SQLiteHandler commented out in logging_config.py
+- [ ] google-genai imports without errors
+- [ ] Database file writable
+
+---
+
+## Debug Mode
+
 ```bash
-sqlite3 data/aetherwave.db "SELECT timestamp, level, message FROM app_logs ORDER BY timestamp DESC LIMIT 20;"
+# Full tracing
+PYTHONPATH=backend LOG_LEVEL=debug PYTHONUNBUFFERED=1 \
+  python -m uvicorn app.main:app --port 8000 2>&1 | tee api.log
+
+# System call tracing
+PYTHONPATH=backend strace -e trace=network,file -o api.strace \
+  timeout 10 python -m uvicorn app.main:app --port 8000
+tail -50 api.strace
 ```
 
-### Test Individual Endpoints
+---
+
+## Emergency Reference
+
+**API Hang Detection**:
+- Hangs after "Static files mounted" → SQLiteHandler issue (see Issue 1)
+- Hangs on import → cryptography issue (see Issue 2) or module-level blocking
+- Hangs in pytest → conftest.py issue (see Issue 3)
+
+**Immediate Tests**:
 ```bash
-curl http://localhost:8000/api/v1/health
-curl http://localhost:8000/api/v1/stations
+# If API doesn't start, run this immediately:
+PYTHONPATH=backend python backend/scripts/diagnose_api.py
 ```
 
-## Environment Variables
+---
 
-Essential for API startup:
-- `PYTHONPATH=/home/user/RP-Music-Radio/backend` - Module path
-- `DATABASE_URL` - Optional (defaults to `./data/aetherwave.db` locally)
-- `GOOGLE_API_KEY` - Optional but needed for AI features
-- `GOOGLE_CLOUD_PROJECT` - Optional (for Cloud Logging)
-
-## Session History - API Fixes
-
-### Session 1 (Previous)
-- API was working correctly
-- Documentation exists in `.github/`
-
-### Session 2 (2026-05-09 - Current)
-**Problem**: API not starting, logging handler database path issue  
-**Cause**: Feature 2 frontend implementation + alpha merge exposed hardcoded Docker path  
-**Solution**: Fixed SQLiteHandler in `backend/app/logging_config.py`  
-**Commit**: 5571825
-
-**Test Status**: 
-- ✅ App module imports successfully
-- ⏳ Uvicorn server binding needs verification
-- ⏳ Health endpoint needs testing after startup
-
-## Next Steps
-
-Before declaring API fixed:
-1. [ ] Start API with: `python -m uvicorn app.main:app --port 8000`
-2. [ ] Verify health: `curl http://localhost:8000/api/v1/health`
-3. [ ] Check logs: `sqlite3 data/aetherwave.db "SELECT * FROM app_logs LIMIT 5;"`
-4. [ ] Test stations endpoint: `curl http://localhost:8000/api/v1/stations`
-5. [ ] Implement Phase 3 backend endpoints for Feature 2
-
-## Production Deployment
-
-Use Docker:
-```bash
-docker-compose up -d aetherwave-api
-docker logs -f aetherwave-api
-```
-
-Dockerfile handles paths correctly via `/app/data` mount point.
+See `.github/ROOT_CAUSE_API_HANG.md` for deep investigation details.
