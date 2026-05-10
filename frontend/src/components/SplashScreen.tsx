@@ -8,6 +8,10 @@ interface Star {
   opacity: number;
 }
 
+const LOGO_DELAY_MS = 200;
+const EXIT_DELAY_MS = 1800;
+const COMPLETE_DELAY_MS = 2600;
+
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
@@ -16,12 +20,12 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   const [exiting, setExiting] = useState(false);
 
   useEffect(() => {
-    const t0 = setTimeout(() => setLogoVisible(true), 200);
+    const t0 = setTimeout(() => setLogoVisible(true), LOGO_DELAY_MS);
     const t1 = setTimeout(() => {
       exitingRef.current = true;
       setExiting(true);
-    }, 1800);
-    const t2 = setTimeout(onDone, 2600);
+    }, EXIT_DELAY_MS);
+    const t2 = setTimeout(onDone, COMPLETE_DELAY_MS);
     return () => {
       clearTimeout(t0);
       clearTimeout(t1);
