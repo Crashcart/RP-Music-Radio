@@ -1329,7 +1329,15 @@ def export_data(db: Session = Depends(get_db)):
 
 @router.get("/settings/logs")
 def get_system_logs(lines: int = 500):
-    """Retrieve the last N log entries from the SQLite app_logs table."""
+    """Retrieve the last N log entries from the SQLite app_logs table.
+
+    Requires app_logs table with schema:
+      - id: INTEGER PRIMARY KEY
+      - timestamp: TEXT
+      - level: TEXT
+      - component: TEXT
+      - message: TEXT
+    """
     import sqlite3
 
     for db_path in [

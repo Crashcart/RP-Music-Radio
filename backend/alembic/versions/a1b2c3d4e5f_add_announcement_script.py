@@ -41,7 +41,7 @@ def upgrade() -> None:
                     server_default="",
                 )
             )
-        except Exception:
+        except sa.exc.OperationalError:
             pass  # column already exists on fresh databases seeded from ORM
 
 
