@@ -10,9 +10,10 @@ RUN echo 'APT::Install-Recommends "false";\nAPT::Install-Suggests "false";' > /e
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Install Python dependencies (tiered: worker needs base + AI + image generation; no dev tooling)
+# Glob copy preserves the -r dependency chain referenced inside requirements-images.txt
 COPY backend/requirements*.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-images.txt
 
 # Copy application code
 COPY backend/ .
