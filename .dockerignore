@@ -1,0 +1,96 @@
+# ─ Docker Build Context Exclusions ──────────────────────────────────────
+# Keeps local artifacts, secrets, and dev-only files out of built images.
+# Mirrors .gitignore where appropriate, plus build-context specifics.
+
+# ─ Secrets & environment ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# ─ VCS ──────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.github
+
+# ─ Python caches & build artifacts ──────────────────────────────────────
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ─ Virtual environments ─────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ─ Node / frontend build artifacts (API/worker images don't need these) ─
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+frontend/node_modules
+frontend/dist
+frontend/build
+
+# ─ Local databases & generated content ──────────────────────────────────
+*.sqlite
+*.sqlite3
+*.db
+data/
+radio_vault/
+persona_db/
+market_ingest/
+redis_data/
+backups/
+
+# ─ Logs & diagnostics ───────────────────────────────────────────────────
+logs/
+*.log
+*.tar.gz
+
+# ─ Test & coverage artifacts ────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ─ Editor / IDE / OS ────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─ Docker meta (don't ship Dockerfiles into the image) ──────────────────
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+.docker/
+
+# ─ Claude Code local settings (may contain secrets) ─────────────────────
+.claude/settings.local.json
+
+# ─ Documentation (not needed at runtime) ────────────────────────────────
+*.md
+!backend/**/*.md
+LICENSE_NOTICE.md
