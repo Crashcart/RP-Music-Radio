@@ -25,6 +25,7 @@ from app.logging_config import setup_logging
 from app.middleware import CSRFMiddleware, RequestLoggingMiddleware
 from app.database import init_db
 from app.api.v1.routes import router as v1_router
+from app.api.v1.routes_web_context import router as web_context_router
 
 # Initialise logging before anything else
 setup_logging()
@@ -35,6 +36,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("AetherWave API starting up")
     init_db()
+
+    # Check Google API key at startup
+    api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is not set. AI features (Gemini, image generation) will be offline."
+        )
+    elif api_key == "your-api-key-here" or api_key.startswith("your-"):
+        logger.warning(
+            "⚠️  GOOGLE_API_KEY is set to a placeholder value (%s). Replace with a real key from Google Cloud Console.",
+            api_key,
+        )
+
     # Ensure output directory exists for static file serving
     try:
         output_dir = Path("/app/output")
@@ -117,6 +131,7 @@ async def validation_exception_handler(
 
 # ── Routes ────────────────────────────────────────────────────────────
 app.include_router(v1_router)
+app.include_router(web_context_router)
 
 # ── Static Files (for generated art) ───────────────────────────────────
 # Serve generated images (station art, DJ portraits, brand logos) from /output

@@ -1,8 +1,11 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.0** | **Last Updated**: 2026-05-03  
+**Version 3.3** | **Last Updated**: 2026-05-09  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.0**: Consolidated Rules 12-P1 and Rule 12 into single cohesive rule; fixed entity constraint in database schema; added explicit escalation procedures.
+**Changes in v3.3**: Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to enable aggressive context compaction at 70% in long-running sessions across multiple AI agents.
+**Previous (v3.2)**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
+**Previous (v3.1)**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches; updated Phase 0 and Phase 2 with checkpoints.
+**Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12; fixed entity constraint in database schema; added explicit escalation procedures.
 
 ---
 
@@ -22,14 +25,25 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ---
 
-## The 12 Core Governance Rules
+## The Governance Rules (14 Rules + 1 Sub-rule)
 
-**Summary**: 12 rules establish mandatory workflow discipline. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle.
+**Summary**: 14 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions.
 
 ### Rule 1: Never Push to Main
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
 - **ENFORCEMENT**: Branch protection rules block direct commits to `main`
 - **CONSEQUENCE**: PR rejection; manual escalation required
+
+### Rule 1.5: Session Work ONLY to Designated Branch (CRITICAL)
+- **REQUIREMENT**: All commits during active session MUST push to the designated branch specified in session header. NO exceptions for governance, documentation, or planning.
+- **SESSION BRANCH IDENTIFICATION**: Read session header at start for designated branch (e.g., `alpha`, `claude/issue-N`, etc.). This is the ONLY branch where session work is pushed. If unclear, STOP and ask human.
+- **ENFORCEMENT CHECKPOINT**: Before EVERY push, verify branch:
+  - Run: `git branch -vv`
+  - Confirm current branch matches session designation
+  - If wrong: `git checkout <correct-branch>` then push
+- **SCOPE**: Applies to ALL changes (code, governance files, documentation, planning)
+- **CONSEQUENCE**: Commits to wrong branch = Cr-level blocker; must revert and re-push to correct branch
+- **RATIONALE**: Prevents accidental merges of unfinished work; keeps session work isolated until human review; ensures correct review gates
 
 ### Rule 2: Never Close Issues Without Human Approval
 - **REQUIREMENT**: Only humans close issues
@@ -169,6 +183,32 @@ If an issue persists across check cycles:
 - **Auditability**: Every fix documented per cycle for review
 - **Quality gate**: All green = production-ready code
 
+---
+
+### Rule 13: Archive Logs in Shared Directory for Multi-AI Access
+
+**REQUIREMENT**: When AI agents receive logs (error outputs, build logs, test failures, API responses, etc.), save them in pure form to `.github/logs/` with a descriptive filename for other AIs and developers to access directly.
+
+**LOG STORAGE**:
+- Directory: `.github/logs/`
+- Filename format: `{YYYY-MM-DD}-{type}-{description}.log` (e.g., `2026-05-09-error-api-deadlock.log`)
+- File format: Pure/original text — no markdown, filtering, or sanitization (preserve full context)
+- When: Any log >5 lines or representing failure/blocker
+- Exclusions: Single-line status messages; sensitive data (sanitize API keys/passwords before saving)
+
+**REFERENCE IN DOCUMENTATION**:
+- In `.github/PLANNING.md`: "See `.github/logs/2026-05-09-error-api-startup.log`"
+- In PR comments: Link to the log file
+- In TODO.md: Reference logs for context
+
+**BENEFIT**:
+- Other AIs can `git clone` and read logs directly without manual re-passing
+- Developers can review logs asynchronously
+- Searchable archive of all issues/errors
+- Historical debugging reference for future sessions
+
+**ENFORCEMENT**: Escalate as Jr-level issue if logs received but not archived
+
 #### Enforcement & Consequences
 
 - **PR cannot merge until**:
@@ -183,15 +223,56 @@ If an issue persists across check cycles:
 
 ---
 
+### Rule 14: Autocompact Threshold for Multi-Session Stability
+
+**REQUIREMENT**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50` to trigger context compaction at 50% capacity instead of default 85%.
+
+**PURPOSE**: 
+- Prevents context window bloat in long-running sessions
+- Enables cleaner handoffs between AI agents/bots
+- Avoids token exhaustion near 100% limit
+- Maintains predictable compaction cycles
+
+**CONFIGURATION**:
+- **Global User Setting** (`~/.claude/settings.json`):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+    }
+  }
+  ```
+- **Project Setting** (`.claude/settings.json` in repo):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+    }
+  }
+  ```
+
+**VERIFICATION**:
+- Run: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`
+- Expected output: `50`
+- Check timing: Context should compact when reaching ~50% of limit, not 85%
+
+**APPLIES TO**: All Claude Code agents/bots working on RP-Music-Radio project
+
+**RATIONALE**: At 50% threshold, context compacts aggressively before reaching danger zone. Prevents bloat in long sessions with multiple agent handoffs; ensures maximum clean context available for new agents.
+
+---
+
 ## The A-to-Z Workflow (4 Phases)
 
 ### Phase 0: Orientation (Before Writing Code)
 1. Read all `.github/` governance files
-2. Review issue context and requirements
-3. Check `PLANNING.md` for related work
-4. Identify dependencies and blockers
-5. Run `./scripts/branch-status.sh` to verify current branch and available commands
-6. **STOP** — ask human if unclear on any requirement
+2. **Identify Session Branch** (Rule 1.5): Read session header for designated branch name. Write it down. Never assume.
+3. Review issue context and requirements
+4. Check `PLANNING.md` for related work
+5. Identify dependencies and blockers
+6. Run `./scripts/branch-status.sh` to verify current branch and available commands
+7. **Verify you are on correct branch**: `git branch -vv` → confirm matches session designation
+8. **STOP** — ask human if unclear on any requirement or branch designation
 
 ### Phase 1: Planning (Immediate)
 1. Break task into 3–5 subtasks
@@ -210,10 +291,11 @@ If an issue persists across check cycles:
 2. Make targeted changes (single concern per commit)
 3. Run full test suite: `npm test` (or project equivalent)
 4. Commit with conventional prefix: `feat:`, `fix:`, `docs:`, `chore:`, `test:`, `refactor:`
-5. **PUSH IMMEDIATELY** — do not batch changes
-6. Verify: `git pull origin <branch>` — check for conflicts
-7. Update `.github/TODO.md` — mark subtask `in_progress` → `completed`
-8. Update `.github/PLANNING.md` — log decision/output for each subtask
+5. **Verify Branch Before Push** (Rule 1.5): Run `git branch -vv` → confirm current branch matches session designation. If wrong, `git checkout <correct-branch>`.
+6. **PUSH IMMEDIATELY** — do not batch changes
+7. Verify: `git pull origin <branch>` — check for conflicts
+8. Update `.github/TODO.md` — mark subtask `in_progress` → `completed`
+9. Update `.github/PLANNING.md` — log decision/output for each subtask
 
 ### Phase 3: Verification (Before PR Submission)
 1. Run full test suite: ensure all tests pass

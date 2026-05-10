@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, type Station, type Artist, type Jingle } from "../api/client";
+import { useFormInitialData } from "../hooks/useFormInitialData";
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
@@ -1083,23 +1084,35 @@ function StationForm({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const { initialData, isAiGenerated, hasInitialData } =
+    useFormInitialData("station");
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+
   const [form, setForm] = useState({
-    name: existing?.name || "",
-    tagline: existing?.tagline || "",
-    description: existing?.description || "",
-    frequency: existing?.frequency || "",
-    genre: existing?.genre || "",
-    sub_genres: existing?.sub_genres || "",
-    mood: existing?.mood || "",
-    era: existing?.era || "",
-    broadcast_style: existing?.broadcast_style || "",
-    color_palette: existing?.color_palette || "",
-    location: existing?.location || "",
-    founded_year: existing?.founded_year || "",
-    owner: existing?.owner || "",
-    lore_notes: existing?.lore_notes || "",
+    name: existing?.name || initialData?.name || "",
+    tagline: existing?.tagline || initialData?.tagline || "",
+    description: existing?.description || initialData?.description || "",
+    frequency: existing?.frequency || initialData?.frequency || "",
+    genre: existing?.genre || initialData?.genre || "",
+    sub_genres: existing?.sub_genres || initialData?.sub_genres || "",
+    mood: existing?.mood || initialData?.mood || "",
+    era: existing?.era || initialData?.era || "",
+    broadcast_style:
+      existing?.broadcast_style || initialData?.broadcast_style || "",
+    color_palette: existing?.color_palette || initialData?.color_palette || "",
+    location: existing?.location || initialData?.location || "",
+    founded_year: existing?.founded_year || initialData?.founded_year || "",
+    owner: existing?.owner || initialData?.owner || "",
+    lore_notes: existing?.lore_notes || initialData?.lore_notes || "",
   });
   const [saving, setSaving] = useState(false);
+
+  // Track which fields were AI-generated when initialData changes
+  useEffect(() => {
+    if (hasInitialData && !existing) {
+      setAiFilledFields(new Set(Object.keys(initialData || {})));
+    }
+  }, [hasInitialData, initialData, existing]);
 
   const set =
     (field: string) =>
@@ -1134,6 +1147,13 @@ function StationForm({
           📻 {existing ? "Edit Station" : "New Station"}
         </h3>
       </div>
+
+      {/* AI-generated warning banner */}
+      {isAiGenerated && (
+        <div className="ai-review-banner" role="alert">
+          ⚠️ AI-generated station. Please review and edit before saving.
+        </div>
+      )}
 
       <div className="form-section">
         <div className="form-section-title">Identity</div>
@@ -1283,29 +1303,47 @@ export function ArtistForm({
   onSave: () => void;
 }) {
   const [stations, setStations] = useState<Station[]>([]);
+  const { initialData, isAiGenerated, hasInitialData } =
+    useFormInitialData("dj");
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+
+  // Determine if we should show AI banner
+  const showAiBanner = isAiGenerated || aiGenerated;
+
   const [form, setForm] = useState({
-    name: existing?.name || "",
-    display_name: existing?.display_name || "",
-    artist_type: existing?.artist_type || "dj",
-    station_id: existing?.station_id || defaultStationId || "",
-    bio: existing?.bio || "",
-    personality: existing?.personality || "",
-    catchphrases: existing?.catchphrases || "",
-    quirks: existing?.quirks || "",
-    speaking_style: existing?.speaking_style || "",
-    accent: existing?.accent || "",
-    age: existing?.age || "",
-    gender: existing?.gender || "",
-    voice_description: existing?.voice_description || "",
-    appearance: existing?.appearance || "",
-    genre: existing?.genre || "",
-    influences: existing?.influences || "",
-    signature_sound: existing?.signature_sound || "",
-    rivals: existing?.rivals || "",
-    allies: existing?.allies || "",
+    name: existing?.name || initialData?.name || "",
+    display_name: existing?.display_name || initialData?.display_name || "",
+    artist_type: existing?.artist_type || initialData?.type || "dj",
+    station_id:
+      existing?.station_id || defaultStationId || initialData?.station_id || "",
+    bio: existing?.bio || initialData?.backstory || "",
+    personality: existing?.personality || initialData?.personality || "",
+    catchphrases: existing?.catchphrases || initialData?.catchphrases || "",
+    quirks: existing?.quirks || initialData?.quirks || "",
+    speaking_style:
+      existing?.speaking_style || initialData?.speaking_style || "",
+    accent: existing?.accent || initialData?.accent || "",
+    age: existing?.age || initialData?.age || "",
+    gender: existing?.gender || initialData?.gender || "",
+    voice_description:
+      existing?.voice_description || initialData?.voice_description || "",
+    appearance: existing?.appearance || initialData?.appearance || "",
+    genre: existing?.genre || initialData?.genre || "",
+    influences: existing?.influences || initialData?.influences || "",
+    signature_sound:
+      existing?.signature_sound || initialData?.signature_sound || "",
+    rivals: existing?.rivals || initialData?.rivals || "",
+    allies: existing?.allies || initialData?.allies || "",
   });
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Track which fields were AI-generated when initialData changes
+  useEffect(() => {
+    if (hasInitialData && !existing) {
+      setAiFilledFields(new Set(Object.keys(initialData || {})));
+    }
+  }, [hasInitialData, initialData, existing]);
 
   useEffect(() => {
     api

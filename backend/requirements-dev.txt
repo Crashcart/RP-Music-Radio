@@ -1,0 +1,12 @@
+# ─ DEVELOPMENT TOOLS (Testing + Linting) ─────────────────────────────
+# Add these only in development environments for testing and code quality
+
+-r requirements-images.txt
+
+pytest==7.4.3
+pytest-timeout==2.1.0
+pytest-mock==3.12.0
+black==23.11.0
+flake8==6.1.0
+
+# Install with: pip install -r requirements-dev.txt

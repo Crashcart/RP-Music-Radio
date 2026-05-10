@@ -1,0 +1,22 @@
+# ─ BASE RUNTIME (Core API + Database + Celery) ─────────────────────────────────
+# Minimal dependencies for the API server
+# Use this in production if you don't need AI, Cloud Logging, or image generation
+
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.2
+SQLAlchemy==2.0.23
+alembic==1.13.0
+celery==5.3.6
+redis==5.0.1
+httpx==0.25.2
+python-json-logger>=2.0.7
+
+# Audio/Media
+mutagen==1.47.0
+
+# Web scraping & data collection
+aiohttp==3.9.1
+beautifulsoup4==4.12.2
+
+# Install with: pip install -r requirements-base.txt

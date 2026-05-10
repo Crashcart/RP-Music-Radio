@@ -1,5 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useIsMobile } from "./hooks/useIsMobile";
+import {
+  FormManagerProvider,
+  FormManagerContext,
+  getFormPageRoute,
+} from "./context/FormManagerContext";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
@@ -8,7 +13,6 @@ import { DraftingTable } from "./pages/DraftingTable";
 import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
-import { SplashScreen } from "./components/SplashScreen";
 import { api, type Draft, type Station } from "./api/client";
 
 type Page =
@@ -19,6 +23,38 @@ type Page =
   | "drafts"
   | "queue"
   | "settings";
+
+/**
+ * FormNavigator — listens to FormManager and updates the page state.
+ * Handles navigation to form pages when AI-generated entities are being created.
+ */
+function FormNavigator({
+  onPageChange,
+}: {
+  onPageChange: (page: Page) => void;
+}) {
+  const formManager = useContext(FormManagerContext);
+
+  useEffect(() => {
+    if (formManager && formManager.isOpen && formManager.request) {
+      const route = getFormPageRoute(formManager.request.entityType);
+      // Map route to page type
+      const pageMap: Record<string, Page> = {
+        "/stations": "stations",
+        "/artists": "artists",
+        "/brands": "brands",
+        "/universes": "universes",
+        "/drafts": "drafts",
+      };
+      const page = pageMap[route];
+      if (page) {
+        onPageChange(page);
+      }
+    }
+  }, [formManager?.isOpen, formManager?.request, onPageChange]);
+
+  return null; // This component doesn't render anything
+}
 
 const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "stations", label: "Stations", icon: "📻" },
@@ -32,7 +68,6 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
 
 export default function App() {
   const isMobile = useIsMobile();
-  const [showSplash, setShowSplash] = useState(true);
   const [page, setPage] = useState<Page>("stations");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
@@ -108,146 +143,152 @@ export default function App() {
   };
 
   return (
-    <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
-      {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <aside className="sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-icon">A</div>
-            <div>
-              <h1>AetherWave</h1>
-            </div>
-            <span className="version">v1.0.4</span>
-          </div>
-
-          <nav className="nav-section">
-            <div className="nav-section-title">Navigation</div>
-            {NAV_ITEMS.map((item) => (
-              <div
-                key={item.id}
-                className={`nav-item ${page === item.id ? "active" : ""}`}
-                onClick={() => setPage(item.id)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-                {item.id === "drafts" && stats.total > 0 && (
-                  <span className="nav-badge">{stats.total}</span>
-                )}
-                {item.id === "queue" && stats.generating > 0 && (
-                  <span className="nav-badge">{stats.generating}</span>
-                )}
-              </div>
-            ))}
-          </nav>
-
-          <div style={{ marginTop: "auto" }}>
-            <div className="nav-section-title">System</div>
-            <div className="stat-mini">
-              <span
-                className={`status-dot ${apiOk ? "online" : apiOk === false ? "offline" : "checking"}`}
-              />
-              <span
-                style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}
-              >
-                API:{" "}
-                {apiOk ? "Online" : apiOk === false ? "Offline" : "Checking..."}
-              </span>
-            </div>
-          </div>
-        </aside>
-      )}
-
-      {/* Mobile Header */}
-      {isMobile && (
-        <header className="mobile-header">
-          <div
-            className="logo-icon"
-            style={{ width: 28, height: 28, fontSize: "0.8rem" }}
-          >
-            A
-          </div>
-          <h1
-            style={{
-              fontSize: "1rem",
-              background:
-                "linear-gradient(135deg, var(--accent), hsl(260,70%,60%))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            AetherWave
-          </h1>
-          <span
-            className={`status-dot ${apiOk ? "online" : "offline"}`}
-            style={{ marginLeft: "auto" }}
-          />
-        </header>
-      )}
-
-      {/* Main Content */}
-      <main className="main-content">
-        {/* Stats bar — only show on drafts/queue pages */}
-        {(page === "drafts" || page === "queue") && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon cyan">📋</div>
+    <FormManagerProvider>
+      <FormNavigator onPageChange={setPage} />
+      <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
+        {/* Desktop Sidebar */}
+        {!isMobile && (
+          <aside className="sidebar">
+            <div className="sidebar-logo">
+              <div className="logo-icon">A</div>
               <div>
-                <div className="stat-value">{stats.total}</div>
-                <div className="stat-label">Total Drafts</div>
+                <h1>AetherWave</h1>
+              </div>
+              <span className="version">v1.0.4</span>
+            </div>
+
+            <nav className="nav-section">
+              <div className="nav-section-title">Navigation</div>
+              {NAV_ITEMS.map((item) => (
+                <div
+                  key={item.id}
+                  className={`nav-item ${page === item.id ? "active" : ""}`}
+                  onClick={() => setPage(item.id)}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  {item.label}
+                  {item.id === "drafts" && stats.total > 0 && (
+                    <span className="nav-badge">{stats.total}</span>
+                  )}
+                  {item.id === "queue" && stats.generating > 0 && (
+                    <span className="nav-badge">{stats.generating}</span>
+                  )}
+                </div>
+              ))}
+            </nav>
+
+            <div style={{ marginTop: "auto" }}>
+              <div className="nav-section-title">System</div>
+              <div className="stat-mini">
+                <span
+                  className={`status-dot ${apiOk ? "online" : apiOk === false ? "offline" : "checking"}`}
+                />
+                <span
+                  style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                >
+                  API:{" "}
+                  {apiOk
+                    ? "Online"
+                    : apiOk === false
+                      ? "Offline"
+                      : "Checking..."}
+                </span>
               </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon amber">✏️</div>
-              <div>
-                <div className="stat-value">{stats.pending}</div>
-                <div className="stat-label">Pending</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon purple">⚡</div>
-              <div>
-                <div className="stat-value">{stats.generating}</div>
-                <div className="stat-label">Generating</div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-icon green">✅</div>
-              <div>
-                <div className="stat-value">{stats.completed}</div>
-                <div className="stat-label">Completed</div>
-              </div>
-            </div>
-          </div>
+          </aside>
         )}
 
-        {renderPage()}
-      </main>
-
-      {/* Mobile Bottom Nav */}
-      {isMobile && (
-        <nav className="mobile-nav">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`mobile-nav-item ${page === item.id ? "active" : ""}`}
-              onClick={() => setPage(item.id)}
+        {/* Mobile Header */}
+        {isMobile && (
+          <header className="mobile-header">
+            <div
+              className="logo-icon"
+              style={{ width: 28, height: 28, fontSize: "0.8rem" }}
             >
-              <span className="mobile-nav-icon">{item.icon}</span>
-              <span className="mobile-nav-label">
-                {item.label.split(" ")[0]}
-              </span>
-            </button>
-          ))}
-        </nav>
-      )}
+              A
+            </div>
+            <h1
+              style={{
+                fontSize: "1rem",
+                background:
+                  "linear-gradient(135deg, var(--accent), hsl(260,70%,60%))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              AetherWave
+            </h1>
+            <span
+              className={`status-dot ${apiOk ? "online" : "offline"}`}
+              style={{ marginLeft: "auto" }}
+            />
+          </header>
+        )}
 
-      {/* AI Chat Assistant — receives station context when user is in a station detail view */}
-      <ChatAssistant
-        onEntityCreated={refreshDrafts}
-        currentStationId={activeStation?.id}
-        selectedStation={activeStation}
-      />
-    </div>
+        {/* Main Content */}
+        <main className="main-content">
+          {/* Stats bar — only show on drafts/queue pages */}
+          {(page === "drafts" || page === "queue") && (
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon cyan">📋</div>
+                <div>
+                  <div className="stat-value">{stats.total}</div>
+                  <div className="stat-label">Total Drafts</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon amber">✏️</div>
+                <div>
+                  <div className="stat-value">{stats.pending}</div>
+                  <div className="stat-label">Pending</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon purple">⚡</div>
+                <div>
+                  <div className="stat-value">{stats.generating}</div>
+                  <div className="stat-label">Generating</div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-icon green">✅</div>
+                <div>
+                  <div className="stat-value">{stats.completed}</div>
+                  <div className="stat-label">Completed</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {renderPage()}
+        </main>
+
+        {/* Mobile Bottom Nav */}
+        {isMobile && (
+          <nav className="mobile-nav">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                className={`mobile-nav-item ${page === item.id ? "active" : ""}`}
+                onClick={() => setPage(item.id)}
+              >
+                <span className="mobile-nav-icon">{item.icon}</span>
+                <span className="mobile-nav-label">
+                  {item.label.split(" ")[0]}
+                </span>
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {/* AI Chat Assistant — receives station context when user is in a station detail view */}
+        <ChatAssistant
+          onEntityCreated={refreshDrafts}
+          currentStationId={activeStation?.id}
+          selectedStation={activeStation}
+        />
+      </div>
+    </FormManagerProvider>
   );
 }

@@ -62,6 +62,11 @@ class Station(Base):
     A fictional radio station — the top-level container.
     DJs are nested under stations. Each station has its own art, jingles,
     genre identity, and broadcast personality.
+
+    Status lifecycle for AI-generated stations:
+      draft            — AI-created, pending user review; expires after 7 days
+      pending_publish  — User approved, in 30-second undo window
+      published        — Live and visible; default for manually created stations
     """
 
     __tablename__ = "stations"
@@ -93,6 +98,16 @@ class Station(Base):
     founded_year = Column(String, default="")  # In-universe founding date
     owner = Column(String, default="")  # In-universe owner/corp
     lore_notes = Column(Text, default="")  # Additional worldbuilding
+
+    # AI staging workflow — added for AI station generation feature
+    # Values: "published" (default/manual), "draft" (AI-staged), "pending_publish" (in undo window)
+    status = Column(String, default="published")
+    # Nullable: set by AI generation flow; None for manually created stations
+    created_by = Column(String, nullable=True)
+    # TTL for draft records — drafts expire 7 days after creation
+    expires_at = Column(DateTime, nullable=True)
+    # Set when status moves to pending_publish; used to enforce the 30s undo window
+    undo_expires_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
@@ -189,6 +204,11 @@ class Brand(Base):
     """
     A fictional in-universe brand/company that sponsors stations.
     Brands generate ad copy, jingles, and product placements.
+
+    Status lifecycle for AI-generated brands:
+      draft            — AI-created, pending user review; expires after 7 days
+      pending_publish  — User approved, in 30-second undo window
+      published        — Live and visible; default for manually created brands
     """
 
     __tablename__ = "brands"
@@ -221,6 +241,16 @@ class Brand(Base):
     reputation = Column(String, default="")  # trusted, shady, cult-like, etc.
     controversies = Column(Text, default="")  # In-universe scandals
     lore_notes = Column(Text, default="")
+
+    # AI staging workflow — added for AI brand generation feature
+    # Values: "published" (default/manual), "draft" (AI-staged), "pending_publish" (in undo window)
+    status = Column(String, default="published")
+    # Nullable: set by AI generation flow; None for manually created brands
+    created_by = Column(String, nullable=True)
+    # TTL for draft records — drafts expire 7 days after creation
+    expires_at = Column(DateTime, nullable=True)
+    # Set when status moves to pending_publish; used to enforce the 30s undo window
+    undo_expires_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

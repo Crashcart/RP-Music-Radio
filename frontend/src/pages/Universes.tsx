@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { api, type Universe } from "../api/client";
+import { useFormInitialData } from "../hooks/useFormInitialData";
 
 export function Universes() {
   const [universes, setUniverses] = useState<Universe[]>([]);
@@ -472,8 +473,27 @@ function UniverseEditForm({
   onSave,
   onCancel,
 }: UniverseEditFormProps) {
-  const [form, setForm] = useState(universe);
+  const { initialData, isAiGenerated, hasInitialData } =
+    useFormInitialData("universe");
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+
+  const [form, setForm] = useState({
+    ...universe,
+    description: universe.description || initialData?.description || "",
+    genre_hints: universe.genre_hints || initialData?.genre_hints || "",
+    mood_hints: universe.mood_hints || initialData?.mood_hints || "",
+    setting: universe.setting || initialData?.setting || "",
+    era: universe.era || initialData?.era || "",
+    publisher: universe.publisher || initialData?.publisher || "",
+  });
   const [saving, setSaving] = useState(false);
+
+  // Track which fields were AI-generated when initialData changes
+  useEffect(() => {
+    if (hasInitialData && !universe.description) {
+      setAiFilledFields(new Set(Object.keys(initialData || {})));
+    }
+  }, [hasInitialData, initialData, universe.description]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -489,6 +509,13 @@ function UniverseEditForm({
       <div className="page-header">
         <h2>Edit Universe: {universe.name}</h2>
       </div>
+
+      {/* AI-generated warning banner */}
+      {isAiGenerated && (
+        <div className="ai-review-banner" role="alert">
+          ⚠️ AI-generated universe. Please review and edit before saving.
+        </div>
+      )}
 
       <div className="card">
         <div

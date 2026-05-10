@@ -43,6 +43,8 @@ from app.api.v1.schemas import (
     ArtistOut,
     ArtistUpdate,
     BrandCreate,
+    BrandDraftCreate,
+    BrandDraftResponse,
     BrandOut,
     BrandUpdate,
     BulkArtistIds,
@@ -58,6 +60,8 @@ from app.api.v1.schemas import (
     JingleCreate,
     JingleOut,
     StationCreate,
+    StationDraftCreate,
+    StationDraftResponse,
     StationOut,
     StationUpdate,
     TaskStatus,
@@ -157,10 +161,69 @@ def create_station(payload: StationCreate, db: Session = Depends(get_db)):
     return StationOut.model_validate(station)
 
 
+@router.post("/stations/staged", response_model=StationDraftResponse)
+def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated station for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged stations per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    Draft expires automatically in 7 days if not approved.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged stations per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft station ──────────────────────────────────────
+    station_data = payload.model_dump()
+    station = Station(
+        **station_data,
+        status="draft",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(station)
+    db.commit()
+    db.refresh(station)
+    logger.info(
+        "Staged AI station: id=%s name=%r created_by=%s",
+        station.id,
+        station.name,
+        station.created_by,
+        extra={"station_id": station.id},
+    )
+    return StationDraftResponse.model_validate(station)
+
+
 @router.get("/stations", response_model=list[StationOut])
-def list_stations(db: Session = Depends(get_db)):
-    """List all stations."""
-    stations = db.query(Station).order_by(Station.created_at.desc()).all()
+def list_stations(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
+    """List stations with pagination. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
+    stations = (
+        db.query(Station)
+        .order_by(Station.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return [StationOut.model_validate(s) for s in stations]
 
 
@@ -247,14 +310,18 @@ def list_artists(
     station_id: str | None = None,
     status: str | None = None,
     created_by: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
 ):
     """
-    List artists with optional filters.
+    List artists with optional filters and pagination.
 
     When called without filters, returns only published artists (legacy behaviour).
     Pass status=draft to retrieve staged AI-generated DJs pending review.
     """
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Artist)
     if station_id:
         query = query.filter(Artist.station_id == station_id)
@@ -265,7 +332,7 @@ def list_artists(
         query = query.filter(Artist.status == "published")
     if created_by:
         query = query.filter(Artist.created_by == created_by)
-    artists = query.order_by(Artist.created_at.desc()).all()
+    artists = query.order_by(Artist.created_at.desc()).limit(limit).offset(offset).all()
     return [ArtistOut.model_validate(a) for a in artists]
 
 
@@ -705,10 +772,69 @@ def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
     return BrandOut.model_validate(brand)
 
 
+@router.post("/brands/staged", response_model=BrandDraftResponse)
+def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated brand for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged brands per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    Draft expires automatically in 7 days if not approved.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged brands per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft brand ───────────────────────────────────────
+    brand_data = payload.model_dump()
+    brand = Brand(
+        **brand_data,
+        status="draft",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(brand)
+    db.commit()
+    db.refresh(brand)
+    logger.info(
+        "Staged AI brand: id=%s name=%r created_by=%s",
+        brand.id,
+        brand.name,
+        brand.created_by,
+        extra={"brand_id": brand.id},
+    )
+    return BrandDraftResponse.model_validate(brand)
+
+
 @router.get("/brands", response_model=list[BrandOut])
-def list_brands(db: Session = Depends(get_db)):
-    """List all brands."""
-    brands = db.query(Brand).order_by(Brand.created_at.desc()).all()
+def list_brands(db: Session = Depends(get_db), limit: int = 100, offset: int = 0):
+    """List brands with pagination. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
+    brands = (
+        db.query(Brand)
+        .order_by(Brand.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
     return [BrandOut.model_validate(b) for b in brands]
 
 
@@ -869,17 +995,21 @@ def ingest_seeds(payload: IngestRequest, db: Session = Depends(get_db)):
 def list_drafts(
     status: str | None = None,
     station_id: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db),
 ):
-    """List all drafts, optionally filtered by status or station."""
+    """List drafts with pagination, optionally filtered by status or station. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Draft)
     if status:
         query = query.filter(Draft.status == status)
     if station_id:
         query = query.filter(Draft.station_id == station_id)
-    drafts = query.order_by(Draft.created_at.desc()).all()
+    drafts = query.order_by(Draft.created_at.desc()).limit(limit).offset(offset).all()
     return DraftListResponse(
-        total=len(drafts),
+        total=query.count(),  # Count total without limit
         drafts=[DraftOut.model_validate(d) for d in drafts],
     )
 
@@ -1087,10 +1217,11 @@ def set_api_key(payload: ApiKeyRequest):
 
 @router.get("/settings/api-key")
 def check_api_key():
-    """Check if an API key is currently configured."""
+    """Check if an API key is currently configured and valid."""
     import json
+    import google.generativeai as genai
 
-    key = os.getenv("GOOGLE_API_KEY", "")
+    key = os.getenv("GOOGLE_API_KEY", "").strip()
 
     # Check persistent storage if not in env
     if not key:
@@ -1099,21 +1230,65 @@ def check_api_key():
                 try:
                     with open(path, "r") as f:
                         data = json.load(f)
-                        key = data.get("GOOGLE_API_KEY", "")
+                        key = data.get("GOOGLE_API_KEY", "").strip()
                         if key:
                             os.environ["GOOGLE_API_KEY"] = key
                             break
                 except Exception:
                     pass
 
-    has_key = bool(key)
-    masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else ("****" if key else "")
-    return {"configured": has_key, "masked_key": masked}
+    # Check if key is a placeholder
+    is_placeholder = key in ["", "your-api-key-here"] or (
+        key and key.startswith("your-")
+    )
+    if is_placeholder:
+        masked = "****" if key else ""
+        return {
+            "configured": False,
+            "valid": False,
+            "masked_key": masked,
+            "error": "placeholder" if key else "missing",
+            "message": "Please set GOOGLE_API_KEY to a real API key from Google Cloud Console",
+        }
+
+    if not key:
+        return {
+            "configured": False,
+            "valid": False,
+            "masked_key": "",
+            "error": "missing",
+            "message": "GOOGLE_API_KEY is not set. See https://console.cloud.google.com for setup.",
+        }
+
+    # Try to validate the key against Google API
+    try:
+        masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "****"
+        genai.configure(api_key=key)
+        # Test by listing models (lightweight validation)
+        genai.list_models()
+        return {
+            "configured": True,
+            "valid": True,
+            "masked_key": masked,
+            "error": None,
+            "message": "API key is valid and working",
+        }
+    except Exception as e:
+        masked = f"{key[:8]}...{key[-4:]}" if len(key) > 12 else "****"
+        logger.warning("API key validation failed: %s", str(e))
+        return {
+            "configured": True,
+            "valid": False,
+            "masked_key": masked,
+            "error": "invalid",
+            "message": f"API key exists but is invalid or unreachable: {str(e)[:100]}",
+        }
 
 
 @router.get("/settings/export")
 def export_data(db: Session = Depends(get_db)):
-    """Export all relational data to a JSON object."""
+    """Export relational data to JSON (max 1000 records per table for safety)."""
+    MAX_EXPORT_PER_TABLE = 1000
 
     def to_dict(obj):
         d = {}
@@ -1128,13 +1303,24 @@ def export_data(db: Session = Depends(get_db)):
         "version": "1.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "data": {
-            "stations": [to_dict(x) for x in db.query(Station).all()],
-            "artists": [to_dict(x) for x in db.query(Artist).all()],
-            "brands": [to_dict(x) for x in db.query(Brand).all()],
-            "jingles": [to_dict(x) for x in db.query(Jingle).all()],
-            "drafts": [to_dict(x) for x in db.query(Draft).all()],
+            "stations": [
+                to_dict(x) for x in db.query(Station).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "artists": [
+                to_dict(x) for x in db.query(Artist).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "brands": [
+                to_dict(x) for x in db.query(Brand).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "jingles": [
+                to_dict(x) for x in db.query(Jingle).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
+            "drafts": [
+                to_dict(x) for x in db.query(Draft).limit(MAX_EXPORT_PER_TABLE).all()
+            ],
             "generation_history": [
-                to_dict(x) for x in db.query(GenerationHistory).all()
+                to_dict(x)
+                for x in db.query(GenerationHistory).limit(MAX_EXPORT_PER_TABLE).all()
             ],
         },
     }
@@ -1235,12 +1421,21 @@ def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/universes", response_model=list[UniverseOut])
-def list_universes(status: str | None = None, db: Session = Depends(get_db)):
-    """List all universes with optional status filter."""
+def list_universes(
+    status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    """List universes with pagination and optional status filter. Max 100 per page."""
+    limit = min(max(limit, 1), 100)  # Enforce [1, 100]
+    offset = max(offset, 0)
     query = db.query(Universe)
     if status:
         query = query.filter(Universe.status == status)
-    universes = query.order_by(Universe.created_at.desc()).all()
+    universes = (
+        query.order_by(Universe.created_at.desc()).limit(limit).offset(offset).all()
+    )
     return [UniverseOut.model_validate(u) for u in universes]
 
 
