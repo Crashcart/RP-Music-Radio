@@ -23,6 +23,8 @@ export interface FormOpenEvent {
 
 interface FormManagerContextType {
   pendingForm: FormOpenEvent | null;
+  request: FormOpenEvent | null;
+  isOpen: boolean;
   openForm: (event: FormOpenEvent) => void;
   closeForm: () => void;
 }
@@ -47,10 +49,30 @@ export function FormManagerProvider({
   };
 
   return (
-    <FormManagerContext.Provider value={{ pendingForm, openForm, closeForm }}>
+    <FormManagerContext.Provider
+      value={{
+        pendingForm,
+        request: pendingForm,
+        isOpen: pendingForm !== null,
+        openForm,
+        closeForm,
+      }}
+    >
       {children}
     </FormManagerContext.Provider>
   );
+}
+
+export function getFormPageRoute(entityType: FormEntityType): string {
+  const routes: Record<FormEntityType, string> = {
+    station: "/stations",
+    brand: "/brands",
+    artist: "/artists",
+    jingle: "/jingles",
+    draft: "/drafts",
+    universe: "/universes",
+  };
+  return routes[entityType];
 }
 
 /**
