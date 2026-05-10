@@ -1086,7 +1086,6 @@ function StationForm({
 }) {
   const { initialData, isAiGenerated, hasInitialData } =
     useFormInitialData("station");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1305,10 +1304,6 @@ export function ArtistForm({
   const [stations, setStations] = useState<Station[]>([]);
   const { initialData, isAiGenerated, hasInitialData } =
     useFormInitialData("dj");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
-
-  // Determine if we should show AI banner
-  const showAiBanner = isAiGenerated || aiGenerated;
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",

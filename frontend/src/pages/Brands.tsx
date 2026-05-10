@@ -412,7 +412,6 @@ function BrandForm({
 }) {
   const { initialData, isAiGenerated, hasInitialData } =
     useFormInitialData("brand");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",

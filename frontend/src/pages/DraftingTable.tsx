@@ -582,7 +582,6 @@ function EditModal({
 }) {
   const { initialData, isAiGenerated, hasInitialData } =
     useFormInitialData("draft");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     ...draft,
     station_name: draft.station_name || initialData?.station_name || "",

@@ -475,7 +475,6 @@ function UniverseEditForm({
 }: UniverseEditFormProps) {
   const { initialData, isAiGenerated, hasInitialData } =
     useFormInitialData("universe");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
     ...universe,
