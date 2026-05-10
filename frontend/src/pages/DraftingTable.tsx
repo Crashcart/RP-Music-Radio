@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { api, type Draft } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 
@@ -580,8 +580,7 @@ function EditModal({
   onClose: () => void;
   onSave: () => void;
 }) {
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("draft");
+  const { initialData, isAiGenerated } = useFormInitialData("draft");
   const [form, setForm] = useState({
     ...draft,
     station_name: draft.station_name || initialData?.station_name || "",
@@ -595,12 +594,6 @@ function EditModal({
       draft.market_research || initialData?.market_research || "",
   });
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (hasInitialData) {
-      setAiFilledFields(new Set(Object.keys(initialData || {})));
-    }
-  }, [hasInitialData, initialData]);
 
   const handleSave = async () => {
     setLoading(true);

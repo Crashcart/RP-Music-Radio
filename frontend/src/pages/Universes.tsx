@@ -473,8 +473,7 @@ function UniverseEditForm({
   onSave,
   onCancel,
 }: UniverseEditFormProps) {
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("universe");
+  const { initialData, isAiGenerated } = useFormInitialData("universe");
 
   const [form, setForm] = useState({
     ...universe,
@@ -486,13 +485,6 @@ function UniverseEditForm({
     publisher: universe.publisher || initialData?.publisher || "",
   });
   const [saving, setSaving] = useState(false);
-
-  // Track which fields were AI-generated when initialData changes
-  useEffect(() => {
-    if (hasInitialData && !universe.description) {
-      setAiFilledFields(new Set(Object.keys(initialData || {})));
-    }
-  }, [hasInitialData, initialData, universe.description]);
 
   const handleSave = async () => {
     setSaving(true);
