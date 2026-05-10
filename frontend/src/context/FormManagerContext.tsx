@@ -27,9 +27,9 @@ interface FormManagerContextType {
   closeForm: () => void;
 }
 
-const FormManagerContext = createContext<FormManagerContextType | undefined>(
-  undefined,
-);
+export const FormManagerContext = createContext<
+  FormManagerContextType | undefined
+>(undefined);
 
 export function FormManagerProvider({
   children,
