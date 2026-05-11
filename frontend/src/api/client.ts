@@ -83,6 +83,7 @@ export interface Station {
   founded_year: string;
   owner: string;
   lore_notes: string;
+  universe_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -547,6 +548,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+
+  /**
+   * Auto-attach the first universe to any stations that have none.
+   * Called on app load when universes exist but stations are unlinked.
+   */
+  autoAttachUniverse: () =>
+    request<{
+      universe_id: string;
+      universe_name: string;
+      stations_updated: number;
+    }>("/api/v1/startup/auto-attach", { method: "POST" }),
 
   // ── Brands ────────────────────────────────────────────────────
   createBrand: (data: Partial<Brand>) =>

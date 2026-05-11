@@ -1469,6 +1469,41 @@ def delete_universe(universe_id: str, db: Session = Depends(get_db)):
     return {"deleted": universe_id}
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  Startup / App-level helpers
+# ═══════════════════════════════════════════════════════════════════
+
+
+@router.post("/startup/auto-attach")
+def startup_auto_attach(db: Session = Depends(get_db)):
+    """
+    Auto-attach the first available universe to any stations that have none.
+
+    Called by the frontend on app load when universes exist but stations are
+    unlinked (i.e. a pre-existing DB that predates the universe_id column).
+    Returns the attached universe and how many stations were updated.
+    """
+    first_universe = db.query(Universe).order_by(Universe.created_at.asc()).first()
+    if not first_universe:
+        raise HTTPException(404, "No universes exist — create one first")
+
+    unlinked = db.query(Station).filter(Station.universe_id.is_(None)).all()
+    for station in unlinked:
+        station.universe_id = first_universe.id
+    db.commit()
+
+    logger.info(
+        "Auto-attached universe '%s' to %d station(s)",
+        first_universe.name,
+        len(unlinked),
+    )
+    return {
+        "universe_id": first_universe.id,
+        "universe_name": first_universe.name,
+        "stations_updated": len(unlinked),
+    }
+
+
 @router.post(
     "/universes/{universe_id}/research", response_model=UniverseResearchResponse
 )
