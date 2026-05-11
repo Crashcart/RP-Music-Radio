@@ -363,6 +363,154 @@ export const api = {
       method: "DELETE",
     }),
 
+  // ── Feature 2: Multi-Entity Staging (Station, Brand, Jingle, Draft) ──────
+  /** Stage an AI-generated Station for user review (status=draft). */
+  stageStation: (stationData: Partial<Station>) =>
+    request<Station>("/api/v1/stations/staged", {
+      method: "POST",
+      body: JSON.stringify(stationData),
+    }),
+
+  /** List staged (draft) stations with optional filters. */
+  listStagedStations: (filters?: { status?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", filters?.status ?? "draft");
+    return request<Station[]>(`/api/v1/stations?${params.toString()}`);
+  },
+
+  /** Move a draft Station to pending_publish and start 30-second undo window. */
+  publishStation: (stationId: string) =>
+    request<Station>(`/api/v1/stations/${stationId}/publish`, {
+      method: "POST",
+    }),
+
+  /** Revert a pending_publish Station back to draft (must be within 30s window). */
+  undoPublishStation: (stationId: string) =>
+    request<Station>(`/api/v1/stations/${stationId}/undo`, { method: "POST" }),
+
+  /** Delete a draft Station by ID. */
+  rejectStation: (stationId: string) =>
+    request<{ deleted: string }>(`/api/v1/stations/${stationId}/staged`, {
+      method: "DELETE",
+    }),
+
+  /** Stage an AI-generated Brand for user review (status=draft). */
+  stageBrand: (brandData: Partial<Brand>) =>
+    request<Brand>("/api/v1/brands/staged", {
+      method: "POST",
+      body: JSON.stringify(brandData),
+    }),
+
+  /** List staged (draft) brands with optional filters. */
+  listStagedBrands: (filters?: { status?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", filters?.status ?? "draft");
+    return request<Brand[]>(`/api/v1/brands?${params.toString()}`);
+  },
+
+  /** Move a draft Brand to pending_publish and start 30-second undo window. */
+  publishBrand: (brandId: string) =>
+    request<Brand>(`/api/v1/brands/${brandId}/publish`, { method: "POST" }),
+
+  /** Revert a pending_publish Brand back to draft (must be within 30s window). */
+  undoPublishBrand: (brandId: string) =>
+    request<Brand>(`/api/v1/brands/${brandId}/undo`, { method: "POST" }),
+
+  /** Delete a draft Brand by ID. */
+  rejectBrand: (brandId: string) =>
+    request<{ deleted: string }>(`/api/v1/brands/${brandId}/staged`, {
+      method: "DELETE",
+    }),
+
+  /** Stage an AI-generated Jingle for user review (status=draft). */
+  stageJingle: (jingleData: Partial<Jingle>) =>
+    request<Jingle>("/api/v1/jingles/staged", {
+      method: "POST",
+      body: JSON.stringify(jingleData),
+    }),
+
+  /** List staged (draft) jingles with optional filters. */
+  listStagedJingles: (filters?: { status?: string; stationId?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", filters?.status ?? "draft");
+    if (filters?.stationId) params.set("station_id", filters.stationId);
+    return request<Jingle[]>(`/api/v1/jingles?${params.toString()}`);
+  },
+
+  /** Move a draft Jingle to pending_publish and start 30-second undo window. */
+  publishJingle: (jingleId: string) =>
+    request<Jingle>(`/api/v1/jingles/${jingleId}/publish`, { method: "POST" }),
+
+  /** Revert a pending_publish Jingle back to draft (must be within 30s window). */
+  undoPublishJingle: (jingleId: string) =>
+    request<Jingle>(`/api/v1/jingles/${jingleId}/undo`, { method: "POST" }),
+
+  /** Delete a draft Jingle by ID. */
+  rejectJingle: (jingleId: string) =>
+    request<{ deleted: string }>(`/api/v1/jingles/${jingleId}/staged`, {
+      method: "DELETE",
+    }),
+
+  /** Stage an AI-generated Draft (track/content) for user review (status=draft). */
+  stageDraft: (draftData: Partial<Draft>) =>
+    request<Draft>("/api/v1/drafts/staged", {
+      method: "POST",
+      body: JSON.stringify(draftData),
+    }),
+
+  /** List staged (draft) drafts with optional filters. */
+  listStagedDrafts: (filters?: { status?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", filters?.status ?? "draft");
+    return request<Draft[]>(`/api/v1/drafts?${params.toString()}`);
+  },
+
+  /** Move a draft Draft to pending_publish and start 30-second undo window. */
+  publishDraft: (draftId: string) =>
+    request<Draft>(`/api/v1/drafts/${draftId}/publish`, { method: "POST" }),
+
+  /** Revert a pending_publish Draft back to draft (must be within 30s window). */
+  undoPublishDraft: (draftId: string) =>
+    request<Draft>(`/api/v1/drafts/${draftId}/undo`, { method: "POST" }),
+
+  /** Delete a draft Draft by ID. */
+  rejectDraft: (draftId: string) =>
+    request<{ deleted: string }>(`/api/v1/drafts/${draftId}/staged`, {
+      method: "DELETE",
+    }),
+
+  /** Stage an AI-generated Universe for user review (status=draft). */
+  stageUniverse: (universeData: Partial<Universe>) =>
+    request<Universe>("/api/v1/universes/staged", {
+      method: "POST",
+      body: JSON.stringify(universeData),
+    }),
+
+  /** List staged (draft) universes with optional filters. */
+  listStagedUniverses: (filters?: { status?: string }) => {
+    const params = new URLSearchParams();
+    params.set("status", filters?.status ?? "draft");
+    return request<Universe[]>(`/api/v1/universes?${params.toString()}`);
+  },
+
+  /** Move a draft Universe to pending_publish and start 30-second undo window. */
+  publishUniverse: (universeId: string) =>
+    request<Universe>(`/api/v1/universes/${universeId}/publish`, {
+      method: "POST",
+    }),
+
+  /** Revert a pending_publish Universe back to draft (must be within 30s window). */
+  undoPublishUniverse: (universeId: string) =>
+    request<Universe>(`/api/v1/universes/${universeId}/undo`, {
+      method: "POST",
+    }),
+
+  /** Delete a draft Universe by ID. */
+  rejectUniverse: (universeId: string) =>
+    request<{ deleted: string }>(`/api/v1/universes/${universeId}/staged`, {
+      method: "DELETE",
+    }),
+
   // ── Universes / Game Worlds ───────────────────────────────────
   /** Create a new universe (game world) for research. */
   createUniverse: (data: { name: string }) =>

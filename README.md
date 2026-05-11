@@ -115,6 +115,12 @@ See [.github/copilot-instructions.md](.github/copilot-instructions.md):
 - 4-phase workflow
 - Conflict detection protocol
 
+Repository rules and branch protection: [.github/GITHUB_RULES.md](.github/GITHUB_RULES.md)
+- Branch protection (main / beta / alpha)
+- Merge strategies & commit format
+- PR requirements & review checklist
+- Tag/release rules and bypass procedures
+
 ### Project Config
 See [.github/REPO_CONFIG.md](.github/REPO_CONFIG.md):
 - Tech stack details

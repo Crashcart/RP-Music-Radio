@@ -1,0 +1,9 @@
+# ─ BASE + AI + IMAGE GENERATION ──────────────────────────────────────
+# Adds image processing for artwork generation (nanoBanana, Pillow)
+
+-r requirements-ai.txt
+
+Pillow>=10.0.0
+piexif>=1.1.3
+
+# Install with: pip install -r requirements-images.txt

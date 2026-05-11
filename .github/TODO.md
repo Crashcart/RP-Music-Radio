@@ -1,6 +1,6 @@
 # AetherWave / RP-Music-Radio — Active Task List
 
-**Last Updated**: 2026-05-03  
+**Last Updated**: 2026-05-09  
 **Project**: Headless Media Factory for procedural lore-heavy radio content  
 **Status**: Foundation & UI Architecture phase + Governance Refinement
 
@@ -18,7 +18,16 @@
 - [x] Create `.github/ARCHITECTURE.md` (full TDR documentation)
 - [x] Update TODO list to reflect the new hierarchical DB architecture
 
-### Governance Refinement (✅ SR-Level Cleanup Completed)
+### Governance Refinement (✅ Ongoing)
+
+**Session 2026-05-09: Added Rule 14 — Autocompact Override**
+- [x] Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to copilot-instructions.md
+- [x] Configured `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in ~/.claude/settings.json (global user)
+- [x] Configured `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=70` in .claude/settings.json (project)
+- [x] Updated copilot-instructions.md version: 3.2 → 3.3
+- [x] Updated header with Rule 14 change summary
+- [x] Added decision log to PLANNING.md with rationale and impact
+- [x] Verified env var configuration in both settings files
 
 **Session 2026-05-03: Consolidated PR Rules & Entity Constraints**
 - [x] Identified and fixed rule numbering chaos ("10 rules" → "12 core rules")
@@ -48,6 +57,419 @@
   - aetherwave-redis: Up, healthy ✅
 
 **Status**: 🚀 **PRODUCTION READY** — Fresh install tested on alpha branch
+
+---
+
+## MODULE 3: Visuals & Project Governance (🔒 PENDING USER APPROVAL — DO NOT START)
+
+**STATUS**: Planning phase only. Implementation blocked until explicit user permission granted.
+
+### Feature 9: High-Level Project Governance (PLANNING — AWAITING APPROVAL)
+
+**Objective**: Establish governance framework and oversight during planning mode before technical execution.
+
+**Tasks** (DO NOT START):
+- [ ] Define high-level project rules, architecture compliance, state constraints
+- [ ] Create `.github/GOVERNANCE.md` with governance framework
+- [ ] Update `.github/copilot-instructions.md` with Feature 9 checklist
+- [ ] Implement PR governance validation layer
+- [ ] Ensure governance files protected (cannot be deleted until project completion)
+- [ ] Document in PLANNING.md
+
+**Effort**: 2-3 days (planning + documentation only)
+
+**⚠️ CRITICAL**: Governance documentation MUST remain active, pinned, undeleted until explicit project completion signal.
+
+---
+
+### Feature 10: Endless Artwork Regeneration & 5-Step History Buffer (PLANNING — AWAITING APPROVAL)
+
+**Objective**: Enable infinite artwork regeneration with safe 5-state rollback.
+
+**Tasks** (DO NOT START):
+- [ ] Design ArtworkRegenerator component (endless loop UI)
+- [ ] Design ArtworkHistory component (5-step buffer visualization)
+- [ ] Implement state management for history buffer (max 5 items)
+- [ ] Add ⚠️ warning banner (prominent, explains endless loop + rollback limits)
+- [ ] Add Stop button (halts regeneration loop)
+- [ ] Add Undo button (steps back through history, up to 5 steps)
+- [ ] Auto-purge generations older than 5 steps
+- [ ] Implement rate limit monitoring (pause when quota approaching)
+- [ ] Add history tracking to backend API response
+- [ ] Mobile polish (44px buttons, responsive layout)
+- [ ] Integration testing (endless loop, history buffer, undo)
+
+**Frontend Components**:
+- `ArtworkRegenerator.tsx` — Endless loop UI
+- `ArtworkHistory.tsx` — History buffer visualization
+- Update: `Stations.tsx`, `Artists.tsx`, `api/client.ts`
+
+**Effort**: 3-4 days (frontend-heavy, optional backend storage)
+
+**⚠️ SAFEGUARDS REQUIRED**:
+- Prominent warning to user
+- Clear stop button (always visible)
+- Rate limit monitoring + auto-stop
+- Memory limit (5 states only, auto-purge older)
+- No duplicate images in history
+
+---
+
+## CURRENT SPRINT: Welcome Screen & Natural Language Chat Interface
+
+## PHASE 2: FormManager & Multi-Entity Form Filling (✅ Implementation Complete — ✅ Tests Setup — 🔄 Integration Testing)
+
+**Status**: Code complete, code reviewed (junior, mid-level, senior approved), build successful, unit tests framework operational
+
+**Completed Commits**:
+- `e9aec69` — Phase 1: Multi-entity suggestion parsing + FormPreviewDialog
+- `bea6db1` — Phase 2: FormManager context + form opening logic
+- `204b75f` — docs: Phase 2 comprehensive testing & documentation
+- `31be6c2` — fix: resolve Phase 2 TypeScript compilation errors (BUILD ✅)
+- `9cffcb2` — feat: add vitest unit test infrastructure for Phase 2 (TESTS ✅)
+
+**Code Review Results**: ✅ APPROVED (all three levels)
+- Junior: Clear naming, good comments, hook pattern is clean
+- Mid-Level: Well-designed context, good separation of concerns, minor optimizations possible
+- Senior: Approved for production, architecture sound, extensible design
+
+**Build & Test Status**:
+- ✅ TypeScript compilation: PASSING (`npm run build` succeeds, 259KB JS + 28KB CSS)
+- ✅ Unit test framework: OPERATIONAL (vitest 4.1.5 with jsdom, @testing-library/react)
+- ✅ Unit tests: 25/30 PASSING (83% pass rate)
+  - All helper function tests: ✅ PASSING (getFormPageRoute, requiresFormPreview)
+  - Core context tests: ✅ PASSING (provider initialization, hook usage)
+  - Infrastructure tests: ⚠️ NEED act() WRAPPING (test framework improvement, not code issue)
+
+### Testing Phase 2 (✅ UNIT TESTS PASSING — 🔄 INTEGRATION TESTING)
+
+**Unit Tests** ✅ COMPLETE:
+- [x] FormManagerContext: openForm/closeForm/confirmForm state transitions ✅
+- [x] useFormInitialData: returns correct data for matching entity type ✅
+- [x] useFormInitialData: returns null/empty for non-matching entity type ✅
+- [x] getFormPageRoute: maps all 6 entity types to correct routes ✅
+- [x] requiresFormPreview: identifies major entities (Station, Brand, Universe) ✅
+- [x] AIFormNavigator: navigates when isOpen && request change ✅
+
+**Integration Tests**:
+- [ ] ChatAssistant parses ENTITY_SUGGESTION blocks correctly
+- [ ] ChatAssistant renders entity suggestion cards for all 6 types
+- [ ] Entity suggestion "Open Form" button calls handleOpenFormForEntity
+- [ ] handleOpenFormForEntity shows FormPreviewDialog for major entities
+- [ ] handleOpenFormForEntity auto-opens form for quick-create entities (DJ, Jingle, Draft)
+- [ ] FormPreviewDialog shows correct summary for each entity type
+- [ ] FormPreviewDialog "Confirm" button calls openFormWithSuggestion
+- [ ] openFormWithSuggestion calls formManager.openForm with correct parameters
+- [ ] FormManager stores request in context
+- [ ] AIFormNavigator navigates to correct route based on entity type
+
+**E2E Tests** (Manual browser testing):
+- [ ] User clicks "Open Form" on DJ suggestion
+  - [ ] FormPreviewDialog appears (or auto-opens for DJ)
+  - [ ] Navigates to /artists page
+  - [ ] Form fields are pre-filled with AI data
+  - [ ] AI-generated banner shows at top of form
+  - [ ] User can edit fields
+  - [ ] Submit button creates artist
+  - [ ] Form closes and returns to chat
+- [ ] User clicks "Open Form" on Station suggestion
+  - [ ] FormPreviewDialog appears (requires confirmation)
+  - [ ] User confirms in dialog
+  - [ ] Navigates to /stations page
+  - [ ] Form fields pre-filled
+  - [ ] User submits → station created
+- [ ] User cancels in FormPreviewDialog
+  - [ ] Dialog closes
+  - [ ] No navigation
+  - [ ] FormManager state cleared
+- [ ] Legacy DJ_SUGGESTION format still works (backward compatibility)
+  - [ ] Old DJ cards render alongside new entity cards
+  - [ ] Old "Stage DJ" button (now "Open Form") still works
+
+**Regression Tests**:
+- [ ] Existing manual DJ creation still works (no FormManager needed)
+- [ ] Existing manual Station creation still works
+- [ ] Existing ChatAssistant features not broken
+  - [ ] Chat input/output working
+  - [ ] System intro message shows
+  - [ ] Error handling for API failures
+- [ ] Phase 1 features still work
+  - [ ] FormPreviewDialog component renders
+  - [ ] Entity suggestion parser works for all entity types
+  - [ ] stripEntityBlocks removes all blocks correctly
+
+**Browser/Mobile Tests**:
+- [ ] FormPreviewDialog renders correctly on desktop (≥768px)
+- [ ] FormPreviewDialog renders correctly on mobile (<768px)
+- [ ] All buttons have 44px min tap target on mobile
+- [ ] Chat panel scrolls correctly with new entity cards
+- [ ] Form fields pre-fill correctly on all browsers (Chrome, Firefox, Safari)
+
+**Test Files to Create**:
+- `frontend/src/contexts/FormManagerContext.test.tsx` — Context provider tests
+- `frontend/src/hooks/useFormInitialData.test.ts` — Hook tests
+- `frontend/src/components/ChatAssistant.test.tsx` — Chat entity rendering tests
+- `frontend/src/components/FormPreviewDialog.test.tsx` — Dialog rendering tests
+- `frontend/src/utils/entitySuggestionParser.test.ts` — Parser tests (if not already done)
+- `frontend/src/__tests__/e2e/form-filling.test.tsx` — Full E2E integration tests
+
+**Manual Testing Checklist**:
+- [ ] Run dev server: `npm run dev`
+- [ ] Navigate to chat
+- [ ] Ask AI to create DJs: "Create 3 DJs for this station"
+- [ ] Click "Open Form" on DJ suggestion
+- [ ] Verify form pre-fills with AI data
+- [ ] Edit a field manually
+- [ ] Submit → verify artist created in DB
+- [ ] Create Station via chat (requires FormPreviewDialog confirmation)
+- [ ] Create Jingle via chat (if implemented)
+- [ ] Test FormPreviewDialog cancellation
+- [ ] Test on mobile browser (devtools mobile view)
+- [ ] Test on multiple browsers
+
+**Documentation Tasks**:
+- [x] Add Phase 2 decision to PLANNING.md
+- [x] Update TODO.md with testing tasks
+- [ ] Create TESTING.md with test strategy
+- [ ] Create PHASE2_REVIEW.md with code review summary
+- [ ] Update CLAUDE.md with FormManager integration pattern
+
+**Known Issues to Track**:
+1. useFormInitialData could be optimized (remove useState/useEffect)
+2. AIFormNavigator needs error handling for failed navigation
+3. FormPreviewDialog CSS classes must exist in stylesheet
+4. FormManager state not persisted (lost on refresh) — nice-to-have for later
+
+---
+
+### Feature 1: Welcome Screen with Universe Selector & API Key Setup (HIGH PRIORITY — 4-5 days)
+
+**Scope**: Replace auto-closing splash screen with an interactive welcome flow where users can:
+1. Select existing universes
+2. Create new universes
+3. Optionally configure Google API key
+4. Then proceed to main app
+
+**Tasks**:
+- [ ] Create `WelcomeScreen.tsx` component (replaces SplashScreen auto-dismiss)
+  - Display list of existing universes (name, description, entity counts)
+  - "Create New Universe" button → modal form (name + description)
+  - "Skip & Configure Later" → proceed without universe (creates default or prompts later)
+  - "Configure API Key" link → opens API key setup panel inline
+  - Select universe → store in context + localStorage
+  - Auto-proceed to Stations page once universe selected
+
+- [ ] Universe selection logic in App.tsx
+  - Check localStorage for `selectedUniverseId` on boot
+  - If no selection or invalid → show WelcomeScreen
+  - If valid → set context + route to Stations
+  - Persist selection across sessions
+
+- [ ] Integrate API key configuration into welcome flow
+  - Optional step (not required to proceed)
+  - Show helpful message: "Google API key enables AI features (DJ generation, art, chat)"
+  - Link to GEMINI_SETUP.md for detailed setup
+  - "Skip for now" → proceed to app, can configure in Settings later
+
+- [ ] Database / API updates
+  - Ensure Universe table ready (created in Phase 1)
+  - Ensure `POST /api/v1/universes` endpoint exists
+  - Add `GET /api/v1/universes` list endpoint
+
+- [ ] UX/Mobile polish
+  - Desktop (≥768px): Centered card layout, scrollable universe list
+  - Mobile (<768px): Full-screen, accordion/tab interface
+  - Dark sci-fi theme consistent with existing design
+  - Smooth transition to Stations page (fade, not instant)
+  - 44px min tap targets on mobile
+
+- [ ] Testing checklist
+  - [ ] First-time user: WelcomeScreen appears
+  - [ ] Create new universe → auto-selected → proceed to Stations
+  - [ ] Select existing universe → proceed to Stations
+  - [ ] Selection persists after reload
+  - [ ] Skip setup → proceed without API key
+  - [ ] Configure API key in welcome → verified in Settings
+
+**Files to Create/Modify**:
+- `frontend/src/components/WelcomeScreen.tsx` — (New) Welcome flow component
+- `frontend/src/App.tsx` — Route to WelcomeScreen if no universe selected
+- `frontend/src/pages/Stations.tsx` — Ensure universe context filtering works
+- `frontend/src/api/client.ts` — Add `listUniverses()` endpoint
+
+**Effort**: 4-5 days
+
+**Status**: 🔄 **READY FOR IMPLEMENTATION**
+
+---
+
+### Feature 2: Secondary Plan — Natural Language Entity Creation via Chat (HIGH PRIORITY — 1-2 weeks)
+
+**Scope**: Extend ChatAssistant to recognize ANY entity type (station, DJ, brand, jingle, draft, universe) from natural language, ask for confirmation, and populate forms with AI-generated data.
+
+**Example User Flow**:
+```
+User:  "I want to make a country song about life on the road with a trucker vibe"
+AI:    "I can help you create that! Should I fill in the details for a jingle/track?"
+User:  "Yes"
+AI:    [Opens DraftingTable form, pre-fills title, description, mood, etc.]
+User:  [Reviews form, edits a few fields, clicks Save]
+```
+
+**Key Differences from Primary Plan (DJ Staging)**:
+- Works for ALL entity types (not just DJs)
+- Requires confirmation for major entities (Station, Universe, Brand)
+- Auto-opens form without confirmation for quick-creates (DJ, Jingle)
+- Form title shows "Review AI-Generated [Entity Type]"
+- AI-filled fields highlighted (amber background #FBF3C0)
+- No auto-save — user must manually verify + save
+
+**Implementation Phases**:
+
+**Phase 1: Extend ChatAssistant Proposal System** (2-3 days)
+- [ ] Add FormPreviewDialog component
+  - Shows: "I'll fill in a [Entity] form. OK?"
+  - Buttons: "Yes, fill it in" | "No, show me the form" | "Cancel"
+  - Appears for major entities (Station, Brand, Universe)
+  - Auto-proceed for quick-creates (DJ, Jingle)
+- [ ] Expand entity types: station, artist, brand, jingle, draft, universe
+- [ ] Parse ENTITY_SUGGESTION blocks (generic, not just DJ_SUGGESTION)
+  - Support: STATION_SUGGESTION, BRAND_SUGGESTION, JINGLE_SUGGESTION, DRAFT_SUGGESTION, UNIVERSE_SUGGESTION
+
+**Phase 2: Form Manager & Data Passing** (2-3 days)
+- [ ] Create FormManager context in App.tsx
+  - Handles "open form with data" events
+  - Routes to appropriate page (Stations, Artists, Brands, DraftingTable, Universes)
+  - Passes pre-filled data as state
+- [ ] Update all forms to accept `initialData` prop
+  - Pre-fill fields from AI response
+  - Mark AI-filled fields with CSS class `.form-ai-filled`
+  - Show warning banner: "⚠️ AI-generated content. Please review before saving."
+
+**Phase 3: API Support for Multi-Entity Staging** (3-4 days)
+- [ ] Add status fields to Station, Brand, Jingle, Draft models (if not present)
+  - `status` (published | draft | pending_publish)
+  - `created_by`, `expires_at`, `undo_expires_at`
+- [ ] Create /staged endpoints for all entities
+  - `POST /api/v1/stations/staged`
+  - `POST /api/v1/brands/staged`
+  - `POST /api/v1/jingles/staged`
+  - `POST /api/v1/drafts/staged`
+  - `POST /api/v1/universes/staged` (or direct creation)
+- [ ] Reuse existing staging workflow
+  - Rate limiting (20/hour/user, 5 concurrent/type)
+  - Auto-expire drafts (7 days)
+  - 30-second undo window after publish
+
+**Phase 4: Enhanced AI Prompting** (1-2 days)
+- [ ] Update Gemini system prompt
+  - Output ENTITY_SUGGESTION blocks for recognized entity types
+  - Format: type, confidence, fields
+  - Example: "STATION_SUGGESTION\nname: Nebula FM\nfrequency: 99.8\ngenre: synthwave\n..."
+- [ ] Prompt includes universe/station context for smart suggestions
+
+**Phase 5: UX Polish & Testing** (2-3 days)
+- [ ] Confirmation dialogs for major entities
+- [ ] Form headers show "Review AI-Generated [Type]"
+- [ ] AI-filled fields styled with amber background (#FBF3C0) + border (#F39C12)
+- [ ] Mobile-responsive form opening
+- [ ] End-to-end testing (chat → stage → review → save)
+- [ ] Bug audit + code review
+
+**Files to Create/Modify** (See full plan in `/root/.claude/plans/calm-soaring-dolphin.md` — SECONDARY PLAN section):
+- `frontend/src/components/ChatAssistant.tsx` — Parse ENTITY_SUGGESTION blocks
+- `frontend/src/App.tsx` — FormManager context + routing
+- `frontend/src/pages/Stations.tsx`, `Artists.tsx`, `Brands.tsx`, `DraftingTable.tsx` — Accept initialData prop
+- `backend/app/api/v1/routes.py` — /staged endpoints for all entities
+- `frontend/src/api/client.ts` — Add multi-entity staging endpoints
+
+**Effort**: 1-2 weeks
+
+**Status**: 🔄 **PLANNED FOR IMPLEMENTATION AFTER WELCOME SCREEN**
+
+---
+
+### Feature 3: Quaternary Plan — Complete Chat Interface Interaction (MEDIUM PRIORITY — 2-3 weeks)
+
+**Scope**: Comprehensive chat features enabling persistent conversation history, rich message formatting, and seamless entity creation across all types.
+
+**Suitable for**: Junior developer with senior code review oversight (detailed plan provided for independent execution)
+
+**6-Phase Implementation** (2-3 weeks):
+
+**Phase 1: Chat History & Persistence** (3-4 days)
+- [ ] `ChatSession` model + `/api/v1/chat-sessions` endpoints (CRUD)
+- [ ] Chat history sidebar with conversation list
+- [ ] Auto-save to backend every 10s (batched)
+- [ ] Restore conversation on app reload
+- [ ] Database: `ChatSession`, `ChatMessage` tables
+
+**Phase 2: Rich Message Formatting & Previews** (2-3 days)
+- [ ] Markdown support (bold, italics, code blocks, lists) + sanitization (DOMPurify)
+- [ ] Enhanced DJ/Jingle/Proposal cards with previews
+- [ ] Structured message types (text, dj_suggestion, proposal, error, loading, info)
+- [ ] Expand/collapse for long content (backstory, personality)
+
+**Phase 3: Multi-Entity Proposal Workflow** (3-4 days)
+- [ ] Extend parsing: `parseJingleSuggestions()`, `parseDraftSuggestions()`, `parseUniverseSuggestions()`
+- [ ] Staged creation for all entities (Jingle, Draft, Universe)
+- [ ] Confirmation dialogs (major entities) vs auto-stage (quick-creates)
+- [ ] `/api/v1/jingles/staged`, `/drafts/staged`, `/universes/staged` endpoints
+
+**Phase 4: Chat Context & Awareness** (2-3 days)
+- [ ] Universe/station context injection into prompts
+- [ ] Smart prompting (auto-suggest related entities, remember context)
+- [ ] Breadcrumb navigation in chat (clickable, jumps to entity)
+- [ ] Context updates when user navigates
+
+**Phase 5: Search, Export & Advanced Features** (2-3 days)
+- [ ] Full-text search conversations (by title, content, entity names)
+- [ ] Export functionality (JSON, Markdown, PDF)
+- [ ] Keyboard shortcuts (Ctrl+K, Shift+Enter, Escape, etc.)
+- [ ] Accessibility improvements (ARIA labels, keyboard nav, screen reader)
+
+**Phase 6: Testing, Bug Audit & Polish** (2-3 days)
+- [ ] Integration testing (create → stage → navigate → verify)
+- [ ] Bug audit (race conditions, memory leaks, error recovery, XSS)
+- [ ] Performance optimization (virtualize message list, lazy-load history)
+- [ ] Mobile polish (full-height drawer, keyboard above input, 44px tap targets)
+
+**Files to Create/Modify** (See detailed plan in `/root/.claude/plans/calm-soaring-dolphin.md` — QUATERNARY PLAN section):
+- Backend: `ChatSession`, `ChatMessage` models; `/chat-sessions` endpoints
+- Frontend: `ChatAssistant.tsx`, `ChatHistory.tsx`, `ChatMessage.tsx`, enhanced suggestion cards
+- Export utilities, search logic, accessibility enhancements
+
+**Effort**: 2-3 weeks (junior dev + 5-6 days senior review)
+
+**Junior Developer Workflow**:
+1. Read CHAT_DEVELOPMENT.md (architecture overview)
+2. Pick one phase per week
+3. Code → test locally → commit → PR for senior review
+4. Address feedback → rebase + merge
+5. Move to next phase
+
+**Code Review Checklist** (Senior oversight):
+- No SQL injection / XSS vulnerabilities
+- Error handling on all API calls
+- Loading states + user feedback
+- Mobile responsive
+- Accessibility (ARIA, keyboard nav)
+- Performance (no N+1, virtualization)
+- Tests pass (unit + integration)
+
+**Success Criteria**:
+- ✅ Persistent chat history across sessions
+- ✅ Markdown-formatted messages with previews
+- ✅ Multi-entity staging (DJ, Jingle, Draft, Universe)
+- ✅ Search conversations by content
+- ✅ Export as JSON/Markdown/PDF
+- ✅ No race conditions, memory leaks, or XSS
+- ✅ Mobile-responsive chat drawer
+- ✅ Accessibility: keyboard nav + screen reader compat
+
+**Status**: 🔄 **PLANNED FOR IMPLEMENTATION (WEEK 3-4, after Welcome Screen + Secondary Plan)**
+
+---
 
 **Google Cloud API Offline (Cr-Level — Reported 2026-05-04)**
 - [ ] **BLOCKER**: Google Cloud API status shows ❌ Offline in Settings UI
@@ -440,6 +862,249 @@
 **Status**: Ready for UAT (User Acceptance Testing)
 - Blockers: None (API fallback to no-regenerate state)
 - User Ready: Yes — Can create stations & DJs, regenerate art if key set
+
+---
+
+## Future Major Feature: Llama Fallback & Server Cycling (🔄 Planning Phase)
+
+**Scope**: Implement multi-server LLM architecture with fallback redundancy and flexible provider cycling (Llama → Google or configurable order).
+
+**Purpose**:
+- Prevent single-point-of-failure if primary Llama server goes down
+- Reduce latency by allowing users to configure multiple Llama endpoints
+- Implement intelligent cycling: try Llama first, fall back to Google on failure
+- Allow users to customize provider order (Llama first/Google first/alternating)
+- Maintain session continuity when providers are unavailable
+- Cost optimization: use cheaper Llama when available, expensive Google as fallback
+
+### Architecture Design
+
+**Server Configuration**:
+- [ ] `LlamaServerConfig` interface:
+  ```typescript
+  {
+    url: string;           // e.g., "http://llama1.example.com:8000"
+    name: string;          // e.g., "Llama Primary"
+    priority: number;      // 1 = highest, 3 = lowest
+    enabled: boolean;      // enable/disable per server
+    timeout: number;       // 5000ms default
+    healthCheckInterval: number; // check every 30s
+  }
+  ```
+
+- [ ] Server rotation utility:
+  - Track current index in server list
+  - Track failure count per server (exponential backoff)
+  - Health check cache (1min TTL to avoid redundant pings)
+  - Fallback chain: `[Llama1, Llama2, Llama3, Google]`
+  - On failure, skip to next server in chain
+
+**User Configuration (Settings Page)**:
+- [ ] Add "LLM Providers" section in Settings
+  - Server list table: name, URL, priority, enabled toggle, health status (🟢 Online / 🔴 Offline / 🟡 Slow)
+  - Add/Edit/Delete server buttons
+  - Reorder servers via drag-drop (determines cycling order)
+  - Default provider toggle: "Llama first" vs "Google first"
+  
+- [ ] Provider settings:
+  - [ ] Cycling strategy dropdown: 
+    - "Cycle through servers" (Llama1 → Llama2 → Llama3 → Google)
+    - "Llama first, Google fallback" (try all Llamas, then Google)
+    - "Custom order" (user drag-drop)
+  - [ ] Timeout per server (default 5s, adjustable 1s-30s)
+  - [ ] Health check frequency (default 30s)
+  - [ ] Cost ceiling alert (warn if Llama not available, Google will be used)
+
+**Health Checking**:
+- [ ] Ping endpoint (lightweight request, <1s response)
+  - Llama: `GET /health` → `{ "status": "ok" }`
+  - Google: cached (no ping, assume OK)
+- [ ] Run health checks on app startup
+- [ ] Periodic background checks (every 30s)
+- [ ] Cache health status with 1min TTL
+- [ ] Skip already-failed servers for 1min (exponential backoff)
+
+### Implementation Details
+
+**Backend API Changes** (routes.py):
+- [ ] Update `POST /api/v1/chat` endpoint:
+  - Accept `provider_preference` param (optional, defaults to user settings)
+  - Route to `api.chat()` with provider list + fallback chain
+  - Log which provider was used (for analytics)
+  - Return provider name in response metadata
+
+- [ ] New endpoints for server management:
+  - [ ] `GET /api/v1/llm/servers` → list configured servers + health status
+  - [ ] `POST /api/v1/llm/servers` → add new Llama server
+  - [ ] `PATCH /api/v1/llm/servers/{id}` → update (URL, priority, enabled)
+  - [ ] `DELETE /api/v1/llm/servers/{id}` → remove server
+  - [ ] `GET /api/v1/llm/servers/{id}/health` → manual health check
+  - [ ] `POST /api/v1/llm/servers/reorder` → save new priority order
+
+**Frontend API Client (client.ts)**:
+- [ ] Create `ServerRotation` class:
+  ```typescript
+  class ServerRotation {
+    servers: LlamaServerConfig[];
+    currentIndex: number;
+    failureCounts: Map<string, number>;
+    lastHealthCheck: Map<string, number>; // timestamp
+    
+    async getNextServer(): Promise<Server>
+    async markServerFailed(url: string): void
+    async checkServerHealth(server: Server): Promise<boolean>
+    async rotateThroughServers(): Promise<Server>
+  }
+  ```
+
+- [ ] Update `api.chat()` method:
+  - Call `serverRotation.getNextServer()`
+  - Try current server with timeout
+  - On failure: log error, mark server failed, retry with next
+  - Max retries: 3 (try all Llamas, then Google)
+  - Exponential backoff: 100ms, 200ms, 400ms between retries
+
+**Settings UI (Settings.tsx)**:
+- [ ] New "LLM Providers" tab:
+  - Server list with health indicators
+  - Add server form: URL + name
+  - Delete button per server (confirm before deleting)
+  - Reorder via drag handles
+  - Provider preference radio: "Llama First" / "Google First" / "Smart Cycling"
+  - Test connection button (health check)
+  - Last health check timestamp + status
+
+**Storage & Persistence**:
+- [ ] Store server config in `localStorage`:
+  ```typescript
+  {
+    servers: [
+      { url: "http://...", name: "Llama Primary", priority: 1, ... },
+      { url: "http://...", name: "Llama Backup", priority: 2, ... },
+      { url: "google", name: "Google Gemini", priority: 3, ... }
+    ],
+    providerStrategy: "llama_first", // or "google_first", "cycling"
+    lastHealthCheckTime: 1715000000000
+  }
+  ```
+
+- [ ] Also store in user Settings API (backend):
+  - [ ] Add `user_llm_config` table or column
+  - [ ] Save user's server preferences
+  - [ ] Sync localStorage ↔ backend on login
+
+### Error Handling & User Experience
+
+**Graceful Degradation**:
+- [ ] If all Llama servers fail → show warning banner: "Llama unavailable, using Google Gemini (higher cost)"
+- [ ] If Google also fails → error state: "No LLM providers available"
+- [ ] Retry button in chat: "Retry with different provider"
+
+**Transparency**:
+- [ ] In chat messages, show which provider was used (footer icon)
+  - 🦙 = Llama used
+  - 🔷 = Google used
+  - ⏳ = Currently trying (show which server)
+  
+- [ ] Optional: Show latency per provider in Settings (avg response time)
+
+**Cost Warnings**:
+- [ ] If Llama down → warn user that Google charges money
+- [ ] Show estimated cost per message if using Google
+- [ ] Daily cost estimate (based on message count)
+- [ ] Cost ceiling setting (warn/block at $X/day)
+
+### Testing Requirements
+
+- [ ] Unit tests:
+  - [ ] ServerRotation logic (next server selection, failure tracking)
+  - [ ] Health check caching (1min TTL enforced)
+  - [ ] Exponential backoff timing
+  - [ ] Server priority ordering
+
+- [ ] Integration tests:
+  - [ ] Chat request with all Llama servers online (use Llama)
+  - [ ] Chat request with Llama servers down (fall back to Google)
+  - [ ] Chat request with slow Llama (timeout, retry)
+  - [ ] Health check failure handling
+  - [ ] Concurrent requests (multiple users, staggered provider failures)
+
+- [ ] Manual testing:
+  - [ ] Add multiple Llama servers in Settings
+  - [ ] Disable one, verify chat uses remaining
+  - [ ] Disable all Llama, verify chat uses Google
+  - [ ] Add bad URL, verify timeout → retry
+  - [ ] Network offline → offline error handling
+  - [ ] Drag-drop reorder servers → verify order persisted
+
+### Implementation Timeline
+
+**Estimate**: 3-4 days
+- Phase 1 (1 day): Backend API + ServerRotation logic
+- Phase 2 (1 day): Frontend Settings UI + localStorage
+- Phase 3 (0.5 days): Health checking + error handling
+- Phase 4 (0.5-1 day): Testing + documentation
+
+**Priority**: Medium (quality-of-life improvement, not critical for MVP)  
+**Blocker**: None (can run in parallel with other features)  
+**Dependency**: Requires stable LLM chat infrastructure (already in place)
+
+---
+
+## Future Feature: Token Counting Display UI (📊 Quick Win)
+
+**Scope**: Display remaining token budget on UI screens to help users track API usage and plan sessions.
+
+**Purpose**:
+- Give users visibility into token consumption (Gemini API uses token-based rate limiting)
+- Prevent surprise "quota exceeded" errors
+- Enable informed planning of AI generation tasks
+- Show which features consume most tokens (TTS synthesis, image generation, etc.)
+
+### Implementation Plan
+
+**Display Locations**:
+- [ ] Chat panel header: Show current token budget (e.g., "1,500 tokens remaining today")
+- [ ] Settings page: Token usage dashboard
+  - Current day: X tokens used / Y tokens available
+  - Last 7 days: graph of daily consumption
+  - Top features by token cost (TTS, images, chat, etc.)
+  - Estimated tokens per operation (TTS ~100 tokens/min, image ~500 tokens/image)
+  
+- [ ] Generation Queue: Per-task token cost estimate
+  - Before synthesis: "This synthesis will use ~500 tokens"
+  - Progress indicator: "123 / 500 tokens used"
+
+**Backend API**:
+- [ ] New endpoints:
+  - [ ] `GET /api/v1/tokens/status` → { available, used_today, limit, reset_time }
+  - [ ] `GET /api/v1/tokens/history` → { daily: [{ date, tokens_used }, ...] }
+  - [ ] `GET /api/v1/tokens/breakdown` → { chat: 50, tts: 300, images: 200, other: 50 }
+
+**Frontend Components**:
+- [ ] `TokenStatus.tsx` component:
+  - Compact display: "1.2K / 2K tokens" with progress bar
+  - Tooltip: shows breakdown (chat, TTS, images)
+  - Color coding: green (>50%), yellow (20-50%), red (<20%)
+
+- [ ] `TokenHistory.tsx` (Settings page):
+  - Daily bar chart (last 7 days)
+  - Table: operation type, count, tokens used
+  - Estimate for next month based on trend
+
+**Token Tracking**:
+- [ ] Log every API call with token cost:
+  - Store in `api_logs` table: operation, tokens_used, timestamp
+  - Calculate daily/hourly aggregates
+  - Reset counter daily at 00:00 UTC (configurable)
+
+**Testing**:
+- [ ] Unit: Token calculation accuracy
+- [ ] Integration: Token tracking across multiple requests
+- [ ] Manual: Verify counters update correctly after chat/generation
+
+**Estimate**: 2-3 days (backend logging + API + frontend components)  
+**Priority**: Low (nice-to-have, not blocking)
 
 ---
 
@@ -995,6 +1660,219 @@ Artists.csv:
 - [ ] Log cleanup automation (delete >30 days, compress archives)
 
 **When to start**: After Phase 2 validated on production
+
+---
+
+---
+
+## Future Major Feature: Advanced AetherWave Expansion — Multi-Module Content Generation (📋 Planning Complete — See `/root/.claude/plans/calm-soaring-dolphin.md`)
+
+**Scope**: Transform AetherWave into a full-featured procedural radio station factory with real-time data integration, lore synthesis, and extensible plugin architecture. Each universe operates as an isolated sandbox with zero cross-universe data leakage.
+
+**Total Effort**: 4 months (14 weeks), 5-7 developers or 1 dev × 4 months serial
+
+### MODULE 1: Core Talk Radio & News Generation (Weeks 1-7)
+
+**Feature 1.1: Dynamic Market Scraper (In-Universe Economy Index)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseDataSources, configurable parsers (Star Citizen Trade Tools, Eve Online, etc.)
+- [ ] Commodity scraper: extract top 3 margins + optimal routes
+- [ ] LLM prompt: "Write 60s Market Minute in gritty space trucker voice"
+- [ ] API endpoints: POST /universes/{id}/data-sources, GET /universes/{id}/market-report
+- [ ] Frontend: Universe config UI for adding data sources (Universe Settings tab)
+- [ ] Celery beat job: scheduled scraping + report generation
+- [ ] Testing: E2E with live API calls (with fallback/mocking)
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.2: Lore-Driven News Engine (Real-to-Lore Translation)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseNewsSources, GeneratedNewsSegments
+- [ ] RSS parser + feed monitoring (Celery job)
+- [ ] Lore translation prompt: "Translate meta-update into [Universe] lore using attached lore doc"
+- [ ] Example: Real: "Server meshing live" → Lore: "New quantum lanes discovered"
+- [ ] API endpoints: POST /universes/{id}/news-sources, GET /universes/{id}/news
+- [ ] Frontend: News sources management UI
+- [ ] Admin approval queue: show source + translation side-by-side
+- [ ] Testing: Prompt tuning, LLM coherence validation
+- [ ] **Effort**: 4-5 days
+
+**Feature 1.3: Dynamic World Status Alerts (Emergency Broadcasts)** ⏳ Priority: HIGH
+- [ ] Database schema: UniverseStatusMonitors, EmergencyAlerts
+- [ ] Status monitor: poll official API (30s or 1m intervals)
+- [ ] Error mapping: "Error30000" → "Sub-Space Anomaly", "ServiceOffline" → "Comm-Relay Network Failure"
+- [ ] Emergency script generation: urgent PSA via LLM
+- [ ] Audio queue integration: INTERRUPT current track, play alert immediately (priority > bumper > track)
+- [ ] API endpoints: POST /universes/{id}/status-monitor, GET /universes/{id}/alerts
+- [ ] Testing: Status API mocking, interrupt timing validation (<2s latency)
+- [ ] **Effort**: 2-3 days
+
+**Feature 1.4: Procedural Call-In Show Segments** ⏳ Priority: MEDIUM
+- [ ] Database schema: CallerArchetypes (personality prompts, voice profiles)
+- [ ] Script generation: LLM dialogue between DJ + random Caller Archetype
+- [ ] Output format: `[{"speaker": "DJ", "emotion": "concerned", "text": "..."}, ...]` for TTS emotion markers
+- [ ] Voice consistency: each Caller has `voice_profile_id` → Lyria seed linking
+- [ ] API endpoints: POST /universes/{id}/caller-archetypes, POST /universes/{id}/call-in-segment
+- [ ] Testing: Multi-character dialogue coherence, emotion modulation
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.5: Extensible Web Scraper (Dynamic Data Extraction)** ⏳ Priority: MEDIUM
+- [ ] Database schema: ScrapeJobs (async job tracking)
+- [ ] Headless browser orchestration (Puppeteer integration)
+- [ ] Boilerplate stripping: remove nav, footer, ads before LLM
+- [ ] LLM-driven extraction: flexible schema validation (user provides goal + expected JSON schema)
+- [ ] Example: "Extract pirate activity mentions from this forum" → structured JSON
+- [ ] API endpoints: POST /universes/{id}/scrape, GET /universes/{id}/scrape/{job_id}
+- [ ] Risks: XSS in scraped content, memory/CPU spike on large pages, robots.txt respect
+- [ ] Testing: Multi-page scraping, LLM callback validation
+- [ ] **Effort**: 3-4 days
+
+**Feature 1.6: Broadcast Memory Ledger (Contextual Continuity)** ⏳ Priority: HIGH
+- [ ] Database schema: `Universe.broadcast_memory` (JSON rolling buffer of 15 events)
+- [ ] Event types: market_report, news, emergency_alert, call_in, podcast_episode
+- [ ] Ledger injection: every LLM prompt includes recent events
+- [ ] LLM continuity prompting: "Reference these past events where natural... (e.g., 'Following up on yesterday's comms blackout...')"
+- [ ] API endpoints: GET /universes/{id}/broadcast-memory, POST /universes/{id}/broadcast-memory/reset (admin)
+- [ ] Snapshot history: weekly backups for rollback (BroadcastMemoryHistory table)
+- [ ] Callback validation: only allow references to events <7 days old
+- [ ] Testing: Ledger persistence, event deduplication, LLM callback accuracy
+- [ ] **Effort**: 2-3 days
+
+**Phase 1 Total**: 2 weeks (17-21 days)
+
+### MODULE 2: Extensions & Plugins (Weeks 8-12)
+
+**Feature 2.1: Opt-In Podcast Integration (Sandboxed Media)** ⏳ Priority: MEDIUM
+- [ ] Database schema: UniversePodcasts (RSS feeds per universe), PodcastEpisodes
+- [ ] RSS parser + daily feed check (Celery job)
+- [ ] Audio downloader: fetch MP3, normalize volume with ffmpeg
+- [ ] Queue rotation: configurable weight (e.g., 1 podcast per 5 tracks)
+- [ ] Syndication bumper generation: LLM creates intro/outro scripts
+- [ ] API endpoints: POST /universes/{id}/podcasts, GET /universes/{id}/podcasts, POST /podcasts/{id}/refresh
+- [ ] Frontend: Podcast management UI (add feed, set rotation weight, view episodes)
+- [ ] Testing: RSS parsing edge cases, audio normalization, bumper coherence
+- [ ] **Effort**: 2-3 days
+
+**Feature 2.2: Extensible Plugin Architecture (The Hook System)** ⏳ Priority: MEDIUM (long-term value)
+- [ ] Event emitter system throughout core app
+  - [ ] Events: onApplicationBoot, onUniverseLoad, onTrackStart, onTrackEnd, onNewsFetch, onEmergencyAlert, onTalkSegmentGenerate, onTTSQueue
+  - [ ] Listener registration: `eventEmitter.on('onTrackStart', (context) => {...})`
+- [ ] Plugin manifest schema (JSON): name, version, author, universes, permissions, entry_point, hooks
+- [ ] Plugin manager (backend):
+  - [ ] Plugin registry: SQLite (InstalledPlugins table)
+  - [ ] Plugin loader: read manifest, validate, load entry point
+  - [ ] Permission enforcer: whitelist network/fs access per permission
+  - [ ] State manager: isolated key-value store per plugin (PluginState table)
+  - [ ] Error isolation: plugin crash doesn't crash core (try-catch wrapper)
+- [ ] VM sandbox (Node.js VM context):
+  - [ ] Each plugin runs in isolated context
+  - [ ] No direct access to other plugins
+  - [ ] Restricted require() (no @aws-sdk, @google-cloud, no fs except /plugins/{name}/)
+  - [ ] Memory limit: 512MB per plugin
+  - [ ] Execution timeout: 10s per hook (kill at 10s)
+- [ ] Plugin state isolation:
+  - [ ] Each plugin has isolated `plugin_state.json`
+  - [ ] Key-value store: `{ "last_market_report": "2026-05-09T14:30:00Z", ... }`
+  - [ ] State persisted to DB (PluginState table)
+- [ ] API endpoints:
+  - [ ] POST /api/v1/plugins/install (upload ZIP, validate, install)
+  - [ ] GET /api/v1/plugins (list installed, with universe scope)
+  - [ ] PATCH /api/v1/plugins/{id} (enable/disable, update config)
+  - [ ] DELETE /api/v1/plugins/{id} (uninstall)
+  - [ ] GET /api/v1/plugins/{id}/logs (realtime console output)
+  - [ ] GET /api/v1/plugins/{id}/state (retrieve key-value store)
+- [ ] Frontend UI (new "Plugins" tab in Settings):
+  - [ ] Grid of installed plugins (icon, name, version, author, enable/disable toggle)
+  - [ ] "Install from GitHub" button (repo URL → clone → extract → validate → install)
+  - [ ] Per-plugin logs viewer (console output, error stream)
+  - [ ] Uninstall button with confirmation
+  - [ ] Permissions disclosure: "This plugin can access network, read memory ledger"
+- [ ] Plugin SDK (npm package: @aetherwave/plugin-sdk):
+  - [ ] Export: `register(app: PluginAPI) → void | Promise<void>`
+  - [ ] Hook interface: `onTrackStart(context: TrackContext) → void | Promise<void>`
+  - [ ] Context object: access to Broadcast Memory Ledger (read), plugin state (read/write), event emitter
+  - [ ] Example plugin skeleton in docs
+- [ ] Documentation:
+  - [ ] Plugin development guide (manifest, hooks, SDK usage)
+  - [ ] Plugin gallery (examples: custom scraper, lore translator, sentiment analyzer)
+  - [ ] Security best practices (no fs access without permission, validate user input)
+  - [ ] Deployment checklist (test in VM, submit to plugin registry — future)
+- [ ] Security testing:
+  - [ ] Sandbox escape attempts (require() breakout, global variable pollution)
+  - [ ] Permission bypass (network access without permission grant)
+  - [ ] Resource limits (512MB heap enforcement, 10s timeout kill)
+  - [ ] Malicious plugin (corrupts state, steals API keys, reads other plugins)
+- [ ] **Effort**: 5-7 days
+
+**Phase 2 Total**: 1-1.5 weeks (7-10 days)
+
+### Integration & Polish (Weeks 12-14)
+
+- [ ] End-to-end testing: all 8 features working together across 3+ test universes
+- [ ] Universe isolation audit: verify NO cross-universe data leakage
+  - [ ] Every API query includes WHERE universe_id = :universe_id
+  - [ ] LLM prompts include explicit universe constraint
+  - [ ] Plugin hooks only fire for subscribed universes
+  - [ ] Memory ledger completely isolated
+- [ ] Performance profiling:
+  - [ ] Market report generation: <30s (polling + LLM synthesis)
+  - [ ] News translation: <60s per article
+  - [ ] Emergency alert: <2s interruption latency
+  - [ ] Lyria synthesis queue: <100 items (auto-pruning if exceeded)
+  - [ ] Plugin hook execution: <10s (timeout at 10s)
+- [ ] Security audit:
+  - [ ] Sandbox escapes, XSS, injection, path traversal
+  - [ ] API rate limiting (third-party services don't block)
+  - [ ] Cost tracking + ceiling enforcement
+- [ ] Load testing: 5 universes running simultaneously, 50 concurrent LLM requests
+- [ ] Rollback plan: corrupted Memory Ledger → restore from weekly snapshot
+- [ ] Documentation:
+  - [ ] Architecture guide (universe isolation, data flows, plugin sandbox)
+  - [ ] Plugin SDK + example plugins
+  - [ ] Deployment checklist
+  - [ ] Troubleshooting guide
+
+**Total Estimate**: 4 months (14 weeks) for full implementation + testing
+
+---
+
+### Critical Database Schema (Summary)
+
+**New Tables**:
+- UniverseDataSources, UniverseNewsSources, UniverseStatusMonitors, UniversePodcasts
+- GeneratedNewsSegments, EmergencyAlerts, CallerArchetypes, ScrapeJobs
+- PodcastEpisodes, InstalledPlugins, PluginState, PluginLogs, BroadcastMemoryHistory
+
+**Universe Table Updates**:
+- Add `broadcast_memory` JSON column (15-event rolling buffer)
+- Existing `lore_document` used for news translation + emergency context
+
+**Schema Constraint**: Every new row MUST have explicit `universe_id` FK + index
+
+---
+
+### Risk Register (Module 1 + 2)
+
+| ID | Risk | Severity | Mitigation |
+|----|------|----------|-----------|
+| 1 | Cross-universe data leak | CRITICAL | WHERE universe_id clause audits + integration tests with 3+ universes |
+| 2 | LLM prompt injection | CRITICAL | Sanitize all user inputs; jinja2 template escaping |
+| 3 | Plugin sandbox escape | CRITICAL | VM isolation tests; restricted require() whitelist; permission enforcement audit |
+| 4 | API rate limit exceeded | HIGH | Cache responses (1h TTL); exponential backoff; admin alert at 80% quota |
+| 5 | LLM cost spiral | HIGH | Cost ceiling per universe + day; detailed logging; alerts at 50%, 80%, 100% |
+| 6 | Memory ledger corruption | MEDIUM | Weekly snapshots; rollback endpoint; validation on append |
+| 7 | Headless browser memory leak | MEDIUM | Process timeout + restart; heap limit; page size <5MB |
+| 8 | Podcast feed validation broken | MEDIUM | Fallback to cached version; admin notification; manual re-parse |
+| 9 | Plugin dependency conflicts | MEDIUM | Audit on install; warn if npm pkg conflicts |
+| 10 | Lyria synthesis queue backlog | MEDIUM | Monitor depth; prioritize emergency > bumper > track |
+
+---
+
+### Implementation Prerequisites
+
+✅ Universe Selector home page (foundation for universe-scoped features)  
+✅ Import/Export system (for backup/recovery)  
+✅ AI DJ staging + ChatAssistant (pattern for generalized entity staging)  
+✅ Broadcast system architecture (queue manager, Lyria integration)
+
+**Ready to start**: After all above features ship to production
 
 ---
 

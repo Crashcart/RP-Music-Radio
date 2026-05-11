@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { api, type Draft } from "../api/client";
+import { useFormInitialData } from "../hooks/useFormInitialData";
 
 interface IngestRow {
   station_name: string;
@@ -579,7 +580,19 @@ function EditModal({
   onClose: () => void;
   onSave: () => void;
 }) {
-  const [form, setForm] = useState({ ...draft });
+  const { initialData, isAiGenerated } = useFormInitialData("draft");
+  const [form, setForm] = useState({
+    ...draft,
+    station_name: draft.station_name || initialData?.station_name || "",
+    artist_name: draft.artist_name || initialData?.artist_name || "",
+    genre: draft.genre || initialData?.genre || "",
+    mood: draft.mood || initialData?.mood || "",
+    items: draft.items || initialData?.items || "",
+    script: draft.script || initialData?.script || "",
+    backstory: draft.backstory || initialData?.backstory || "",
+    market_research:
+      draft.market_research || initialData?.market_research || "",
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -611,6 +624,12 @@ function EditModal({
         style={{ maxWidth: 640 }}
       >
         <h3 className="modal-title">✏️ Edit Draft</h3>
+
+        {isAiGenerated && (
+          <div className="ai-review-banner" role="alert">
+            ⚠️ AI-generated draft. Please review and edit before saving.
+          </div>
+        )}
 
         <div
           style={{
