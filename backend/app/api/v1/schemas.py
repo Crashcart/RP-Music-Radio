@@ -50,6 +50,7 @@ class StationUpdate(BaseModel):
     founded_year: Optional[str] = None
     owner: Optional[str] = None
     lore_notes: Optional[str] = None
+    universe_id: Optional[str] = None
 
 
 class StationOut(BaseModel):
@@ -70,6 +71,7 @@ class StationOut(BaseModel):
     founded_year: str
     owner: str
     lore_notes: str
+    universe_id: Optional[str] = None
     # AI staging workflow fields
     status: str = "published"
     created_by: Optional[str] = None

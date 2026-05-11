@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { api, type Universe } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 
-export function Universes() {
+interface UniversesProps {
+  /** Called when a universe is created while in "gate" mode (no active universe). */
+  onUniverseCreated?: () => void;
+}
+
+export function Universes({ onUniverseCreated }: UniversesProps = {}) {
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [selectedUniverse, setSelectedUniverse] = useState<Universe | null>(
     null,
@@ -35,6 +40,8 @@ export function Universes() {
       refresh();
       // Auto-select the new universe for research
       setSelectedUniverse(universe);
+      // Notify App-level gate that a universe now exists
+      onUniverseCreated?.();
     } catch (e: unknown) {
       alert(
         `Failed to create universe: ${e instanceof Error ? e.message : String(e)}`,

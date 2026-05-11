@@ -99,6 +99,9 @@ class Station(Base):
     owner = Column(String, default="")  # In-universe owner/corp
     lore_notes = Column(Text, default="")  # Additional worldbuilding
 
+    # Universe link — which game world this station belongs to (nullable for legacy rows)
+    universe_id = Column(String, ForeignKey("universes.id"), nullable=True)
+
     # AI staging workflow — added for AI station generation feature
     # Values: "published" (default/manual), "draft" (AI-staged), "pending_publish" (in undo window)
     status = Column(String, default="published")
