@@ -1,8 +1,76 @@
 # AetherWave / RP-Music-Radio — Planning & Decisions Log
 
-**Last Updated**: 2026-04-26  
+**Last Updated**: 2026-05-09  
 **Project**: Headless Media Factory — Procedural Lore-Heavy Radio Content Generator  
 **TDR Version**: 1.0.4 (Reference: `ARCHITECTURE.md`)
+
+---
+
+## Session 2: Feature 2 (Multi-Entity Form Filling) & Docker Cleanup (2026-05-09)
+
+### Governance & Configuration
+
+#### Decision: Autocompact Override for Multi-Session Stability (Rule 14 — 2026-05-09)
+
+**Issue**: Long-running sessions risk context window exhaustion without explicit autocompact trigger; prevents effective handoffs between AI agents.
+
+**Decision**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50` in both global user settings (~/.claude/settings.json) and project settings (.claude/settings.json).
+
+**Rationale**: 
+- Default 85% threshold too aggressive for multi-agent workflows
+- 50% threshold ensures aggressive compaction, maximum clean context for new agents
+- Enables predictable session boundaries with fresh context on every compaction
+- Reduces friction and ensures stability in long-running development cycles
+
+**Implementation**:
+- Added Rule 14 to `.github/copilot-instructions.md` (v3.3)
+- Configured `~/.claude/settings.json` with env var
+- Configured `.claude/settings.json` (project) with env var  
+- Verified with: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` → outputs `50`
+
+**Impact**: All Claude Code agents/bots working on RP-Music-Radio will use 50% autocompact threshold. Sessions will compact aggressively, providing fresh clean context for each new agent session; maximizes stability in multi-agent workflows.
+
+---
+
+### Completed
+- ✅ **Governance (Rule 14)**: Autocompact threshold for multi-session stability
+  - Added Rule 14 to copilot-instructions.md (v3.3)
+  - Updated global and project settings with env var
+  - Version bumped: 3.2 → 3.3
+  - Decision logged in PLANNING.md
+
+- ✅ **Feature 2 Frontend**: Complete 4-phase implementation
+  - Phase 1: Extended ChatAssistant parsing for 6 entity types (ENTITY_SUGGESTION blocks)
+  - Phase 2: FormManager context router for pre-filling forms with AI data
+  - Phase 3: Backend API staging endpoints (client-side)
+  - Phase 4: Enhanced system prompts with entity generation guidance
+  - Pushed to alpha branch
+
+- ✅ **API Logging Fix**: SQLiteHandler environment detection
+  - Fixed: Hardcoded Docker path `/app/data/` → auto-detect local vs Docker
+  - Now works in both local development and Docker environments
+
+- ✅ **Docker Cleanup Planning**: Comprehensive plan created
+  - Identified unnecessary dependencies: google-cloud-logging (~30MB), grpcio (~10MB)
+  - Planned multi-stage Docker build: 36%+ size reduction (550MB → 350MB)
+  - Created tiered requirements strategy (base/ai/image/cloud/dev)
+  - Documentation: DOCKER_CLEANUP_PLAN.md
+
+### Pending / Blockers
+- 🔴 **API Startup Hang**: App initializes but doesn't bind to port 8000
+  - Root cause: Unknown (not in app import, not in lifespan, not in logging)
+  - Impact: Cannot test Feature 2 backend or verify health check
+  - Investigation status: Blocks further testing
+
+- ⏳ **Feature 2 Backend**: Staging endpoints not yet implemented
+  - Depends on: API startup fix
+  - Tasks: POST /staged endpoints for Station, Brand, Jingle, Draft, Universe
+
+### Next Steps
+1. **CRITICAL**: Investigate and fix API startup hang
+2. **HIGH**: Implement Feature 2 backend staging endpoints
+3. **MEDIUM**: Execute Docker cleanup plan (5-6 days effort)
+4. **LOW**: Polish and optimization tasks
 
 ---
 
@@ -1217,5 +1285,80 @@ The `Universe` model exists in the database but has **no foreign key relationshi
 - Radio content is universe-specific (a synthwave universe has different stations than a cyberpunk universe)
 - Without universe scoping, all stations/brands mix together with no context separation
 - Universe gate at app load ensures users always have context before creating content
+
+---
+
+## Architectural Decision: FormManager Context for AI-Guided Form Filling (2026-05-09)
+
+### Decision (Phase 2)
+**Forms receive AI-generated data via React Context, not via direct API staging.**
+
+Previously (Phase 1): ChatAssistant parsed AI suggestions → directly staged entities in database
+Now (Phase 2): ChatAssistant parses AI suggestions → FormManager context → form components read initial data → user reviews → form submits to API
+
+### Flow
+
+```
+User: "Create 3 DJs for this station"
+  ↓
+ChatAssistant sends message to Gemini
+  ↓
+Gemini returns ENTITY_SUGGESTION blocks (3 DJs)
+  ↓
+ChatAssistant parses suggestions, renders cards
+  ↓
+User clicks "Open Form" on DJ suggestion
+  ↓
+ChatAssistant calls formManager.openForm({
+  entityType: "dj",
+  initialData: { name: "Vance", personality: "...", ... },
+  aiGenerated: true
+})
+  ↓
+AIFormNavigator navigates to /artists
+  ↓
+ArtistForm component calls useFormInitialData("artist")
+  ↓
+Form pre-fills fields: value={initialData?.name ?? ""}
+  ↓
+User reviews, edits, clicks Save
+  ↓
+ArtistForm submits to API: POST /api/v1/artists
+  ↓
+API creates artist in database
+  ↓
+formManager.confirmForm() closes form and refreshes UI
+```
+
+### Rationale
+
+1. **User Review Gate**: No entities enter database without explicit user approval. AI data is a suggestion, not a command.
+2. **Form Reusability**: Forms don't know they're AI-fed. Same form works for manual entry and AI suggestions.
+3. **Extensibility**: Adding new entity type = add FormManager mapping + wire up useFormInitialData in form. No API changes.
+4. **Decoupling**: Chat doesn't know about database. Forms don't know about chat. They communicate via context.
+
+### Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| `FormManagerContext` | Singleton context storing current form request (entityType, initialData, callbacks) |
+| `useFormManager()` | Hook to call `openForm()`, `closeForm()`, `confirmForm()` |
+| `useFormInitialData(entityType)` | Hook for forms to read initial data + AI-generated flag |
+| `AIFormNavigator` | Silent component that navigates to form page when form is opened |
+| `FormPreviewDialog` | Confirmation dialog for major entities (Station, Brand, Universe) before form opens |
+
+### Integration with Phases
+
+**Phase 1** → Parse AI suggestions into EntitySuggestion objects  
+**Phase 2** (This) → Route suggestions through FormManager to forms ← **YOU ARE HERE**  
+**Phase 3** → Forms create staged entities (status="draft") in database  
+**Phase 4** → Update system prompt to output ENTITY_SUGGESTION blocks  
+
+### Future Considerations
+
+- **Phase 3**: Forms will transition from `createArtist()` to `stageArtist()` + approval workflow
+- **Serialization**: Consider sessionStorage persistence for form state (nice-to-have)
+- **Error tracking**: Add `errorMessage` to FormManager for error logging/analytics
+- **Multi-form support**: Current design supports one form open at a time. Future: support draft carousel?
 
 ---

@@ -25,6 +25,7 @@ from app.logging_config import setup_logging
 from app.middleware import CSRFMiddleware, RequestLoggingMiddleware
 from app.database import init_db
 from app.api.v1.routes import router as v1_router
+from app.api.v1.routes_web_context import router as web_context_router
 
 # Initialise logging before anything else
 setup_logging()
@@ -130,6 +131,7 @@ async def validation_exception_handler(
 
 # ── Routes ────────────────────────────────────────────────────────────
 app.include_router(v1_router)
+app.include_router(web_context_router)
 
 # ── Static Files (for generated art) ───────────────────────────────────
 # Serve generated images (station art, DJ portraits, brand logos) from /output

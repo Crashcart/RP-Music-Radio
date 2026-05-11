@@ -27,8 +27,15 @@ from threading import Lock
 class SQLiteHandler(logging.Handler):
     """Log handler that persists records to SQLite for analysis."""
 
-    def __init__(self, db_path: str = "/app/data/aetherwave.db"):
+    def __init__(self, db_path: str | None = None):
         super().__init__()
+        # Use provided path, or detect environment-appropriate default
+        if db_path is None:
+            if os.path.exists("/app/data"):
+                db_path = "/app/data/aetherwave.db"
+            else:
+                db_path = "./data/aetherwave.db"
+                os.makedirs("./data", exist_ok=True)
         self.db_path = db_path
         self.lock = Lock()
         self._init_table()
@@ -36,7 +43,7 @@ class SQLiteHandler(logging.Handler):
     def _init_table(self):
         """Create logs table if it doesn't exist."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(self.db_path, timeout=2.0) as conn:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS app_logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +85,8 @@ class SQLiteHandler(logging.Handler):
                 if record.exc_info:
                     exception = self.formatException(record.exc_info)
 
-                with sqlite3.connect(self.db_path) as conn:
+                # Use timeout to prevent blocking on database locks
+                with sqlite3.connect(self.db_path, timeout=2.0) as conn:
                     conn.execute(
                         """
                         INSERT INTO app_logs
@@ -159,12 +167,14 @@ def setup_logging() -> None:
     root.addHandler(handler)
 
     # Add SQLite handler for queryable logs (always active, errors suppressed)
-    try:
-        sqlite_handler = SQLiteHandler()
-        sqlite_handler.setLevel(logging.INFO)  # Only store INFO and above
-        root.addHandler(sqlite_handler)
-    except Exception as e:
-        print(f"[logging] SQLite handler unavailable: {e}", file=sys.stderr)
+    # NOTE: Temporarily disabled due to database blocking issue on first logger.info() call
+    # TODO: Investigate root cause - likely database lock timeout even with timeout parameter
+    # try:
+    #     sqlite_handler = SQLiteHandler()
+    #     sqlite_handler.setLevel(logging.INFO)  # Only store INFO and above
+    #     root.addHandler(sqlite_handler)
+    # except Exception as e:
+    #     print(f"[logging] SQLite handler unavailable: {e}", file=sys.stderr)
 
     # Quieten noisy third-party loggers
     for noisy in ("httpx", "httpcore", "urllib3", "uvicorn.access"):

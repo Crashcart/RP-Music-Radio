@@ -1,0 +1,9 @@
+# ─ BASE + AI ─────────────────────────────────────────────────────────
+# Adds Gemini API for script generation and content creation
+# Include if you need AI features (ChatAssistant, script generation, etc.)
+
+-r requirements-base.txt
+
+google-genai>=1.0.0
+
+# Install with: pip install -r requirements-ai.txt

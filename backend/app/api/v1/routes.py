@@ -43,6 +43,8 @@ from app.api.v1.schemas import (
     ArtistOut,
     ArtistUpdate,
     BrandCreate,
+    BrandDraftCreate,
+    BrandDraftResponse,
     BrandOut,
     BrandUpdate,
     BulkArtistIds,
@@ -58,6 +60,8 @@ from app.api.v1.schemas import (
     JingleCreate,
     JingleOut,
     StationCreate,
+    StationDraftCreate,
+    StationDraftResponse,
     StationOut,
     StationUpdate,
     TaskStatus,
@@ -155,6 +159,57 @@ def create_station(payload: StationCreate, db: Session = Depends(get_db)):
     db.refresh(station)
     logger.info("Created station: %s", station.name)
     return StationOut.model_validate(station)
+
+
+@router.post("/stations/staged", response_model=StationDraftResponse)
+def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated station for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged stations per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    Draft expires automatically in 7 days if not approved.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged stations per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft station ──────────────────────────────────────
+    station_data = payload.model_dump()
+    station = Station(
+        **station_data,
+        status="draft",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(station)
+    db.commit()
+    db.refresh(station)
+    logger.info(
+        "Staged AI station: id=%s name=%r created_by=%s",
+        station.id,
+        station.name,
+        station.created_by,
+        extra={"station_id": station.id},
+    )
+    return StationDraftResponse.model_validate(station)
 
 
 @router.get("/stations", response_model=list[StationOut])
@@ -715,6 +770,57 @@ def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
     db.refresh(brand)
     logger.info("Created brand: %s", brand.name)
     return BrandOut.model_validate(brand)
+
+
+@router.post("/brands/staged", response_model=BrandDraftResponse)
+def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated brand for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged brands per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    Draft expires automatically in 7 days if not approved.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged brands per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft brand ───────────────────────────────────────
+    brand_data = payload.model_dump()
+    brand = Brand(
+        **brand_data,
+        status="draft",
+        expires_at=now + timedelta(days=7),
+    )
+    db.add(brand)
+    db.commit()
+    db.refresh(brand)
+    logger.info(
+        "Staged AI brand: id=%s name=%r created_by=%s",
+        brand.id,
+        brand.name,
+        brand.created_by,
+        extra={"brand_id": brand.id},
+    )
+    return BrandDraftResponse.model_validate(brand)
 
 
 @router.get("/brands", response_model=list[BrandOut])
