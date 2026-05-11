@@ -1362,3 +1362,32 @@ formManager.confirmForm() closes form and refreshes UI
 - **Multi-form support**: Current design supports one form open at a time. Future: support draft carousel?
 
 ---
+
+## Session 3: Form Dialog Debug & Branch Governance (2026-05-11)
+
+### Bug Fix: Artist Form Never Opening (PR #57)
+
+**Root Cause**: System prompt had a duplicate `type:` field in the artist ENTITY_SUGGESTION example:
+```
+ENTITY_SUGGESTION
+type: artist     ← correct
+...
+type: dj         ← parser overwrote entityType to "dj"
+```
+`"dj"` is not in `requiresFormPreview`'s allow-list and has no route in `getFormPageRoute`, so clicking "Open Form" on any AI-generated artist did nothing.
+
+**Fix**:
+1. Renamed subtype field in prompt from `type` → `artist_type`
+2. Added `normalizeEntityType()` call in `handleOpenFormForEntity` before the preview check as a safety net
+
+**Files**: `frontend/src/components/ChatAssistant.tsx`
+
+### Governance Decision: Never Auto-Merge to Main
+
+**Rule**: Claude must create PRs to `main` but **never merge them**. User reviews and merges to main manually.
+
+**Allowed**: Claude may merge between `dev`, `alpha`, `beta`, and feature branches freely.
+
+**Rationale**: `main` is production. Merges require human review.
+
+---
