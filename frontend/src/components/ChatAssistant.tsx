@@ -169,7 +169,7 @@ BRAND: name, industry (required)
   description: Cutting-edge electronics brand with retro-futuristic design
 
 ARTIST/DJ: name (required)
-  Optional: display_name, type (dj|host|musician|narrator|caller|guest), personality, speaking_style, voice_description, catchphrases, genre, signature_sound, backstory
+  Optional: display_name, artist_type (dj|host|musician|narrator|caller|guest), personality, speaking_style, voice_description, catchphrases, genre, signature_sound, backstory
   Tips: Personality should be 2-4 vivid sentences. Voice description helps TTS. Catchphrases separated by pipes (|).
   Example:
   ENTITY_SUGGESTION
@@ -177,7 +177,7 @@ ARTIST/DJ: name (required)
   confidence: high
   name: Marcus Chen
   display_name: DJ Chen
-  type: dj
+  artist_type: dj
   personality: Smooth operator with dry wit. Always has a story about the underground scene. Surprisingly philosophical about music.
   voice_description: Deep, warm voice with slight accent. Deliberate pacing. Laughs often.
   catchphrases: Keep it real|Spin it right|That's the vibe
@@ -651,15 +651,18 @@ export function ChatAssistant({
   const handleOpenFormForEntity = async (
     suggestion: EntitySuggestion,
   ): Promise<void> => {
+    // Normalize so "dj", "host", "musician" etc. all map to "artist"
+    const entityType = normalizeEntityType(suggestion.entityType);
+
     // Convert to new format for FormManager
     const newFormatSuggestion: EntitySuggestionNew = {
-      type: suggestion.entityType as any,
+      type: entityType as any,
       data: suggestion.fields,
       confidence: suggestion.confidence,
     };
 
     // Check if this entity type requires preview dialog
-    const needsPreview = requiresFormPreview(suggestion.entityType as any);
+    const needsPreview = requiresFormPreview(entityType);
 
     if (needsPreview) {
       // Show preview dialog for major entities
@@ -670,7 +673,7 @@ export function ChatAssistant({
       setPreviewLoading(true);
       try {
         formManager.openForm({
-          entityType: suggestion.entityType as any,
+          entityType,
           initialData: suggestion.fields,
           aiGenerated: true,
           sourceUniverse: currentStationId,
