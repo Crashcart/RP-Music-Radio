@@ -108,12 +108,12 @@ export default function App() {
         const first = universes[0];
         setActiveUniverse(first);
 
-        // Auto-attach: link the first universe to any stations that have none
-        // (handles pre-existing DBs that predate the universe_id column)
+        // TEMP: auto-attach first universe to unlinked stations for pre-existing DBs.
+        // Remove this block (and the endpoint) once all DBs are universe-gated from creation.
         try {
           await api.autoAttachUniverse();
         } catch {
-          // Non-fatal: may fail if all stations already have a universe
+          // Non-fatal: silently skip if all stations are already linked
         }
 
         setUniverseCheckDone(true);

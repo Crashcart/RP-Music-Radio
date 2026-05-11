@@ -1477,7 +1477,9 @@ def delete_universe(universe_id: str, db: Session = Depends(get_db)):
 @router.post("/startup/auto-attach")
 def startup_auto_attach(db: Session = Depends(get_db)):
     """
-    Auto-attach the first available universe to any stations that have none.
+    TEMP: Auto-attach the first universe to unlinked stations for pre-existing DBs.
+    Remove this endpoint once the Universe gate is fully live and all DBs are
+    created with a universe from the start.
 
     Called by the frontend on app load when universes exist but stations are
     unlinked (i.e. a pre-existing DB that predates the universe_id column).
