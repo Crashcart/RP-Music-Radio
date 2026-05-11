@@ -410,9 +410,7 @@ function BrandForm({
   onCancel: () => void;
   onSave: () => void;
 }) {
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("brand");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+  const { initialData, isAiGenerated } = useFormInitialData("brand");
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -436,13 +434,6 @@ function BrandForm({
     lore_notes: existing?.lore_notes || initialData?.lore_notes || "",
   });
   const [saving, setSaving] = useState(false);
-
-  // Track which fields were AI-generated when initialData changes
-  useEffect(() => {
-    if (hasInitialData && !existing) {
-      setAiFilledFields(new Set(Object.keys(initialData || {})));
-    }
-  }, [hasInitialData, initialData, existing]);
 
   const set =
     (field: string) =>

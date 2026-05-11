@@ -13,6 +13,7 @@ import { DraftingTable } from "./pages/DraftingTable";
 import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
+import { SplashScreen } from "./components/SplashScreen";
 import { api, type Draft, type Station } from "./api/client";
 
 type Page =
@@ -68,6 +69,7 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
 
 export default function App() {
   const isMobile = useIsMobile();
+  const [showSplash, setShowSplash] = useState(true);
   const [page, setPage] = useState<Page>("stations");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
@@ -146,6 +148,7 @@ export default function App() {
     <FormManagerProvider>
       <FormNavigator onPageChange={setPage} />
       <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
+        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
         {/* Desktop Sidebar */}
         {!isMobile && (
           <aside className="sidebar">
