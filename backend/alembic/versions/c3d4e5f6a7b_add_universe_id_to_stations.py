@@ -38,6 +38,15 @@ def upgrade() -> None:
             )
         except Exception:
             pass  # column already exists on fresh databases seeded from ORM
+        try:
+            batch_op.create_foreign_key(
+                "fk_stations_universe_id",
+                "universes",
+                ["universe_id"],
+                ["id"],
+            )
+        except Exception:
+            pass  # constraint already exists
 
 
 def downgrade() -> None:
