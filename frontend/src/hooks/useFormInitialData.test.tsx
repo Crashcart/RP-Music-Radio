@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { ReactNode } from "react";
-import { FormManagerProvider } from "../contexts/FormManagerContext";
+import {
+  FormManagerProvider,
+  useFormManager,
+} from "../contexts/FormManagerContext";
 import { useFormInitialData, useFormField } from "./useFormInitialData";
 
 /**
@@ -23,17 +26,31 @@ describe("useFormInitialData hook", () => {
   });
 
   it("should return initial data when entity type matches current form request", async () => {
-    const { result: formManagerResult } = renderHook(
-      () => {
-        const fm = require("../contexts/FormManagerContext").useFormManager();
-        return fm;
-      },
-      { wrapper },
-    );
+    // Create a test component that uses both hooks in same context
+    function TestComponent() {
+      const manager = useFormManager();
+      const formData = useFormInitialData("dj");
+      return { manager, formData };
+    }
 
-    // This test would need to mock FormManager state changes
-    // For now, testing the hook structure
-    expect(true).toBe(true);
+    const { result } = renderHook(() => TestComponent(), { wrapper });
+
+    // Open form with dj data
+    act(() => {
+      result.current.manager.openForm({
+        entityType: "dj",
+        initialData: { name: "Test DJ", personality: "Cool" },
+        aiGenerated: true,
+      });
+    });
+
+    // Verify hook returns the data
+    expect(result.current.formData.initialData).toEqual({
+      name: "Test DJ",
+      personality: "Cool",
+    });
+    expect(result.current.formData.isAiGenerated).toBe(true);
+    expect(result.current.formData.hasInitialData).toBe(true);
   });
 
   it("should return empty data when entity type does not match", () => {

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import { ReactNode } from "react";
 import {
   FormManagerProvider,
@@ -36,9 +36,16 @@ function TestComponent() {
 describe("FormManagerContext", () => {
   describe("useFormManager hook", () => {
     it("should throw error if used outside FormManagerProvider", () => {
-      // Wrap in error boundary to catch the error
-      const { container } = render(<TestComponent />);
-      expect(container).toBeDefined(); // Would fail if no provider
+      // Suppress console error for this test
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
+      expect(() => render(<TestComponent />)).toThrow(
+        "useFormManager must be used within FormManagerProvider",
+      );
+
+      consoleError.mockRestore();
     });
 
     it("should return context values when inside provider", () => {
@@ -52,7 +59,7 @@ describe("FormManagerContext", () => {
       expect(getByTestId("entity-type").textContent).toBe("none");
     });
 
-    it("should handle openForm action", () => {
+    it("should handle openForm action", async () => {
       const { getByTestId, getByText } = render(
         <FormManagerProvider>
           <TestComponent />
@@ -65,12 +72,14 @@ describe("FormManagerContext", () => {
       // Click to open form
       getByText("Open DJ Form").click();
 
-      // Check updated state
-      expect(getByTestId("is-open").textContent).toBe("open");
+      // Wait for state update
+      await waitFor(() => {
+        expect(getByTestId("is-open").textContent).toBe("open");
+      });
       expect(getByTestId("entity-type").textContent).toBe("dj");
     });
 
-    it("should handle closeForm action", () => {
+    it("should handle closeForm action", async () => {
       const { getByTestId, getByText } = render(
         <FormManagerProvider>
           <TestComponent />
@@ -79,11 +88,15 @@ describe("FormManagerContext", () => {
 
       // Open form
       getByText("Open DJ Form").click();
-      expect(getByTestId("is-open").textContent).toBe("open");
+      await waitFor(() => {
+        expect(getByTestId("is-open").textContent).toBe("open");
+      });
 
       // Close form
       getByText("Close Form").click();
-      expect(getByTestId("is-open").textContent).toBe("closed");
+      await waitFor(() => {
+        expect(getByTestId("is-open").textContent).toBe("closed");
+      });
       expect(getByTestId("entity-type").textContent).toBe("none");
     });
   });
@@ -163,7 +176,7 @@ describe("FormManagerContext", () => {
       );
     }
 
-    it("should close form when confirmForm called", () => {
+    it("should close form when confirmForm called", async () => {
       const { getByTestId, getByText } = render(
         <FormManagerProvider>
           <TestComponentWithConfirm />
@@ -171,10 +184,14 @@ describe("FormManagerContext", () => {
       );
 
       getByText("Open Form").click();
-      expect(getByTestId("is-open").textContent).toBe("open");
+      await waitFor(() => {
+        expect(getByTestId("is-open").textContent).toBe("open");
+      });
 
       getByText("Confirm Form").click();
-      expect(getByTestId("is-open").textContent).toBe("closed");
+      await waitFor(() => {
+        expect(getByTestId("is-open").textContent).toBe("closed");
+      });
     });
   });
 
