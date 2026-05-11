@@ -9,9 +9,10 @@ RUN echo 'APT::Install-Recommends "false";\nAPT::Install-Suggests "false";' > /e
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies (tiered: API needs base + Gemini AI; no dev tooling)
+# Glob copy preserves the -r dependency chain referenced inside requirements-ai.txt
+COPY backend/requirements*.txt .
+RUN pip install --no-cache-dir -r requirements-ai.txt
 
 # Copy application code
 COPY backend/ .

@@ -1,8 +1,9 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.3** | **Last Updated**: 2026-05-09  
+**Version 3.4** | **Last Updated**: 2026-05-10  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.3**: Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to enable aggressive context compaction at 70% in long-running sessions across multiple AI agents.
+**Changes in v3.4**: Added Rule 15 (Claude-Only Credential Storage) to keep sensitive credentials local-only, inaccessible to other AI agents.
+**Previous (v3.3)**: Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to enable aggressive context compaction at 50% in long-running sessions across multiple AI agents.
 **Previous (v3.2)**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
 **Previous (v3.1)**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches; updated Phase 0 and Phase 2 with checkpoints.
 **Previous (v3.0)**: Consolidated Rules 12-P1 and Rule 12; fixed entity constraint in database schema; added explicit escalation procedures.
@@ -25,9 +26,9 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ---
 
-## The Governance Rules (14 Rules + 1 Sub-rule)
+## The Governance Rules (15 Rules + 1 Sub-rule)
 
-**Summary**: 14 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions.
+**Summary**: 15 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions. Rule 15 keeps sensitive credentials local-only, accessible only to Claude.
 
 ### Rule 1: Never Push to Main
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
@@ -259,6 +260,45 @@ If an issue persists across check cycles:
 **APPLIES TO**: All Claude Code agents/bots working on RP-Music-Radio project
 
 **RATIONALE**: At 50% threshold, context compacts aggressively before reaching danger zone. Prevents bloat in long sessions with multiple agent handoffs; ensures maximum clean context available for new agents.
+
+---
+
+### Rule 15: Claude-Only Credential Storage (Local Files Only)
+
+**REQUIREMENT**: Store all sensitive credentials (GitHub tokens, API keys, etc.) **locally in user files only** — NEVER embed in git URLs, config files, or any tracked repository files.
+
+**STORAGE METHOD**:
+- **GitHub tokens**: `~/.git-credentials` (local user file, not tracked by git)
+- **API keys**: Environment variables or `.env.local` (git-ignored)
+- **SSH keys**: `~/.ssh/` (local user directory)
+
+**ENFORCEMENT**:
+- ✅ DO: Store token in `~/.git-credentials`, use git credential helper
+- ✅ DO: Store token in environment variable for runtime use
+- ❌ DON'T: Embed token in git remote URL (e.g., `https://token@github.com/...`)
+- ❌ DON'T: Commit token to `.git/config` or any config file
+- ❌ DON'T: Store token in git history (run `git log` to verify)
+
+**REMOTE URL FORMAT**:
+- ✅ CORRECT: `https://github.com/Crashcart/RP-Music-Radio.git` (clean, no credentials)
+- ❌ WRONG: `https://ghp_token@github.com/Crashcart/RP-Music-Radio.git` (embedded token)
+
+**GIT CREDENTIAL HELPER**:
+```bash
+# Store token locally
+cat > ~/.git-credentials <<'EOF'
+https://x-access-token:YOUR_TOKEN@github.com
+https://YOUR_TOKEN@github.com
+EOF
+chmod 600 ~/.git-credentials
+
+# Git automatically uses it for all operations
+git push origin branch  # No token visible in URL
+```
+
+**RATIONALE**: Other AI agents (ChatGPT, Copilot, etc.) will NOT have access to local `~/.git-credentials` files. Keeping credentials local-only ensures they remain Claude-exclusive and cannot be accessed or compromised by other systems.
+
+**APPLIES TO**: Claude agents only (Rule 15 does not apply to other AIs)
 
 ---
 

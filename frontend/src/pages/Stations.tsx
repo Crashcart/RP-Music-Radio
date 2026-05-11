@@ -1084,9 +1084,7 @@ function StationForm({
   onCancel: () => void;
   onSave: () => void;
 }) {
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("station");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+  const { initialData, isAiGenerated } = useFormInitialData("station");
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1106,13 +1104,6 @@ function StationForm({
     lore_notes: existing?.lore_notes || initialData?.lore_notes || "",
   });
   const [saving, setSaving] = useState(false);
-
-  // Track which fields were AI-generated when initialData changes
-  useEffect(() => {
-    if (hasInitialData && !existing) {
-      setAiFilledFields(new Set(Object.keys(initialData || {})));
-    }
-  }, [hasInitialData, initialData, existing]);
 
   const set =
     (field: string) =>
@@ -1303,12 +1294,7 @@ export function ArtistForm({
   onSave: () => void;
 }) {
   const [stations, setStations] = useState<Station[]>([]);
-  const { initialData, isAiGenerated, hasInitialData } =
-    useFormInitialData("dj");
-  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
-
-  // Determine if we should show AI banner
-  const showAiBanner = isAiGenerated || aiGenerated;
+  const { initialData } = useFormInitialData("dj");
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1337,13 +1323,6 @@ export function ArtistForm({
   });
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // Track which fields were AI-generated when initialData changes
-  useEffect(() => {
-    if (hasInitialData && !existing) {
-      setAiFilledFields(new Set(Object.keys(initialData || {})));
-    }
-  }, [hasInitialData, initialData, existing]);
 
   useEffect(() => {
     api

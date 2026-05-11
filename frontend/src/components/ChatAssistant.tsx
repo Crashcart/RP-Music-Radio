@@ -10,7 +10,8 @@ import { FormPreviewDialog } from "./FormPreviewDialog";
 import {
   useFormManager,
   requiresFormPreview,
-} from "../contexts/FormManagerContext";
+  normalizeEntityType,
+} from "../context/FormManagerContext";
 import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
@@ -690,7 +691,7 @@ export function ChatAssistant({
     setPreviewLoading(true);
     try {
       formManager.openForm({
-        entityType: selectedSuggestionForPreview.type,
+        entityType: normalizeEntityType(selectedSuggestionForPreview.type),
         initialData: selectedSuggestionForPreview.data,
         aiGenerated: true,
         sourceUniverse: currentStationId,

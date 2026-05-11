@@ -23,13 +23,15 @@ export interface FormOpenEvent {
 
 interface FormManagerContextType {
   pendingForm: FormOpenEvent | null;
+  request: FormOpenEvent | null;
+  isOpen: boolean;
   openForm: (event: FormOpenEvent) => void;
   closeForm: () => void;
 }
 
-const FormManagerContext = createContext<FormManagerContextType | undefined>(
-  undefined,
-);
+export const FormManagerContext = createContext<
+  FormManagerContextType | undefined
+>(undefined);
 
 export function FormManagerProvider({
   children,
@@ -47,10 +49,30 @@ export function FormManagerProvider({
   };
 
   return (
-    <FormManagerContext.Provider value={{ pendingForm, openForm, closeForm }}>
+    <FormManagerContext.Provider
+      value={{
+        pendingForm,
+        request: pendingForm,
+        isOpen: pendingForm !== null,
+        openForm,
+        closeForm,
+      }}
+    >
       {children}
     </FormManagerContext.Provider>
   );
+}
+
+export function getFormPageRoute(entityType: FormEntityType): string {
+  const routes: Record<FormEntityType, string> = {
+    station: "/stations",
+    brand: "/brands",
+    artist: "/artists",
+    jingle: "/jingles",
+    draft: "/drafts",
+    universe: "/universes",
+  };
+  return routes[entityType];
 }
 
 /**
@@ -87,4 +109,26 @@ export function useFormInitialData<T extends Record<string, any>>(
   }
 
   return null;
+}
+
+/**
+ * Determines if an entity type requires a preview dialog before form opening.
+ * Major entities (station, brand, artist, universe) show preview.
+ * Quick-create entities (jingle, draft) auto-open without preview.
+ */
+export function requiresFormPreview(entityType: FormEntityType): boolean {
+  const previewRequired = ["station", "brand", "artist", "universe"];
+  return previewRequired.includes(entityType);
+}
+
+/**
+ * Normalizes entity type strings to FormEntityType.
+ * Maps artist subtypes (dj, host, musician, narrator, etc.) to "artist".
+ */
+export function normalizeEntityType(type: string): FormEntityType {
+  const artistTypes = ["dj", "host", "musician", "narrator", "caller", "guest"];
+  if (artistTypes.includes(type.toLowerCase())) {
+    return "artist";
+  }
+  return type as FormEntityType;
 }
