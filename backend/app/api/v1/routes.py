@@ -22,6 +22,7 @@ from typing import Optional
 import redis as redis_lib  # type: ignore
 from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel  # type: ignore
+from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.database import get_db
@@ -1497,19 +1498,26 @@ def startup_auto_attach(db: Session = Depends(get_db)):
     if not first_universe:
         raise HTTPException(404, "No universes exist — create one first")
 
+    universe_id = first_universe.id
+    universe_name = first_universe.name
+
     unlinked = db.query(Station).filter(Station.universe_id.is_(None)).all()
     for station in unlinked:
-        station.universe_id = first_universe.id
-    db.commit()
+        station.universe_id = universe_id
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Universe was deleted during operation — please retry")
 
     logger.info(
         "Auto-attached universe '%s' to %d station(s)",
-        first_universe.name,
+        universe_name,
         len(unlinked),
     )
     return {
-        "universe_id": first_universe.id,
-        "universe_name": first_universe.name,
+        "universe_id": universe_id,
+        "universe_name": universe_name,
         "stations_updated": len(unlinked),
     }
 
