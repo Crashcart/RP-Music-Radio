@@ -651,15 +651,18 @@ export function ChatAssistant({
   const handleOpenFormForEntity = async (
     suggestion: EntitySuggestion,
   ): Promise<void> => {
+    // Normalize so "dj", "host", "musician" etc. all map to "artist"
+    const entityType = normalizeEntityType(suggestion.entityType);
+
     // Convert to new format for FormManager
     const newFormatSuggestion: EntitySuggestionNew = {
-      type: suggestion.entityType as any,
+      type: entityType as any,
       data: suggestion.fields,
       confidence: suggestion.confidence,
     };
 
     // Check if this entity type requires preview dialog
-    const needsPreview = requiresFormPreview(suggestion.entityType as any);
+    const needsPreview = requiresFormPreview(entityType);
 
     if (needsPreview) {
       // Show preview dialog for major entities
@@ -670,7 +673,7 @@ export function ChatAssistant({
       setPreviewLoading(true);
       try {
         formManager.openForm({
-          entityType: suggestion.entityType as any,
+          entityType,
           initialData: suggestion.fields,
           aiGenerated: true,
           sourceUniverse: currentStationId,
