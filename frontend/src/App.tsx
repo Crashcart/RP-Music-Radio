@@ -113,7 +113,7 @@ export default function App() {
         try {
           await api.autoAttachUniverse();
         } catch {
-          // Non-fatal: silently skip if all stations are already linked
+          // Non-fatal: skip if no unlinked stations or universe deleted mid-flight
         }
 
         setUniverseCheckDone(true);
@@ -161,6 +161,25 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Called when any universe is deleted — re-sync activeUniverse from server
+  const handleUniverseDeleted = useCallback(
+    (deletedId: string) => {
+      if (activeUniverse?.id !== deletedId) return;
+      api
+        .listUniverses()
+        .then((universes) => {
+          if (universes.length === 0) {
+            setActiveUniverse(null);
+            setPage("universes");
+          } else {
+            setActiveUniverse(universes[0]);
+          }
+        })
+        .catch(() => setActiveUniverse(null));
+    },
+    [activeUniverse],
+  );
+
   const renderPage = () => {
     switch (page) {
       case "stations":
@@ -177,6 +196,7 @@ export default function App() {
             onUniverseCreated={
               !activeUniverse ? handleUniverseCreated : undefined
             }
+            onUniverseDeleted={handleUniverseDeleted}
           />
         );
       case "drafts":

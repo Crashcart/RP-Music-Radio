@@ -5,9 +5,14 @@ import { useFormInitialData } from "../hooks/useFormInitialData";
 interface UniversesProps {
   /** Called when a universe is created while in "gate" mode (no active universe). */
   onUniverseCreated?: () => void;
+  /** Called when a universe is deleted; passes the deleted universe's id. */
+  onUniverseDeleted?: (id: string) => void;
 }
 
-export function Universes({ onUniverseCreated }: UniversesProps = {}) {
+export function Universes({
+  onUniverseCreated,
+  onUniverseDeleted,
+}: UniversesProps = {}) {
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [selectedUniverse, setSelectedUniverse] = useState<Universe | null>(
     null,
@@ -81,6 +86,7 @@ export function Universes({ onUniverseCreated }: UniversesProps = {}) {
     try {
       await api.deleteUniverse(id);
       if (selectedUniverse?.id === id) setSelectedUniverse(null);
+      onUniverseDeleted?.(id);
       refresh();
     } catch (e: unknown) {
       alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
