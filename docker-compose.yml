@@ -84,7 +84,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker.optimized
-    command: celery -A app.celery beat --loglevel=info
+    command: celery -A app.tasks beat --loglevel=info
     volumes:
       - ./data:/app/data
     environment:

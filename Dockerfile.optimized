@@ -21,9 +21,9 @@ LABEL description="Headless Media Factory — Procedural Radio Content Generator
 
 WORKDIR /app
 
-# Install only production base dependencies (much smaller)
-COPY backend/requirements-base.txt .
-RUN pip install --no-cache-dir -r requirements-base.txt
+# Install production dependencies: base + AI (Gemini for script generation)
+COPY backend/requirements-ai.txt .
+RUN pip install --no-cache-dir -r requirements-ai.txt
 
 # Copy application
 COPY backend/ .
@@ -34,7 +34,7 @@ RUN mkdir -p /app/data
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/health', timeout=5)"
 
 # Run API
 EXPOSE 8000
