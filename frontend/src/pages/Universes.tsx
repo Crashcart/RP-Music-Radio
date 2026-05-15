@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Universe } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
+import { useFormManager } from "../contexts/FormManagerContext";
 
 interface UniversesProps {
   /** Called when a universe is created while in "gate" mode (no active universe). */
@@ -23,6 +24,7 @@ export function Universes({
   const [researching, setResearching] = useState<string | null>(null);
   const [editing, setEditing] = useState<Universe | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const formManager = useFormManager();
 
   const refresh = () => {
     api
@@ -35,6 +37,15 @@ export function Universes({
     refresh();
   }, []);
 
+  useEffect(() => {
+    if (formManager.isOpen && formManager.request?.entityType === "universe") {
+      setShowCreate(true);
+      if (formManager.request.initialData?.name) {
+        setNewUniverseName(formManager.request.initialData.name as string);
+      }
+    }
+  }, [formManager.isOpen, formManager.request]);
+
   const handleCreateUniverse = async () => {
     if (!newUniverseName.trim()) return alert("Universe name required");
     setCreating(true);
@@ -42,6 +53,7 @@ export function Universes({
       const universe = await api.createUniverse({ name: newUniverseName });
       setNewUniverseName("");
       setShowCreate(false);
+      formManager.confirmForm();
       refresh();
       // Auto-select the new universe for research
       setSelectedUniverse(universe);
@@ -168,6 +180,7 @@ export function Universes({
               onClick={() => {
                 setShowCreate(false);
                 setNewUniverseName("");
+                formManager.closeForm();
               }}
             >
               Cancel

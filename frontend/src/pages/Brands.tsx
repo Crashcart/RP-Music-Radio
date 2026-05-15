@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type Brand } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
+import { useFormManager } from "../contexts/FormManagerContext";
 
 export function Brands() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -8,6 +9,7 @@ export function Brands() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [genLogo, setGenLogo] = useState<string | null>(null);
+  const formManager = useFormManager();
 
   const refresh = () => {
     api
@@ -19,6 +21,13 @@ export function Brands() {
   useEffect(() => {
     refresh();
   }, []);
+
+  // Auto-open create form when ChatAssistant opens a brand form
+  useEffect(() => {
+    if (formManager.isOpen && formManager.request?.entityType === "brand") {
+      setShowCreate(true);
+    }
+  }, [formManager.isOpen, formManager.request]);
 
   const handleGenLogo = async (id: string) => {
     setGenLogo(id);
@@ -65,9 +74,13 @@ export function Brands() {
           <h2>🏢 New Brand</h2>
         </div>
         <BrandForm
-          onCancel={() => setShowCreate(false)}
+          onCancel={() => {
+            setShowCreate(false);
+            formManager.closeForm();
+          }}
           onSave={() => {
             setShowCreate(false);
+            formManager.confirmForm();
             refresh();
           }}
         />

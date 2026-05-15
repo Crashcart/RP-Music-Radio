@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, type Station, type Artist, type Jingle } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
+import { useFormManager } from "../contexts/FormManagerContext";
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
@@ -25,6 +26,7 @@ export function Stations({
   const [showCreate, setShowCreate] = useState(false);
   const [stationDJs, setStationDJs] = useState<Artist[]>([]);
   const [stationJingles, setStationJingles] = useState<Jingle[]>([]);
+  const formManager = useFormManager();
 
   const refresh = () => {
     api
@@ -36,6 +38,12 @@ export function Stations({
   useEffect(() => {
     refresh();
   }, []);
+
+  useEffect(() => {
+    if (formManager.isOpen && formManager.request?.entityType === "station") {
+      setShowCreate(true);
+    }
+  }, [formManager.isOpen, formManager.request]);
 
   useEffect(() => {
     if (selectedStation) {
@@ -84,9 +92,13 @@ export function Stations({
   if (showCreate) {
     return (
       <StationForm
-        onCancel={() => setShowCreate(false)}
+        onCancel={() => {
+          setShowCreate(false);
+          formManager.closeForm();
+        }}
         onSave={() => {
           setShowCreate(false);
+          formManager.confirmForm();
           refresh();
         }}
       />
