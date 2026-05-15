@@ -1294,7 +1294,7 @@ export function ArtistForm({
   onSave: () => void;
 }) {
   const [stations, setStations] = useState<Station[]>([]);
-  const { initialData } = useFormInitialData("dj");
+  const { initialData, isAiGenerated } = useFormInitialData("artist");
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1374,7 +1374,9 @@ export function ArtistForm({
     }
   };
 
-  const aiFilled = aiGenerated ? "form-ai-filled" : "";
+  // Use either the prop or the hook value (hook takes priority)
+  const shouldMarkAiFilled = isAiGenerated || aiGenerated;
+  const aiFilled = shouldMarkAiFilled ? "form-ai-filled" : "";
 
   return (
     <div className="card form-card">
@@ -1385,7 +1387,7 @@ export function ArtistForm({
       </div>
 
       {/* AI-generated warning banner */}
-      {aiGenerated && (
+      {shouldMarkAiFilled && (
         <div className="ai-review-banner" role="alert">
           ⚠️ AI-generated DJ. Please review and edit before approving.
         </div>

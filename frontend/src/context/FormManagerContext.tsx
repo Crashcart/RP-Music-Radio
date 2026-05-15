@@ -92,23 +92,24 @@ export function useFormManager(): FormManagerContextType {
  * Automatically applies AI-generated initial data to form fields.
  *
  * Usage:
- *   const initialData = useFormInitialData();
- *   const [formData, setFormData] = useState<Station>(initialData || {});
+ *   const { initialData, isAiGenerated } = useFormInitialData("artist");
+ *   const [formData, setFormData] = useState<Artist>(initialData || {});
  */
 export function useFormInitialData<T extends Record<string, any>>(
   expectedEntityType: FormEntityType,
-): T | null {
+): { initialData: T | null; isAiGenerated: boolean } {
   const { pendingForm, closeForm } = useFormManager();
 
   // Only return data if it matches the expected entity type
   if (pendingForm && pendingForm.entityType === expectedEntityType) {
     // Close the pending form so it doesn't interfere with other form opens
     const data = pendingForm.initialData;
+    const aiGenerated = pendingForm.aiGenerated ?? false;
     closeForm();
-    return data as T;
+    return { initialData: data as T, isAiGenerated: aiGenerated };
   }
 
-  return null;
+  return { initialData: null, isAiGenerated: false };
 }
 
 /**
