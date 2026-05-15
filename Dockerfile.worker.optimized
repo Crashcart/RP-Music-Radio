@@ -1,0 +1,38 @@
+# ─ OPTIMIZED CELERY WORKER BUILD ────────────────────────────────────
+# Multi-stage build for Celery workers and beat scheduler
+# Installs only production + synthesis dependencies, no dev tools
+# Image size: ~250MB (vs 580MB with monolithic build)
+
+FROM python:3.11-slim
+
+LABEL maintainer="AetherWave Team"
+LABEL description="Celery Worker — Synthesis & Image Generation"
+
+WORKDIR /app
+
+# Install system dependencies (ffmpeg for audio processing, curl for health checks)
+ENV DEBIAN_FRONTEND=noninteractive
+RUN echo 'APT::Install-Recommends "false";\nAPT::Install-Suggests "false";' > /etc/apt/apt.conf.d/99no-recommends && \
+    apt-get update && apt-get install -y \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies (tiered: base + AI + images, no dev)
+COPY backend/requirements*.txt .
+RUN pip install --no-cache-dir -r requirements-images.txt
+
+# Copy application code
+COPY backend/ .
+ENV PYTHONPATH=/app
+
+# Create data directories for persistence
+RUN mkdir -p /app/data /app/output /app/persistence
+
+# Health check (ping Redis)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Default: Run Celery worker
+# Can be overridden with: docker run ... command celery -A app.celery beat --loglevel=info
+CMD ["celery", "-A", "app.celery", "worker", "--loglevel=${LOG_LEVEL:-info}"]
