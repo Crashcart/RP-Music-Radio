@@ -461,6 +461,8 @@ function BrandForm({
     }
   };
 
+  const aiFilled = isAiGenerated ? "form-ai-filled" : "";
+
   return (
     <div className="card form-card">
       <div className="card-header">
@@ -484,12 +486,20 @@ function BrandForm({
             value={form.name}
             onChange={set("name")}
             placeholder="Nexus Dynamics"
+            dataField="name"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
           <FormField
             label="Slogan"
             value={form.slogan}
             onChange={set("slogan")}
             placeholder="Taste the Nebula"
+            dataField="slogan"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
         </div>
         <div className="form-row">
@@ -513,6 +523,10 @@ function BrandForm({
               "real-estate",
               "other",
             ]}
+            dataField="industry"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
           <FormSelect
             label="Reputation"
@@ -529,6 +543,10 @@ function BrandForm({
               "beloved",
               "feared",
             ]}
+            dataField="reputation"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
         </div>
         <FormTextarea
@@ -536,6 +554,10 @@ function BrandForm({
           value={form.description}
           onChange={set("description")}
           placeholder="What does this brand do? What do they sell? What's their deal?"
+          dataField="description"
+          dataSection="identity"
+          dataType="brand"
+          className={aiFilled}
         />
       </div>
 
@@ -558,12 +580,20 @@ function BrandForm({
               "deadpan",
               "luxurious",
             ]}
+            dataField="tone"
+            dataSection="market"
+            dataType="brand"
+            className={aiFilled}
           />
           <FormField
             label="Target Audience"
             value={form.target_audience}
             onChange={set("target_audience")}
             placeholder="space truckers, corporate drones"
+            dataField="target_audience"
+            dataSection="market"
+            dataType="brand"
+            className={aiFilled}
           />
         </div>
         <FormSelect
@@ -581,6 +611,10 @@ function BrandForm({
             "celebrity-endorsement",
             "fear-based",
           ]}
+          dataField="ad_style"
+          dataSection="market"
+          dataType="brand"
+          className={aiFilled}
         />
       </div>
 
@@ -591,12 +625,20 @@ function BrandForm({
           value={form.products}
           onChange={set("products")}
           placeholder="Fusion Core|Med-Kit|Plasma Ammo|NanoShield"
+          dataField="products"
+          dataSection="identity"
+          dataType="brand"
+          className={aiFilled}
         />
         <FormTextarea
           label="Product Details"
           value={form.product_descriptions}
           onChange={set("product_descriptions")}
           placeholder="Detailed descriptions of each product — used by AI to write ad copy..."
+          dataField="product_descriptions"
+          dataSection="identity"
+          dataType="brand"
+          className={aiFilled}
         />
       </div>
 
@@ -608,12 +650,20 @@ function BrandForm({
             value={form.color_primary}
             onChange={set("color_primary")}
             placeholder="#ff006e"
+            dataField="color_primary"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
           <FormField
             label="Secondary Color"
             value={form.color_secondary}
             onChange={set("color_secondary")}
             placeholder="#7b2ff7"
+            dataField="color_secondary"
+            dataSection="identity"
+            dataType="brand"
+            className={aiFilled}
           />
         </div>
         {(form.color_primary || form.color_secondary) && (
@@ -658,12 +708,20 @@ function BrandForm({
             value={form.founded_year}
             onChange={set("founded_year")}
             placeholder="2145"
+            dataField="founded_year"
+            dataSection="lore"
+            dataType="brand"
+            className={aiFilled}
           />
           <FormField
             label="Headquarters"
             value={form.headquarters}
             onChange={set("headquarters")}
             placeholder="Mars Colony Alpha"
+            dataField="headquarters"
+            dataSection="lore"
+            dataType="brand"
+            className={aiFilled}
           />
         </div>
         <FormTextarea
@@ -671,12 +729,20 @@ function BrandForm({
           value={form.controversies}
           onChange={set("controversies")}
           placeholder="In-universe scandals, lawsuits, cover-ups..."
+          dataField="controversies"
+          dataSection="lore"
+          dataType="brand"
+          className={aiFilled}
         />
         <FormTextarea
           label="Lore Notes"
           value={form.lore_notes}
           onChange={set("lore_notes")}
           placeholder="Additional worldbuilding details..."
+          dataField="lore_notes"
+          dataSection="lore"
+          dataType="brand"
+          className={aiFilled}
         />
       </div>
 
@@ -721,13 +787,22 @@ function FormField({
   value,
   onChange,
   placeholder,
+  dataField,
+  dataSection,
+  dataType,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  dataField?: string;
+  dataSection?: string;
+  dataType?: string;
+  className?: string;
 }) {
   const id = fieldId(label);
+  const ariaLabel = dataField ?? id;
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>
@@ -736,11 +811,15 @@ function FormField({
       <input
         id={id}
         name={id}
-        className="form-input"
+        className={`form-input${className ? ` ${className}` : ""}`}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         autoComplete="on"
+        aria-label={ariaLabel}
+        data-field={dataField}
+        data-section={dataSection}
+        data-type={dataType}
       />
     </div>
   );
@@ -751,13 +830,22 @@ function FormTextarea({
   value,
   onChange,
   placeholder,
+  dataField,
+  dataSection,
+  dataType,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
+  dataField?: string;
+  dataSection?: string;
+  dataType?: string;
+  className?: string;
 }) {
   const id = fieldId(label);
+  const ariaLabel = dataField ?? id;
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>
@@ -766,12 +854,16 @@ function FormTextarea({
       <textarea
         id={id}
         name={id}
-        className="form-input form-textarea"
+        className={`form-input form-textarea${className ? ` ${className}` : ""}`}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
         rows={3}
         autoComplete="on"
+        aria-label={ariaLabel}
+        data-field={dataField}
+        data-section={dataSection}
+        data-type={dataType}
       />
     </div>
   );
@@ -782,13 +874,22 @@ function FormSelect({
   value,
   onChange,
   options,
+  dataField,
+  dataSection,
+  dataType,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   options: string[];
+  dataField?: string;
+  dataSection?: string;
+  dataType?: string;
+  className?: string;
 }) {
   const id = fieldId(label);
+  const ariaLabel = dataField ?? id;
   return (
     <div className="form-group">
       <label className="form-label" htmlFor={id}>
@@ -797,10 +898,14 @@ function FormSelect({
       <select
         id={id}
         name={id}
-        className="form-input"
+        className={`form-input${className ? ` ${className}` : ""}`}
         value={value}
         onChange={onChange}
         autoComplete="on"
+        aria-label={ariaLabel}
+        data-field={dataField}
+        data-section={dataSection}
+        data-type={dataType}
       >
         {options.map((o) => (
           <option key={o} value={o}>

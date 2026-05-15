@@ -1131,6 +1131,8 @@ function StationForm({
     }
   };
 
+  const aiFilled = isAiGenerated ? "form-ai-filled" : "";
+
   return (
     <div className="card form-card">
       <div className="card-header">
@@ -1154,12 +1156,20 @@ function StationForm({
             value={form.name}
             onChange={set("name")}
             placeholder="Nebula FM 99.8"
+            dataField="name"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Frequency"
             value={form.frequency}
             onChange={set("frequency")}
             placeholder="99.8 FM"
+            dataField="frequency"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <FormField
@@ -1167,12 +1177,20 @@ function StationForm({
           value={form.tagline}
           onChange={set("tagline")}
           placeholder="The sound of tomorrow"
+          dataField="tagline"
+          dataSection="identity"
+          dataType="station"
+          className={aiFilled}
         />
         <FormTextarea
           label="Description"
           value={form.description}
           onChange={set("description")}
           placeholder="Full station description and lore..."
+          dataField="description"
+          dataSection="identity"
+          dataType="station"
+          className={aiFilled}
         />
       </div>
 
@@ -1184,12 +1202,20 @@ function StationForm({
             value={form.genre}
             onChange={set("genre")}
             placeholder="synthwave"
+            dataField="genre"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Sub-genres"
             value={form.sub_genres}
             onChange={set("sub_genres")}
             placeholder="darksynth|retrowave|cyberpunk"
+            dataField="sub_genres"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <div className="form-row">
@@ -1198,12 +1224,20 @@ function StationForm({
             value={form.mood}
             onChange={set("mood")}
             placeholder="energetic"
+            dataField="mood"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Era"
             value={form.era}
             onChange={set("era")}
             placeholder="retro-future"
+            dataField="era"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <div className="form-row">
@@ -1221,12 +1255,20 @@ function StationForm({
               "military",
               "rebel",
             ]}
+            dataField="broadcast_style"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Color Palette"
             value={form.color_palette}
             onChange={set("color_palette")}
             placeholder="#00f5d4|#7b2ff7|#ff006e"
+            dataField="color_palette"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
       </div>
@@ -1239,12 +1281,20 @@ function StationForm({
             value={form.location}
             onChange={set("location")}
             placeholder="Orbital Platform Sigma-7"
+            dataField="location"
+            dataSection="lore"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Founded"
             value={form.founded_year}
             onChange={set("founded_year")}
             placeholder="2187"
+            dataField="founded_year"
+            dataSection="lore"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <FormField
@@ -1252,12 +1302,20 @@ function StationForm({
           value={form.owner}
           onChange={set("owner")}
           placeholder="Nexus Media Corp"
+          dataField="owner"
+          dataSection="lore"
+          dataType="station"
+          className={aiFilled}
         />
         <FormTextarea
           label="Lore Notes"
           value={form.lore_notes}
           onChange={set("lore_notes")}
           placeholder="Additional worldbuilding details..."
+          dataField="lore_notes"
+          dataSection="lore"
+          dataType="station"
+          className={aiFilled}
         />
       </div>
 
