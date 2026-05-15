@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import type { EntityType } from "../utils/entitySuggestionParser";
 
-export type FormEntityType = EntityType | "jingle" | "draft";
+export type FormEntityType = EntityType | "artist" | "jingle" | "draft";
 
 export interface FormOpenRequest {
   entityType: FormEntityType;
@@ -23,9 +23,9 @@ interface FormManagerContextType {
   confirmForm: () => void;
 }
 
-const FormManagerContext = createContext<FormManagerContextType | undefined>(
-  undefined,
-);
+export const FormManagerContext = createContext<
+  FormManagerContextType | undefined
+>(undefined);
 
 /**
  * FormManager Provider — manages form state across all pages.
@@ -97,6 +97,7 @@ export function useFormManager() {
 export function getFormPageRoute(entityType: FormEntityType): string {
   const routes: Record<FormEntityType, string> = {
     dj: "/artists",
+    artist: "/artists",
     station: "/stations",
     brand: "/brands",
     jingle: "/jingles",
@@ -114,4 +115,24 @@ export function getFormPageRoute(entityType: FormEntityType): string {
 export function requiresFormPreview(entityType: FormEntityType): boolean {
   const majorEntities: FormEntityType[] = ["station", "brand", "universe"];
   return majorEntities.includes(entityType);
+}
+
+/**
+ * Normalizes entity type strings to FormEntityType.
+ * Maps artist subtypes (dj, host, musician, narrator, etc.) to "artist".
+ */
+export function normalizeEntityType(type: string): FormEntityType {
+  const artistTypes = [
+    "dj",
+    "host",
+    "musician",
+    "narrator",
+    "caller",
+    "guest",
+    "artist",
+  ];
+  if (artistTypes.includes(type.toLowerCase())) {
+    return "artist" as FormEntityType;
+  }
+  return type as FormEntityType;
 }

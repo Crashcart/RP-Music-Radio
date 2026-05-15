@@ -11,7 +11,7 @@ import {
   useFormManager,
   requiresFormPreview,
   normalizeEntityType,
-} from "../context/FormManagerContext";
+} from "../contexts/FormManagerContext";
 import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
