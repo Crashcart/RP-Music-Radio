@@ -106,6 +106,10 @@ describe("FormManagerContext", () => {
       expect(getFormPageRoute("dj")).toBe("/artists");
     });
 
+    it("should map artist to /artists", () => {
+      expect(getFormPageRoute("artist")).toBe("/artists");
+    });
+
     it("should map station to /stations", () => {
       expect(getFormPageRoute("station")).toBe("/stations");
     });
@@ -146,6 +150,10 @@ describe("FormManagerContext", () => {
 
     it("should NOT require preview for dj", () => {
       expect(requiresFormPreview("dj")).toBe(false);
+    });
+
+    it("should NOT require preview for artist", () => {
+      expect(requiresFormPreview("artist")).toBe(false);
     });
 
     it("should NOT require preview for jingle", () => {
