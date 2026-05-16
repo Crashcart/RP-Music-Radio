@@ -22,7 +22,9 @@ LABEL description="Headless Media Factory — Procedural Radio Content Generator
 WORKDIR /app
 
 # Install production dependencies: base + AI (Gemini for script generation)
-COPY backend/requirements-ai.txt .
+# Copy all requirements files so the `-r requirements-base.txt` include in
+# requirements-ai.txt resolves at build time.
+COPY backend/requirements*.txt ./
 RUN pip install --no-cache-dir -r requirements-ai.txt
 
 # Copy application
