@@ -56,7 +56,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+    // FastAPI returns `detail` as either a string or a structured object
+    // ({ error, code }) for rate-limit / conflict responses.
+    const detail = body.detail;
+    let message: string;
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (detail && typeof detail === "object") {
+      message = detail.error || detail.code || `HTTP ${res.status}`;
+    } else {
+      message = body.error || `HTTP ${res.status}`;
+    }
+    throw new Error(message);
   }
   return res.json();
 }

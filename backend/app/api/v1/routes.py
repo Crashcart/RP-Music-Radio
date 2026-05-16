@@ -201,7 +201,17 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(station)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A station named {station_data['name']!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
     db.refresh(station)
     logger.info(
         "Staged AI station: id=%s name=%r created_by=%s",
@@ -1407,7 +1417,17 @@ def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)):
     """Create a new universe (game world) for research."""
     universe = Universe(name=payload.name, status="draft")
     db.add(universe)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A universe named {payload.name!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
     db.refresh(universe)
     logger.info("Created universe: %s", universe.name)
     return UniverseOut.model_validate(universe)
