@@ -124,6 +124,8 @@ export default function App() {
       });
   }, [apiOk]);
 
+  const handleSplashDone = useCallback(() => setShowSplash(false), []);
+
   const refreshDrafts = useCallback(() => {
     api
       .listDrafts()
@@ -222,7 +224,7 @@ export default function App() {
     <FormManagerProvider>
       <FormNavigator onPageChange={setPage} />
       <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
-        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+        {showSplash && <SplashScreen onDone={handleSplashDone} />}
 
         {/* Desktop Sidebar */}
         {!isMobile && (

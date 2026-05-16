@@ -15,19 +15,28 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   const [logoVisible, setLogoVisible] = useState(false);
   const [exiting, setExiting] = useState(false);
 
+  // Hold the latest onDone in a ref so the timer effect can run exactly once
+  // on mount. The parent (App) passes a fresh inline callback on every render
+  // and re-renders several times during startup (health/universe/drafts); a
+  // [onDone] dependency would reset these timers each time and the splash
+  // would never dismiss, leaving a fixed z-index:9999 overlay that blocks
+  // every click in the app.
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
   useEffect(() => {
     const t0 = setTimeout(() => setLogoVisible(true), 200);
     const t1 = setTimeout(() => {
       exitingRef.current = true;
       setExiting(true);
     }, 1800);
-    const t2 = setTimeout(onDone, 2600);
+    const t2 = setTimeout(() => onDoneRef.current(), 2600);
     return () => {
       clearTimeout(t0);
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [onDone]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
