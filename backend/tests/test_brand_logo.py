@@ -50,7 +50,7 @@ class TestBrandLogoEndpoint:
         """Should return success response with logo_path when API key configured."""
         # Mock the art generator to avoid actual API calls
         mock_generator = mocker.patch(
-            "app.api.v1.routes.ArtGenerator.generate_brand_logo"
+            "app.utils.art_generator.ArtGenerator.generate_brand_logo"
         )
         mock_path = Path("/app/output/art/logo_brand_test.jpg")
         mock_generator.return_value = mock_path
@@ -74,7 +74,7 @@ class TestBrandLogoEndpoint:
     def test_brand_data_passed_to_generator(self, client, test_brand, mocker):
         """Should pass brand data to the art generator."""
         mock_generator = mocker.patch(
-            "app.api.v1.routes.ArtGenerator.generate_brand_logo"
+            "app.utils.art_generator.ArtGenerator.generate_brand_logo"
         )
         mock_generator.return_value = Path("/app/output/art/logo.jpg")
 
