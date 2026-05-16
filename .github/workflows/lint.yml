@@ -26,3 +26,9 @@ jobs:
         run: black --check . || echo "Black found issues (non-blocking for MVP)"
       - name: Lint with flake8
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Flake8 found issues"
+      - name: Install frontend dependencies
+        run: |
+          if [ -d frontend ]; then cd frontend && npm ci; fi
+      - name: Lint frontend with ESLint
+        run: |
+          if [ -d frontend ]; then cd frontend && npm run lint; else echo "No frontend implementation yet."; fi
