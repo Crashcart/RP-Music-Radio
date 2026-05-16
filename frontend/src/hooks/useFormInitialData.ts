@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   useFormManager,
   type FormEntityType,
@@ -6,6 +5,8 @@ import {
 
 /**
  * Hook for form components to access AI-generated initial data.
+ * Returns values synchronously from the FormManager request so that
+ * the form's useState initializer captures real data on the first render.
  *
  * Usage in a form component:
  * ```tsx
@@ -16,27 +17,19 @@ import {
  */
 export function useFormInitialData(expectedEntityType: FormEntityType) {
   const { request } = useFormManager();
-  const [initialData, setInitialData] = useState<Record<string, string> | null>(
-    null,
-  );
-  const [isAiGenerated, setIsAiGenerated] = useState(false);
 
-  useEffect(() => {
-    // Check if there's a form request for this entity type
-    if (request && request.entityType === expectedEntityType) {
-      setInitialData(request.initialData);
-      setIsAiGenerated(request.aiGenerated ?? false);
-    } else {
-      // Clear data if request is for a different entity type
-      setInitialData(null);
-      setIsAiGenerated(false);
-    }
-  }, [request, expectedEntityType]);
+  if (request && request.entityType === expectedEntityType) {
+    return {
+      initialData: request.initialData,
+      isAiGenerated: request.aiGenerated ?? false,
+      hasInitialData: true,
+    };
+  }
 
   return {
-    initialData,
-    isAiGenerated,
-    hasInitialData: initialData !== null,
+    initialData: null,
+    isAiGenerated: false,
+    hasInitialData: false,
   };
 }
 
@@ -45,7 +38,7 @@ export function useFormInitialData(expectedEntityType: FormEntityType) {
  *
  * Usage:
  * ```tsx
- * const name = useFormField("name");
+ * const name = useFormField("artist", "name");
  * // Returns the value or empty string
  * ```
  */

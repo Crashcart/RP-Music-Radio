@@ -8,7 +8,7 @@ services:
     container_name: aetherwave_api
     build:
       context: .
-      dockerfile: Dockerfile.api
+      dockerfile: Dockerfile.optimized
     volumes:
       - ./radio_vault:/app/output        # Host mount: generated MP3s
       - ./persona_db:/app/persistence    # Host mount: Voice DNA storage
@@ -56,7 +56,7 @@ services:
     container_name: aetherwave_worker
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: Dockerfile.worker.optimized
     volumes:
       - ./radio_vault:/app/output
       - ./persona_db:/app/persistence
@@ -83,8 +83,8 @@ services:
     container_name: aetherwave_beat
     build:
       context: .
-      dockerfile: Dockerfile.worker
-    command: celery -A app.celery beat --loglevel=info
+      dockerfile: Dockerfile.worker.optimized
+    command: celery -A app.tasks beat --loglevel=info
     volumes:
       - ./data:/app/data
     environment:

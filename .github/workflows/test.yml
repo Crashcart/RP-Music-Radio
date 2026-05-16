@@ -36,8 +36,8 @@ jobs:
           node-version: '18'
       - name: Install dependencies
         run: |
-          if [ -d frontend ]; then cd frontend && npm install; fi
+          if [ -d frontend ]; then cd frontend && npm ci; fi
       - name: Run tests
         run: |
-          if [ -d frontend ]; then cd frontend && npm test; else echo "No frontend implementation yet."; fi
+          if [ -d frontend ]; then cd frontend && npm test -- --run; else echo "No frontend implementation yet."; fi
         continue-on-error: true

@@ -11,7 +11,7 @@ import {
   useFormManager,
   requiresFormPreview,
   normalizeEntityType,
-} from "../context/FormManagerContext";
+} from "../contexts/FormManagerContext";
 import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
 
 interface ChatMessage {
@@ -656,7 +656,7 @@ export function ChatAssistant({
 
     // Convert to new format for FormManager
     const newFormatSuggestion: EntitySuggestionNew = {
-      type: entityType as any,
+      type: entityType as unknown as EntitySuggestionNew["type"],
       data: suggestion.fields,
       confidence: suggestion.confidence,
     };

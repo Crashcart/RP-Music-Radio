@@ -1679,7 +1679,6 @@ div.form-ai-filled .form-input {
   border-left-color: var(--error);
   background: hsla(0, 80%, 50%, 0.05);
 }
-}
 
 /* ── Splash / Galaxy Opening Screen ──────────────────────────────── */
 .splash-screen {

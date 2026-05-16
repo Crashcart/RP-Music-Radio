@@ -1,10 +1,10 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import { useIsMobile } from "./hooks/useIsMobile";
 import {
   FormManagerProvider,
   FormManagerContext,
   getFormPageRoute,
-} from "./context/FormManagerContext";
+} from "./contexts/FormManagerContext";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
@@ -14,7 +14,7 @@ import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { SplashScreen } from "./components/SplashScreen";
-import { api, type Draft, type Station } from "./api/client";
+import { api, type Draft, type Station, type Universe } from "./api/client";
 
 type Page =
   | "stations"
@@ -73,12 +73,13 @@ export default function App() {
   const [page, setPage] = useState<Page>("stations");
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
-  /**
-   * Currently selected station — set by Stations page via context callback.
-   * ChatAssistant uses this to inject station-aware prompts.
-   */
   const [activeStation, setActiveStation] = useState<Station | null>(null);
+  /** Active universe — set on startup, cleared if all universes are deleted. */
+  const [activeUniverse, setActiveUniverse] = useState<Universe | null>(null);
+  /** True while the startup universe check is running (blocks nav to stations). */
+  const [universeCheckDone, setUniverseCheckDone] = useState(false);
 
+  // ── Health check ──────────────────────────────────────────────────
   useEffect(() => {
     api
       .health()
@@ -89,18 +90,54 @@ export default function App() {
       });
   }, []);
 
-  const refreshDrafts = () => {
+  // ── Universe gate — runs once after API comes online ──────────────
+  useEffect(() => {
+    if (apiOk !== true) return; // wait for health check
+
+    api
+      .listUniverses()
+      .then(async (universes) => {
+        if (universes.length === 0) {
+          // No universe exists → force user to Universes page to create one
+          setPage("universes");
+          setUniverseCheckDone(true);
+          return;
+        }
+
+        // Universe(s) exist — pick the first as the active one
+        const first = universes[0];
+        setActiveUniverse(first);
+
+        // TEMP: auto-attach first universe to unlinked stations for pre-existing DBs.
+        // Remove this block (and the endpoint) once all DBs are universe-gated from creation.
+        try {
+          await api.autoAttachUniverse();
+        } catch {
+          // Non-fatal: skip if no unlinked stations or universe deleted mid-flight
+        }
+
+        setUniverseCheckDone(true);
+      })
+      .catch((e) => {
+        console.error("Universe startup check failed:", e);
+        setUniverseCheckDone(true); // don't block the app on error
+      });
+  }, [apiOk]);
+
+  const handleSplashDone = useCallback(() => setShowSplash(false), []);
+
+  const refreshDrafts = useCallback(() => {
     api
       .listDrafts()
       .then((res) => setDrafts(res.drafts))
       .catch((e) => console.error("Failed to load drafts:", e));
-  };
+  }, []);
 
   useEffect(() => {
     refreshDrafts();
     const interval = setInterval(refreshDrafts, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshDrafts]);
 
   const stats = {
     total: drafts.length,
@@ -113,6 +150,38 @@ export default function App() {
     completed: drafts.filter((d) => d.status === "completed").length,
   };
 
+  // Called when user creates a universe from the gate page
+  const handleUniverseCreated = useCallback(() => {
+    api
+      .listUniverses()
+      .then((universes) => {
+        if (universes.length > 0) {
+          setActiveUniverse(universes[0]);
+          setPage("stations");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Called when any universe is deleted — re-sync activeUniverse from server
+  const handleUniverseDeleted = useCallback(
+    (deletedId: string) => {
+      if (activeUniverse?.id !== deletedId) return;
+      api
+        .listUniverses()
+        .then((universes) => {
+          if (universes.length === 0) {
+            setActiveUniverse(null);
+            setPage("universes");
+          } else {
+            setActiveUniverse(universes[0]);
+          }
+        })
+        .catch(() => setActiveUniverse(null));
+    },
+    [activeUniverse],
+  );
+
   const renderPage = () => {
     switch (page) {
       case "stations":
@@ -124,7 +193,14 @@ export default function App() {
       case "brands":
         return <Brands />;
       case "universes":
-        return <Universes />;
+        return (
+          <Universes
+            onUniverseCreated={
+              !activeUniverse ? handleUniverseCreated : undefined
+            }
+            onUniverseDeleted={handleUniverseDeleted}
+          />
+        );
       case "drafts":
         return <DraftingTable drafts={drafts} onRefresh={refreshDrafts} />;
       case "queue":
@@ -148,7 +224,8 @@ export default function App() {
     <FormManagerProvider>
       <FormNavigator onPageChange={setPage} />
       <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
-        {showSplash && <SplashScreen onDone={() => setShowSplash(false)} />}
+        {showSplash && <SplashScreen onDone={handleSplashDone} />}
+
         {/* Desktop Sidebar */}
         {!isMobile && (
           <aside className="sidebar">
@@ -181,6 +258,43 @@ export default function App() {
             </nav>
 
             <div style={{ marginTop: "auto" }}>
+              {/* Active universe indicator */}
+              {activeUniverse && (
+                <div
+                  className="stat-mini"
+                  style={{ marginBottom: "var(--space-sm)", cursor: "pointer" }}
+                  onClick={() => setPage("universes")}
+                  title={`Active universe: ${activeUniverse.name}`}
+                >
+                  <span style={{ fontSize: "0.9rem" }}>🌍</span>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-secondary)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {activeUniverse.name}
+                  </span>
+                </div>
+              )}
+              {!activeUniverse && universeCheckDone && (
+                <div
+                  className="stat-mini"
+                  style={{
+                    marginBottom: "var(--space-sm)",
+                    cursor: "pointer",
+                    color: "var(--status-warning, #f59e0b)",
+                  }}
+                  onClick={() => setPage("universes")}
+                  title="No universe set — click to create one"
+                >
+                  <span style={{ fontSize: "0.9rem" }}>⚠️</span>
+                  <span style={{ fontSize: "0.75rem" }}>No universe set</span>
+                </div>
+              )}
               <div className="nav-section-title">System</div>
               <div className="stat-mini">
                 <span
@@ -221,6 +335,17 @@ export default function App() {
             >
               AetherWave
             </h1>
+            {activeUniverse && (
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: "var(--text-secondary)",
+                  marginLeft: "var(--space-sm)",
+                }}
+              >
+                🌍 {activeUniverse.name}
+              </span>
+            )}
             <span
               className={`status-dot ${apiOk ? "online" : "offline"}`}
               style={{ marginLeft: "auto" }}
@@ -228,8 +353,36 @@ export default function App() {
           </header>
         )}
 
+        {/* Universe setup banner — shown when no universe exists and user is on stations page */}
+        {universeCheckDone && !activeUniverse && page === "universes" && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 100,
+              background: "linear-gradient(90deg, #7c3aed, #4f46e5)",
+              color: "#fff",
+              padding: "0.6rem 1.5rem",
+              textAlign: "center",
+              fontSize: "0.875rem",
+            }}
+          >
+            🌍 Create a universe first to get started — your stations will live
+            inside it.
+          </div>
+        )}
+
         {/* Main Content */}
-        <main className="main-content">
+        <main
+          className="main-content"
+          style={
+            universeCheckDone && !activeUniverse && page === "universes"
+              ? { paddingTop: "2.5rem" }
+              : undefined
+          }
+        >
           {/* Stats bar — only show on drafts/queue pages */}
           {(page === "drafts" || page === "queue") && (
             <div className="stats-grid">

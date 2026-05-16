@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { ReactNode } from "react";
+import { describe, it, expect, vi } from "vitest";
+import { render, waitFor } from "@testing-library/react";
 import {
   FormManagerProvider,
   useFormManager,
   getFormPageRoute,
   requiresFormPreview,
+  type FormEntityType,
 } from "./FormManagerContext";
 
 /**
@@ -106,6 +106,10 @@ describe("FormManagerContext", () => {
       expect(getFormPageRoute("dj")).toBe("/artists");
     });
 
+    it("should map artist to /artists", () => {
+      expect(getFormPageRoute("artist")).toBe("/artists");
+    });
+
     it("should map station to /stations", () => {
       expect(getFormPageRoute("station")).toBe("/stations");
     });
@@ -127,7 +131,7 @@ describe("FormManagerContext", () => {
     });
 
     it("should return / for unknown types", () => {
-      expect(getFormPageRoute("unknown" as any)).toBe("/");
+      expect(getFormPageRoute("unknown" as FormEntityType)).toBe("/");
     });
   });
 
@@ -148,6 +152,10 @@ describe("FormManagerContext", () => {
       expect(requiresFormPreview("dj")).toBe(false);
     });
 
+    it("should NOT require preview for artist", () => {
+      expect(requiresFormPreview("artist")).toBe(false);
+    });
+
     it("should NOT require preview for jingle", () => {
       expect(requiresFormPreview("jingle")).toBe(false);
     });
@@ -159,7 +167,7 @@ describe("FormManagerContext", () => {
 
   describe("confirmForm action", () => {
     function TestComponentWithConfirm() {
-      const { isOpen, request, openForm, confirmForm } = useFormManager();
+      const { isOpen, openForm, confirmForm } = useFormManager();
 
       return (
         <div>
@@ -196,33 +204,8 @@ describe("FormManagerContext", () => {
   });
 
   describe("FormOpenRequest callbacks", () => {
-    function TestComponentWithCallbacks() {
-      const { openForm } = useFormManager();
-      const onSuccess = vi.fn();
-      const onCancel = vi.fn();
-
-      return (
-        <div>
-          <button
-            onClick={() =>
-              openForm({
-                entityType: "dj",
-                initialData: { name: "Test" },
-                onSuccess,
-                onCancel,
-              })
-            }
-          >
-            Open with Callbacks
-          </button>
-        </div>
-      );
-    }
-
     it("should call onSuccess callback when confirmForm is called", () => {
-      // Note: This test would need additional setup to verify callbacks are called
-      // Currently, callbacks are stored in request but not executed by FormManager
-      // They're executed by form components after submission
+      // Callbacks are stored in request but executed by form components after submission
       expect(true).toBe(true); // Placeholder
     });
   });

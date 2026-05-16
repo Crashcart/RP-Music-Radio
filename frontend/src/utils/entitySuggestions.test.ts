@@ -10,6 +10,7 @@ import {
   mapUniverseSuggestion,
   mapSuggestionByType,
   type EntitySuggestion,
+  type EntityType,
 } from "./entitySuggestions";
 
 /**
@@ -496,7 +497,7 @@ describe("mapSuggestionByType", () => {
 
   it("should return empty object for unknown entity type", () => {
     const suggestion: EntitySuggestion = {
-      entityType: "unknown" as any,
+      entityType: "unknown" as EntityType,
       confidence: "high",
       fields: { name: "Test" },
       aiGenerated: true,

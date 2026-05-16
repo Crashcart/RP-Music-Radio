@@ -56,7 +56,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || body.error || `HTTP ${res.status}`);
+    // FastAPI returns `detail` as either a string or a structured object
+    // ({ error, code }) for rate-limit / conflict responses.
+    const detail = body.detail;
+    let message: string;
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (detail && typeof detail === "object") {
+      message = detail.error || detail.code || `HTTP ${res.status}`;
+    } else {
+      message = body.error || `HTTP ${res.status}`;
+    }
+    throw new Error(message);
   }
   return res.json();
 }
@@ -83,6 +94,7 @@ export interface Station {
   founded_year: string;
   owner: string;
   lore_notes: string;
+  universe_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -547,6 +559,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+
+  /**
+   * Auto-attach the first universe to any stations that have none.
+   * Called on app load when universes exist but stations are unlinked.
+   */
+  autoAttachUniverse: () =>
+    request<{
+      universe_id: string;
+      universe_name: string;
+      stations_updated: number;
+    }>("/api/v1/startup/auto-attach", { method: "POST" }),
 
   // ── Brands ────────────────────────────────────────────────────
   createBrand: (data: Partial<Brand>) =>

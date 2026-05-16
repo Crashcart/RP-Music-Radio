@@ -22,6 +22,7 @@ from typing import Optional
 import redis as redis_lib  # type: ignore
 from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel  # type: ignore
+from sqlalchemy.exc import IntegrityError  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.database import get_db
@@ -200,7 +201,17 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(station)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A station named {station_data['name']!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
     db.refresh(station)
     logger.info(
         "Staged AI station: id=%s name=%r created_by=%s",
@@ -1406,7 +1417,17 @@ def create_universe(payload: UniverseCreate, db: Session = Depends(get_db)):
     """Create a new universe (game world) for research."""
     universe = Universe(name=payload.name, status="draft")
     db.add(universe)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A universe named {payload.name!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
     db.refresh(universe)
     logger.info("Created universe: %s", universe.name)
     return UniverseOut.model_validate(universe)
@@ -1467,6 +1488,50 @@ def delete_universe(universe_id: str, db: Session = Depends(get_db)):
     db.commit()
     logger.info("Deleted universe: %s", universe.name)
     return {"deleted": universe_id}
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Startup / App-level helpers
+# ═══════════════════════════════════════════════════════════════════
+
+
+@router.post("/startup/auto-attach")
+def startup_auto_attach(db: Session = Depends(get_db)):
+    """
+    TEMP: Auto-attach the first universe to unlinked stations for pre-existing DBs.
+    Remove this endpoint once the Universe gate is fully live and all DBs are
+    created with a universe from the start.
+
+    Called by the frontend on app load when universes exist but stations are
+    unlinked (i.e. a pre-existing DB that predates the universe_id column).
+    Returns the attached universe and how many stations were updated.
+    """
+    first_universe = db.query(Universe).order_by(Universe.created_at.asc()).first()
+    if not first_universe:
+        raise HTTPException(404, "No universes exist — create one first")
+
+    universe_id = first_universe.id
+    universe_name = first_universe.name
+
+    unlinked = db.query(Station).filter(Station.universe_id.is_(None)).all()
+    for station in unlinked:
+        station.universe_id = universe_id
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Universe was deleted during operation — please retry")
+
+    logger.info(
+        "Auto-attached universe '%s' to %d station(s)",
+        universe_name,
+        len(unlinked),
+    )
+    return {
+        "universe_id": universe_id,
+        "universe_name": universe_name,
+        "stations_updated": len(unlinked),
+    }
 
 
 @router.post(

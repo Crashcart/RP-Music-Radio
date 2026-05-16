@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { api, type Artist } from '../api/client';
-import { ArtistForm } from './Stations';
+import { useState, useEffect } from "react";
+import { api, type Artist } from "../api/client";
+import { ArtistForm } from "./Stations";
+import { useFormManager } from "../contexts/FormManagerContext";
 
 export function Artists() {
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -8,12 +9,30 @@ export function Artists() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [genPortrait, setGenPortrait] = useState<string | null>(null);
+  const formManager = useFormManager();
 
   const refresh = () => {
-    api.listArtists().then(setArtists).catch((e: Error) => console.error('Failed to load artists:', e));
+    api
+      .listArtists()
+      .then(setArtists)
+      .catch((e: Error) => console.error("Failed to load artists:", e));
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  // Auto-open create form when ChatAssistant opens an artist form
+  useEffect(() => {
+    if (
+      formManager.isOpen &&
+      formManager.request &&
+      (formManager.request.entityType === "artist" ||
+        formManager.request.entityType === "dj")
+    ) {
+      setShowCreate(true);
+    }
+  }, [formManager.isOpen, formManager.request]);
 
   const handleGenPortrait = async (id: string) => {
     setGenPortrait(id);
@@ -21,23 +40,32 @@ export function Artists() {
       await api.generatePortrait(id);
       refresh();
       if (selected?.id === id) {
-        api.getArtist(id).then(setSelected).catch((e: Error) => console.error('Failed to reload artist after portrait:', e));
+        api
+          .getArtist(id)
+          .then(setSelected)
+          .catch((e: Error) =>
+            console.error("Failed to reload artist after portrait:", e),
+          );
       }
     } catch (e: unknown) {
-      alert(`Portrait generation failed: ${e instanceof Error ? e.message : 'Check your API key'}`);
+      alert(
+        `Portrait generation failed: ${e instanceof Error ? e.message : "Check your API key"}`,
+      );
     } finally {
       setGenPortrait(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this artist?')) return;
+    if (!confirm("Delete this artist?")) return;
     try {
       await api.deleteArtist(id);
       if (selected?.id === id) setSelected(null);
       refresh();
     } catch (e: unknown) {
-      alert(`Failed to delete artist: ${e instanceof Error ? e.message : String(e)}`);
+      alert(
+        `Failed to delete artist: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   };
 
@@ -48,8 +76,15 @@ export function Artists() {
           <h2>🎤 New Artist</h2>
         </div>
         <ArtistForm
-          onCancel={() => setShowCreate(false)}
-          onSave={() => { setShowCreate(false); refresh(); }}
+          onCancel={() => {
+            setShowCreate(false);
+            formManager.closeForm();
+          }}
+          onSave={() => {
+            setShowCreate(false);
+            formManager.confirmForm();
+            refresh();
+          }}
         />
       </div>
     );
@@ -67,7 +102,12 @@ export function Artists() {
           onSave={() => {
             setShowEdit(false);
             refresh();
-            api.getArtist(selected.id).then(setSelected).catch((e: Error) => console.error('Failed to reload artist:', e));
+            api
+              .getArtist(selected.id)
+              .then(setSelected)
+              .catch((e: Error) =>
+                console.error("Failed to reload artist:", e),
+              );
           }}
         />
       </div>
@@ -78,35 +118,73 @@ export function Artists() {
     return (
       <div>
         <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
-            <button className="btn btn-ghost" onClick={() => setSelected(null)}>← Back</button>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-md)",
+            }}
+          >
+            <button className="btn btn-ghost" onClick={() => setSelected(null)}>
+              ← Back
+            </button>
             <div>
               <h2>🎤 {selected.display_name || selected.name}</h2>
-              <p>{selected.artist_type} {selected.genre && `• ${selected.genre}`}</p>
+              <p>
+                {selected.artist_type} {selected.genre && `• ${selected.genre}`}
+              </p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <button className="btn btn-ghost" onClick={() => setShowEdit(true)}>Edit</button>
-            <button className="btn btn-secondary" onClick={() => handleGenPortrait(selected.id)}
-              disabled={genPortrait === selected.id}>
-              {genPortrait === selected.id ? 'Generating...' : '🎨 Generate Portrait'}
+          <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+            <button className="btn btn-ghost" onClick={() => setShowEdit(true)}>
+              Edit
             </button>
-            <button className="btn btn-ghost" style={{ color: 'var(--status-failed)' }}
-              onClick={() => handleDelete(selected.id)}>Delete</button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => handleGenPortrait(selected.id)}
+              disabled={genPortrait === selected.id}
+            >
+              {genPortrait === selected.id
+                ? "Generating..."
+                : "🎨 Generate Portrait"}
+            </button>
+            <button
+              className="btn btn-ghost"
+              style={{ color: "var(--status-failed)" }}
+              onClick={() => handleDelete(selected.id)}
+            >
+              Delete
+            </button>
           </div>
         </div>
 
         <div className="detail-grid">
           {/* Portrait */}
-          <div className="card" style={{ textAlign: 'center' }}>
+          <div className="card" style={{ textAlign: "center" }}>
             {selected.portrait_path ? (
-              <img src={selected.portrait_path} alt={selected.name}
-                style={{ width: '100%', maxWidth: 300, borderRadius: 'var(--radius-lg)', margin: '0 auto' }} />
+              <img
+                src={selected.portrait_path}
+                alt={selected.name}
+                style={{
+                  width: "100%",
+                  maxWidth: 300,
+                  borderRadius: "var(--radius-lg)",
+                  margin: "0 auto",
+                }}
+              />
             ) : (
-              <div style={{ padding: 'var(--space-xxl)', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: '4rem' }}>🎤</div>
+              <div
+                style={{
+                  padding: "var(--space-xxl)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <div style={{ fontSize: "4rem" }}>🎤</div>
                 <p>No portrait yet</p>
-                <button className="btn btn-secondary" onClick={() => handleGenPortrait(selected.id)}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => handleGenPortrait(selected.id)}
+                >
                   Generate Portrait
                 </button>
               </div>
@@ -115,7 +193,9 @@ export function Artists() {
 
           {/* Identity */}
           <div className="card">
-            <div className="card-header"><h3 className="card-title">Identity</h3></div>
+            <div className="card-header">
+              <h3 className="card-title">Identity</h3>
+            </div>
             <div className="detail-fields">
               <DetailField label="Real Name" value={selected.name} />
               <DetailField label="On-Air Name" value={selected.display_name} />
@@ -123,17 +203,25 @@ export function Artists() {
               <DetailField label="Age" value={selected.age} />
               <DetailField label="Gender" value={selected.gender} />
               <DetailField label="Genre" value={selected.genre} />
-              <DetailField label="Tracks" value={String(selected.total_tracks)} />
+              <DetailField
+                label="Tracks"
+                value={String(selected.total_tracks)}
+              />
             </div>
           </div>
 
           {/* Personality */}
           <div className="card">
-            <div className="card-header"><h3 className="card-title">Personality & Voice</h3></div>
+            <div className="card-header">
+              <h3 className="card-title">Personality & Voice</h3>
+            </div>
             <div className="detail-fields">
               <DetailField label="Bio" value={selected.bio} />
               <DetailField label="Personality" value={selected.personality} />
-              <DetailField label="Speaking Style" value={selected.speaking_style} />
+              <DetailField
+                label="Speaking Style"
+                value={selected.speaking_style}
+              />
               <DetailField label="Accent" value={selected.accent} />
               <DetailField label="Catchphrases" value={selected.catchphrases} />
               <DetailField label="Quirks" value={selected.quirks} />
@@ -145,18 +233,27 @@ export function Artists() {
           {/* Appearance */}
           {selected.appearance && (
             <div className="card">
-              <div className="card-header"><h3 className="card-title">Appearance</h3></div>
-              <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>{selected.appearance}</p>
+              <div className="card-header">
+                <h3 className="card-title">Appearance</h3>
+              </div>
+              <p style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                {selected.appearance}
+              </p>
             </div>
           )}
 
           {/* Relationships */}
           {(selected.influences || selected.rivals || selected.allies) && (
             <div className="card">
-              <div className="card-header"><h3 className="card-title">Relationships & Influences</h3></div>
+              <div className="card-header">
+                <h3 className="card-title">Relationships & Influences</h3>
+              </div>
               <div className="detail-fields">
                 <DetailField label="Influences" value={selected.influences} />
-                <DetailField label="Signature Sound" value={selected.signature_sound} />
+                <DetailField
+                  label="Signature Sound"
+                  value={selected.signature_sound}
+                />
                 <DetailField label="Rivals" value={selected.rivals} />
                 <DetailField label="Allies" value={selected.allies} />
               </div>
@@ -180,20 +277,37 @@ export function Artists() {
       </div>
 
       {artists.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: 'var(--space-xxl)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 'var(--space-md)' }}>🎤</div>
-          <h3 style={{ color: 'var(--text-primary)' }}>No artists yet</h3>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>
+        <div
+          className="card"
+          style={{ textAlign: "center", padding: "var(--space-xxl)" }}
+        >
+          <div style={{ fontSize: "3rem", marginBottom: "var(--space-md)" }}>
+            🎤
+          </div>
+          <h3 style={{ color: "var(--text-primary)" }}>No artists yet</h3>
+          <p
+            style={{
+              color: "var(--text-secondary)",
+              marginBottom: "var(--space-lg)",
+            }}
+          >
             Create your first DJ or artist to get started.
           </p>
-          <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowCreate(true)}
+          >
             + Create Artist
           </button>
         </div>
       ) : (
         <div className="entity-grid">
-          {artists.map(a => (
-            <div key={a.id} className="card entity-card" onClick={() => setSelected(a)}>
+          {artists.map((a) => (
+            <div
+              key={a.id}
+              className="card entity-card"
+              onClick={() => setSelected(a)}
+            >
               <div className="entity-card-art portrait">
                 {a.portrait_path ? (
                   <img src={a.portrait_path} alt={a.name} />
@@ -204,10 +318,17 @@ export function Artists() {
               <div className="entity-card-info">
                 <h3>{a.display_name || a.name}</h3>
                 <span className="entity-card-sub">{a.artist_type}</span>
-                {a.bio && <p className="entity-card-tagline">{a.bio.substring(0, 80)}{a.bio.length > 80 ? '...' : ''}</p>}
+                {a.bio && (
+                  <p className="entity-card-tagline">
+                    {a.bio.substring(0, 80)}
+                    {a.bio.length > 80 ? "..." : ""}
+                  </p>
+                )}
                 <div className="entity-card-tags">
                   {a.genre && <span className="tag">{a.genre}</span>}
-                  {a.speaking_style && <span className="tag">{a.speaking_style}</span>}
+                  {a.speaking_style && (
+                    <span className="tag">{a.speaking_style}</span>
+                  )}
                   {a.accent && <span className="tag">{a.accent}</span>}
                 </div>
               </div>

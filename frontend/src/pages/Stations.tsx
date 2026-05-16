@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { api, type Station, type Artist, type Jingle } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
+import { useFormManager } from "../contexts/FormManagerContext";
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
@@ -25,6 +26,7 @@ export function Stations({
   const [showCreate, setShowCreate] = useState(false);
   const [stationDJs, setStationDJs] = useState<Artist[]>([]);
   const [stationJingles, setStationJingles] = useState<Jingle[]>([]);
+  const formManager = useFormManager();
 
   const refresh = () => {
     api
@@ -36,6 +38,12 @@ export function Stations({
   useEffect(() => {
     refresh();
   }, []);
+
+  useEffect(() => {
+    if (formManager.isOpen && formManager.request?.entityType === "station") {
+      setShowCreate(true);
+    }
+  }, [formManager.isOpen, formManager.request]);
 
   useEffect(() => {
     if (selectedStation) {
@@ -84,9 +92,13 @@ export function Stations({
   if (showCreate) {
     return (
       <StationForm
-        onCancel={() => setShowCreate(false)}
+        onCancel={() => {
+          setShowCreate(false);
+          formManager.closeForm();
+        }}
         onSave={() => {
           setShowCreate(false);
+          formManager.confirmForm();
           refresh();
         }}
       />
@@ -1131,6 +1143,8 @@ function StationForm({
     }
   };
 
+  const aiFilled = isAiGenerated ? "form-ai-filled" : "";
+
   return (
     <div className="card form-card">
       <div className="card-header">
@@ -1154,12 +1168,20 @@ function StationForm({
             value={form.name}
             onChange={set("name")}
             placeholder="Nebula FM 99.8"
+            dataField="name"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Frequency"
             value={form.frequency}
             onChange={set("frequency")}
             placeholder="99.8 FM"
+            dataField="frequency"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <FormField
@@ -1167,12 +1189,20 @@ function StationForm({
           value={form.tagline}
           onChange={set("tagline")}
           placeholder="The sound of tomorrow"
+          dataField="tagline"
+          dataSection="identity"
+          dataType="station"
+          className={aiFilled}
         />
         <FormTextarea
           label="Description"
           value={form.description}
           onChange={set("description")}
           placeholder="Full station description and lore..."
+          dataField="description"
+          dataSection="identity"
+          dataType="station"
+          className={aiFilled}
         />
       </div>
 
@@ -1184,12 +1214,20 @@ function StationForm({
             value={form.genre}
             onChange={set("genre")}
             placeholder="synthwave"
+            dataField="genre"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Sub-genres"
             value={form.sub_genres}
             onChange={set("sub_genres")}
             placeholder="darksynth|retrowave|cyberpunk"
+            dataField="sub_genres"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <div className="form-row">
@@ -1198,12 +1236,20 @@ function StationForm({
             value={form.mood}
             onChange={set("mood")}
             placeholder="energetic"
+            dataField="mood"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Era"
             value={form.era}
             onChange={set("era")}
             placeholder="retro-future"
+            dataField="era"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <div className="form-row">
@@ -1221,12 +1267,20 @@ function StationForm({
               "military",
               "rebel",
             ]}
+            dataField="broadcast_style"
+            dataSection="music"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Color Palette"
             value={form.color_palette}
             onChange={set("color_palette")}
             placeholder="#00f5d4|#7b2ff7|#ff006e"
+            dataField="color_palette"
+            dataSection="identity"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
       </div>
@@ -1239,12 +1293,20 @@ function StationForm({
             value={form.location}
             onChange={set("location")}
             placeholder="Orbital Platform Sigma-7"
+            dataField="location"
+            dataSection="lore"
+            dataType="station"
+            className={aiFilled}
           />
           <FormField
             label="Founded"
             value={form.founded_year}
             onChange={set("founded_year")}
             placeholder="2187"
+            dataField="founded_year"
+            dataSection="lore"
+            dataType="station"
+            className={aiFilled}
           />
         </div>
         <FormField
@@ -1252,12 +1314,20 @@ function StationForm({
           value={form.owner}
           onChange={set("owner")}
           placeholder="Nexus Media Corp"
+          dataField="owner"
+          dataSection="lore"
+          dataType="station"
+          className={aiFilled}
         />
         <FormTextarea
           label="Lore Notes"
           value={form.lore_notes}
           onChange={set("lore_notes")}
           placeholder="Additional worldbuilding details..."
+          dataField="lore_notes"
+          dataSection="lore"
+          dataType="station"
+          className={aiFilled}
         />
       </div>
 
@@ -1294,7 +1364,7 @@ export function ArtistForm({
   onSave: () => void;
 }) {
   const [stations, setStations] = useState<Station[]>([]);
-  const { initialData } = useFormInitialData("dj");
+  const { initialData, isAiGenerated } = useFormInitialData("artist");
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1374,7 +1444,9 @@ export function ArtistForm({
     }
   };
 
-  const aiFilled = aiGenerated ? "form-ai-filled" : "";
+  // Use either the prop or the hook value (hook takes priority)
+  const shouldMarkAiFilled = isAiGenerated || aiGenerated;
+  const aiFilled = shouldMarkAiFilled ? "form-ai-filled" : "";
 
   return (
     <div className="card form-card">
@@ -1385,7 +1457,7 @@ export function ArtistForm({
       </div>
 
       {/* AI-generated warning banner */}
-      {aiGenerated && (
+      {shouldMarkAiFilled && (
         <div className="ai-review-banner" role="alert">
           ⚠️ AI-generated DJ. Please review and edit before approving.
         </div>
