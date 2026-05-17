@@ -963,60 +963,18 @@ function StationDetail({
           </button>
         </div>
         {showAddJingle && (
-          <div className="card" style={{ marginBottom: "var(--space-md)" }}>
-            <div style={{ display: "flex", gap: "var(--space-md)" }}>
-              <input
-                type="text"
-                placeholder="Jingle name..."
-                value={jingleForm.name}
-                onChange={(e) =>
-                  setJingleForm((f) => ({ ...f, name: e.target.value }))
-                }
-                className="form-input"
-                style={{ flex: 1 }}
-              />
-              <select
-                value={jingleForm.jingle_type}
-                onChange={(e) =>
-                  setJingleForm((f) => ({ ...f, jingle_type: e.target.value }))
-                }
-                className="form-input"
-              >
-                <option value="intro">Intro</option>
-                <option value="outro">Outro</option>
-                <option value="bumper">Bumper</option>
-                <option value="sting">Sting</option>
-                <option value="transition">Transition</option>
-              </select>
-              <button
-                className="btn btn-primary"
-                disabled={savingJingle}
-                onClick={async () => {
-                  if (!jingleForm.name.trim())
-                    return alert("Jingle name required");
-                  setSavingJingle(true);
-                  try {
-                    await api.createJingle({
-                      station_id: station.id,
-                      name: jingleForm.name,
-                      jingle_type: jingleForm.jingle_type,
-                    });
-                    setJingleForm({ name: "", jingle_type: "intro" });
-                    setShowAddJingle(false);
-                    onRefresh();
-                  } catch (e: unknown) {
-                    alert(
-                      `Failed to create jingle: ${e instanceof Error ? e.message : String(e)}`,
-                    );
-                  } finally {
-                    setSavingJingle(false);
-                  }
-                }}
-              >
-                {savingJingle ? "Creating..." : "Create"}
-              </button>
-            </div>
-          </div>
+          <JingleForm
+            stationId={station.id}
+            onSave={() => {
+              setShowAddJingle(false);
+              setJingleForm({ name: "", jingle_type: "intro" });
+              onRefresh();
+            }}
+            onCancel={() => {
+              setShowAddJingle(false);
+              setJingleForm({ name: "", jingle_type: "intro" });
+            }}
+          />
         )}
         {jingles.length === 0 ? (
           <p style={{ color: "var(--text-muted)", fontStyle: "italic" }}>
@@ -1740,6 +1698,163 @@ function DetailField({ label, value }: { label: string; value: string }) {
     <div className="detail-field">
       <span className="detail-label">{label}</span>
       <span className="detail-value">{value}</span>
+    </div>
+  );
+}
+
+/* ── Jingle Form Component ──────────────────────────────────── */
+
+interface JingleFormProps {
+  stationId: string;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function JingleForm({ stationId, onSave, onCancel }: JingleFormProps) {
+  const { initialData, isAiGenerated } = useFormInitialData("jingle");
+  const { setDirty } = useFormDirtyState();
+  const toast = useToast();
+
+  const [form, setForm] = useState({
+    name: initialData?.name || "",
+    jingle_type: initialData?.jingle_type || "intro",
+    description: initialData?.description || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set =
+    (field: string) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) => {
+      setDirty(true);
+      setForm({ ...form, [field]: e.target.value });
+    };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error("Jingle name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.createJingle({
+        station_id: stationId,
+        name: form.name,
+        jingle_type: form.jingle_type,
+        description: form.description,
+      });
+      toast.success(`Created ${form.name} successfully!`);
+      setDirty(false);
+      onSave();
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to create jingle: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const aiFilled = isAiGenerated ? "form-ai-filled" : "";
+
+  return (
+    <div className="card" style={{ marginBottom: "var(--space-md)" }}>
+      {isAiGenerated && (
+        <div className="ai-review-banner" role="alert">
+          ⚠️ AI-generated jingle. Please review and edit before creating.
+        </div>
+      )}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--space-md)",
+        }}
+      >
+        <div>
+          <label htmlFor="jingle-name" className="form-label">
+            Jingle Name *
+          </label>
+          <input
+            id="jingle-name"
+            name="name"
+            data-field="name"
+            data-section="identity"
+            data-type="jingle"
+            type="text"
+            className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+            placeholder="Jingle name..."
+            value={form.name}
+            onChange={set("name")}
+            aria-label="Jingle Name"
+          />
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-md)",
+          }}
+        >
+          <div>
+            <label htmlFor="jingle-type" className="form-label">
+              Type
+            </label>
+            <select
+              id="jingle-type"
+              name="jingle_type"
+              data-field="jingle_type"
+              data-section="identity"
+              data-type="jingle"
+              className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+              value={form.jingle_type}
+              onChange={set("jingle_type")}
+              aria-label="Jingle Type"
+            >
+              <option value="intro">Intro</option>
+              <option value="outro">Outro</option>
+              <option value="bumper">Bumper</option>
+              <option value="sting">Sting</option>
+              <option value="transition">Transition</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="jingle-description" className="form-label">
+            Description
+          </label>
+          <textarea
+            id="jingle-description"
+            name="description"
+            data-field="description"
+            data-section="lore"
+            data-type="jingle"
+            className={`form-input form-textarea${aiFilled ? ` ${aiFilled}` : ""}`}
+            value={form.description}
+            onChange={set("description")}
+            placeholder="Describe the jingle..."
+            rows={2}
+            aria-label="Description"
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+          <button
+            className="btn btn-primary"
+            disabled={saving}
+            onClick={handleSave}
+          >
+            {saving ? "Creating..." : "Create"}
+          </button>
+          <button className="btn btn-ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -44,9 +44,6 @@ export function Universes({
   useEffect(() => {
     if (formManager.isOpen && formManager.request?.entityType === "universe") {
       setShowCreate(true);
-      if (formManager.request.initialData?.name) {
-        setNewUniverseName(formManager.request.initialData.name as string);
-      }
     }
   }, [formManager.isOpen, formManager.request]);
 
@@ -178,49 +175,20 @@ export function Universes({
       </div>
 
       {showCreate && (
-        <div className="card" style={{ marginBottom: "var(--space-lg)" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--space-md)",
-              alignItems: "flex-end",
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label htmlFor="universe-name" style={{ display: "block" }}>
-                Game / World Name
-              </label>
-              <input
-                id="universe-name"
-                type="text"
-                className="form-input"
-                placeholder="e.g. Cyberpunk 2077, The Witcher 3, Skyrim"
-                value={newUniverseName}
-                onChange={(e) => setNewUniverseName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateUniverse();
-                }}
-              />
-            </div>
-            <button
-              className="btn btn-primary"
-              disabled={creating}
-              onClick={handleCreateUniverse}
-            >
-              {creating ? "Creating..." : "Create"}
-            </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => {
-                setShowCreate(false);
-                setNewUniverseName("");
-                formManager.closeForm();
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <UniverseCreateForm
+          onCancel={() => {
+            setShowCreate(false);
+            setNewUniverseName("");
+            formManager.closeForm();
+          }}
+          onSave={() => {
+            setShowCreate(false);
+            setNewUniverseName("");
+            formManager.confirmForm();
+            refresh();
+            onUniverseCreated?.();
+          }}
+        />
       )}
 
       {universes.length === 0 ? (
@@ -597,6 +565,227 @@ function UniverseDetail({
   );
 }
 
+/* ── Universe Create Form ────────────────────────────────────── */
+
+interface UniverseCreateFormProps {
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+function UniverseCreateForm({ onCancel, onSave }: UniverseCreateFormProps) {
+  const { initialData, isAiGenerated } = useFormInitialData("universe");
+  const { setDirty } = useFormDirtyState();
+  const toast = useToast();
+
+  const [form, setForm] = useState({
+    name: initialData?.name || "",
+    description: initialData?.description || "",
+    genre_hints: initialData?.genre_hints || "",
+    mood_hints: initialData?.mood_hints || "",
+    setting: initialData?.setting || "",
+    era: initialData?.era || "",
+    publisher: initialData?.publisher || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set =
+    (field: string) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) => {
+      setDirty(true);
+      setForm({ ...form, [field]: e.target.value });
+    };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      toast.error("Universe name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.createUniverse(form);
+      toast.success(`Created ${form.name} successfully!`);
+      setDirty(false);
+      onSave();
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to create universe: ${errorMsg}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const aiFilled = isAiGenerated ? "form-ai-filled" : "";
+
+  return (
+    <div className="card form-card">
+      <div className="card-header">
+        <h3 className="card-title">🌍 New Universe</h3>
+      </div>
+
+      {isAiGenerated && (
+        <div className="ai-review-banner" role="alert">
+          ⚠️ AI-generated universe. Please review and edit before creating.
+        </div>
+      )}
+
+      <div className="form-section">
+        <div className="form-section-title">Basic Info</div>
+        <div className="form-group">
+          <label htmlFor="universe-name" className="form-label">
+            Universe Name *
+          </label>
+          <input
+            id="universe-name"
+            name="name"
+            data-field="name"
+            data-section="identity"
+            data-type="universe"
+            className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+            value={form.name}
+            onChange={set("name")}
+            placeholder="e.g. Cyberpunk 2077"
+            aria-label="Universe Name"
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="universe-publisher" className="form-label">
+            Publisher / Creator
+          </label>
+          <input
+            id="universe-publisher"
+            name="publisher"
+            data-field="publisher"
+            data-section="identity"
+            data-type="universe"
+            className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+            value={form.publisher}
+            onChange={set("publisher")}
+            placeholder="CD Projekt Red, Blizzard, etc."
+            aria-label="Publisher"
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-section-title">Description</div>
+        <div className="form-group">
+          <label htmlFor="universe-description" className="form-label">
+            Description
+          </label>
+          <textarea
+            id="universe-description"
+            name="description"
+            data-field="description"
+            data-section="lore"
+            data-type="universe"
+            className={`form-input form-textarea${aiFilled ? ` ${aiFilled}` : ""}`}
+            value={form.description}
+            onChange={set("description")}
+            placeholder="Full world description and context..."
+            rows={4}
+            aria-label="Description"
+          />
+        </div>
+      </div>
+
+      <div className="form-section">
+        <div className="form-section-title">Atmosphere & Hints</div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="universe-genre-hints" className="form-label">
+              Genre Hints (pipe-separated)
+            </label>
+            <input
+              id="universe-genre-hints"
+              name="genre_hints"
+              data-field="genre_hints"
+              data-section="music"
+              data-type="universe"
+              className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+              value={form.genre_hints}
+              onChange={set("genre_hints")}
+              placeholder="synthwave|cyberpunk|ambient"
+              aria-label="Genre Hints"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="universe-mood-hints" className="form-label">
+              Mood Hints (pipe-separated)
+            </label>
+            <input
+              id="universe-mood-hints"
+              name="mood_hints"
+              data-field="mood_hints"
+              data-section="music"
+              data-type="universe"
+              className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+              value={form.mood_hints}
+              onChange={set("mood_hints")}
+              placeholder="dark|mysterious|energetic"
+              aria-label="Mood Hints"
+            />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="universe-setting" className="form-label">
+              Setting
+            </label>
+            <input
+              id="universe-setting"
+              name="setting"
+              data-field="setting"
+              data-section="lore"
+              data-type="universe"
+              className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+              value={form.setting}
+              onChange={set("setting")}
+              placeholder="e.g. futuristic city"
+              aria-label="Setting"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="universe-era" className="form-label">
+              Era
+            </label>
+            <input
+              id="universe-era"
+              name="era"
+              data-field="era"
+              data-section="lore"
+              data-type="universe"
+              className={`form-input${aiFilled ? ` ${aiFilled}` : ""}`}
+              value={form.era}
+              onChange={set("era")}
+              placeholder="e.g. futuristic, medieval"
+              aria-label="Era"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? "Creating..." : "Create Universe"}
+        </button>
+        <button className="btn btn-ghost" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ── Universe Edit Form ──────────────────────────────────────── */
 
 interface UniverseEditFormProps {
@@ -669,40 +858,61 @@ function UniverseEditForm({
         >
           {/* Description */}
           <div>
-            <label htmlFor="description">Description</label>
+            <label htmlFor="description" className="form-label">
+              Description
+            </label>
             <textarea
               id="description"
-              className="form-input"
+              name="description"
+              data-field="description"
+              data-section="lore"
+              data-type="universe"
+              className="form-input form-textarea"
               style={{ minHeight: "300px", fontFamily: "monospace" }}
               value={form.description}
               onChange={set("description")}
               placeholder="Full world description..."
+              aria-label="Description"
             />
           </div>
 
           {/* Genre Hints */}
           <div>
-            <label htmlFor="genre-hints">Genre Hints (pipe-separated)</label>
+            <label htmlFor="genre-hints" className="form-label">
+              Genre Hints (pipe-separated)
+            </label>
             <input
               id="genre-hints"
+              name="genre_hints"
+              data-field="genre_hints"
+              data-section="music"
+              data-type="universe"
               type="text"
               className="form-input"
               value={form.genre_hints}
               onChange={set("genre_hints")}
               placeholder="synthwave|cyberpunk|ambient"
+              aria-label="Genre Hints"
             />
           </div>
 
           {/* Mood Hints */}
           <div>
-            <label htmlFor="mood-hints">Mood Hints (pipe-separated)</label>
+            <label htmlFor="mood-hints" className="form-label">
+              Mood Hints (pipe-separated)
+            </label>
             <input
               id="mood-hints"
+              name="mood_hints"
+              data-field="mood_hints"
+              data-section="music"
+              data-type="universe"
               type="text"
               className="form-input"
               value={form.mood_hints}
               onChange={set("mood_hints")}
               placeholder="dark|mysterious|energetic"
+              aria-label="Mood Hints"
             />
           </div>
 
@@ -715,37 +925,58 @@ function UniverseEditForm({
             }}
           >
             <div>
-              <label htmlFor="setting">Setting</label>
+              <label htmlFor="setting" className="form-label">
+                Setting
+              </label>
               <input
                 id="setting"
+                name="setting"
+                data-field="setting"
+                data-section="lore"
+                data-type="universe"
                 type="text"
                 className="form-input"
                 value={form.setting}
                 onChange={set("setting")}
                 placeholder="e.g. futuristic city"
+                aria-label="Setting"
               />
             </div>
             <div>
-              <label htmlFor="era">Era</label>
+              <label htmlFor="era" className="form-label">
+                Era
+              </label>
               <input
                 id="era"
+                name="era"
+                data-field="era"
+                data-section="lore"
+                data-type="universe"
                 type="text"
                 className="form-input"
                 value={form.era}
                 onChange={set("era")}
                 placeholder="e.g. futuristic"
+                aria-label="Era"
               />
             </div>
           </div>
 
           {/* Status */}
           <div>
-            <label htmlFor="status">Status</label>
+            <label htmlFor="status" className="form-label">
+              Status
+            </label>
             <select
               id="status"
+              name="status"
+              data-field="status"
+              data-section="identity"
+              data-type="universe"
               className="form-input"
               value={form.status}
               onChange={set("status")}
+              aria-label="Status"
             >
               <option value="draft">Draft</option>
               <option value="reviewed">Reviewed</option>
