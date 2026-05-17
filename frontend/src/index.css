@@ -1391,6 +1391,48 @@ textarea.input {
   cursor: not-allowed;
 }
 
+/* ── Quota usage alerts ─────────────────────────────────────────── */
+
+.quota-alert {
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+  border-left: 4px solid;
+  animation: slideDown var(--duration-normal) var(--ease-out);
+}
+
+.quota-alert.warning {
+  background-color: hsla(38, 90%, 55%, 0.1);
+  border-left-color: hsl(38, 90%, 55%);
+  color: hsl(38, 90%, 75%);
+}
+
+.quota-alert.critical {
+  background-color: hsla(0, 75%, 55%, 0.1);
+  border-left-color: hsl(0, 75%, 55%);
+  color: hsl(0, 75%, 75%);
+}
+
+.quota-alert strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.quota-alert-title {
+  font-weight: 600;
+  margin-bottom: 0.25em;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    AI DJ Staging — Phase 1 / Phase 2 additions
    ═══════════════════════════════════════════════════════════════════ */
