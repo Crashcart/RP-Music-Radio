@@ -64,79 +64,65 @@ class ModelDetector:
     @staticmethod
     def detect_available_model(ollama_client: OllamaClient | None = None) -> str | None:
         """
-        Detect which Llama model is available and can run with current resources.
+        Detect which model is available and can run with current resources.
+        Uses lightweight /api/tags check instead of generating content.
 
         Returns:
-            Llama model name if available, None if no models found or Ollama unavailable
+            Model name if available, None if Ollama unavailable or no models found
         """
         if ollama_client is None:
             ollama_client = OllamaClient()
 
-        # Check if Ollama is available
+        # Quick health check: is Ollama responding?
         if not ollama_client._is_available():
             logger.info("Model detection: Ollama unavailable, will use Gemini cloud")
             return None
 
-        # Get current configuration
+        # Get configured model (defaults to llama2)
         configured_model = os.getenv("OLLAMA_MODEL", "llama2")
-        logger.info(
-            f"Model detection: Testing configured model '{configured_model}'..."
-        )
+        logger.info(f"Model detection: Checking for '{configured_model}'...")
 
-        # Test configured model
+        # List available models via /api/tags endpoint
         try:
-            # Try to ping the model with a simple request
-            result = ollama_client.generate_script(
-                character="test",
-                setting="test",
-                genre="test",
-                script_style="short",
-                timeout_seconds=5,
+            import requests
+
+            response = requests.get(
+                f"{ollama_client.host}/api/tags",
+                timeout=3,
             )
-            if result:
+            if response.status_code != 200:
+                logger.warning("Model detection: Could not list models from Ollama")
+                return None
+
+            data = response.json()
+            available_models = [m.get("name", "") for m in data.get("models", [])]
+
+            # Check if configured model is available
+            if configured_model in available_models:
                 logger.info(
-                    f"✓ Model detection SUCCESS: '{configured_model}' is available and working"
+                    f"✓ Model detection SUCCESS: '{configured_model}' is available"
                 )
                 return configured_model
-        except Exception as exc:
-            logger.warning(
-                f"Model detection: '{configured_model}' test failed: {exc}. Trying alternatives..."
-            )
 
-        # Try recommended models in order
-        for model in ModelDetector.RECOMMENDED_MODELS:
-            if model == configured_model:
-                continue  # Already tried this one
-
-            logger.info(f"Model detection: Testing '{model}'...")
-            try:
-                # Update client model temporarily
-                original_model = ollama_client.model
-                ollama_client.model = model
-
-                result = ollama_client.generate_script(
-                    character="test",
-                    setting="test",
-                    genre="test",
-                    script_style="short",
-                    timeout_seconds=5,
-                )
-
-                if result:
+            # Try recommended fallbacks
+            for model in ModelDetector.RECOMMENDED_MODELS:
+                if model in available_models:
                     logger.info(
-                        f"✓ Model detection SUCCESS: Found working model '{model}'"
+                        f"✓ Model detection SUCCESS: Configured model not found, using '{model}'"
                     )
                     return model
 
-            except Exception as exc:
-                logger.debug(f"Model detection: '{model}' not available: {exc}")
-            finally:
-                ollama_client.model = original_model
+            # No recommended models found
+            logger.warning(
+                f"Model detection: No models available. Found: {available_models}"
+            )
+            return None
 
-        logger.warning(
-            "Model detection: No Llama models available locally. System will use Gemini cloud with automatic fallback."
-        )
-        return None
+        except Exception as exc:
+            logger.warning(
+                f"Model detection failed: {exc}. Will use Gemini cloud with automatic fallback."
+            )
+            return None
 
     @staticmethod
     def get_model_info(model_name: str) -> dict:
