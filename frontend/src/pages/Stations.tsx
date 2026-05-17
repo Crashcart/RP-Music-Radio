@@ -3,6 +3,7 @@ import { api, type Station, type Artist, type Jingle } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 import { useFormManager } from "../contexts/FormManagerContext";
 import { useFormDirtyState } from "../contexts/FormDirtyStateContext";
+import { useToast } from "../components/Toast";
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
@@ -1099,6 +1100,7 @@ function StationForm({
 }) {
   const { initialData, isAiGenerated } = useFormInitialData("station");
   const { setDirty } = useFormDirtyState();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1131,18 +1133,24 @@ function StationForm({
     };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return alert("Station name is required");
+    if (!form.name.trim()) {
+      toast.error("Station name is required");
+      return;
+    }
     setSaving(true);
     try {
       if (existing) {
         await api.updateStation(existing.id, form);
+        toast.success(`Updated ${form.name}`);
       } else {
         await api.createStation(form);
+        toast.success(`Created ${form.name} successfully!`);
       }
       setDirty(false);
       onSave();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : String(e));
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to save: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
@@ -1377,6 +1385,7 @@ export function ArtistForm({
   const [stations, setStations] = useState<Station[]>([]);
   const { initialData, isAiGenerated } = useFormInitialData("artist");
   const { setDirty } = useFormDirtyState();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1446,13 +1455,18 @@ export function ArtistForm({
       const payload = { ...form, station_id: form.station_id || undefined };
       if (existing) {
         await api.updateArtist(existing.id, payload);
+        toast.success(`Updated ${form.display_name || form.name}`);
       } else {
         await api.createArtist(payload);
+        toast.success(
+          `Created ${form.display_name || form.name} successfully!`,
+        );
       }
       setDirty(false);
       onSave();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : String(e));
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to save: ${errorMsg}`);
     } finally {
       setSaving(false);
     }

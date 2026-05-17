@@ -19,6 +19,7 @@ import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { SplashScreen } from "./components/SplashScreen";
 import { ConfirmNavigationDialog } from "./components/ConfirmNavigationDialog";
+import { ToastContainer } from "./components/Toast";
 import {
   TokenUsageWidget,
   type UsageStats,
@@ -541,6 +542,9 @@ function AppContent() {
               : ""
           }
         />
+
+        {/* Toast Notifications */}
+        <ToastContainer />
       </div>
     </>
   );

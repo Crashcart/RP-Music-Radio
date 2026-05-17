@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { api, type Universe } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 import { useFormManager } from "../contexts/FormManagerContext";
+import { useFormDirtyState } from "../contexts/FormDirtyStateContext";
+import { useToast } from "../components/Toast";
 
 interface UniversesProps {
   /** Called when a universe is created while in "gate" mode (no active universe). */
@@ -26,6 +28,7 @@ export function Universes({
   const [editing, setEditing] = useState<Universe | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const formManager = useFormManager();
+  const toast = useToast();
 
   const refresh = () => {
     api
@@ -48,7 +51,10 @@ export function Universes({
   }, [formManager.isOpen, formManager.request]);
 
   const handleCreateUniverse = async () => {
-    if (!newUniverseName.trim()) return alert("Universe name required");
+    if (!newUniverseName.trim()) {
+      toast.error("Universe name required");
+      return;
+    }
     setCreating(true);
     try {
       const universe = await api.createUniverse({ name: newUniverseName });
@@ -60,10 +66,10 @@ export function Universes({
       setSelectedUniverse(universe);
       // Notify App-level gate that a universe now exists
       onUniverseCreated?.();
+      toast.success(`Created ${universe.name} successfully!`);
     } catch (e: unknown) {
-      alert(
-        `Failed to create universe: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to create universe: ${errorMsg}`);
     } finally {
       setCreating(false);
     }
@@ -75,8 +81,10 @@ export function Universes({
       const researched = await api.researchUniverse(universeId);
       setSelectedUniverse(researched);
       refresh();
+      toast.success("Research completed successfully!");
     } catch (e: unknown) {
-      alert(`Research failed: ${e instanceof Error ? e.message : String(e)}`);
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Research failed: ${errorMsg}`);
     } finally {
       setResearching(null);
     }
@@ -92,10 +100,10 @@ export function Universes({
         const updated = universes.find((u) => u.id === universeId);
         if (updated) setSelectedUniverse(updated);
       }
+      toast.success("Universe art generated successfully!");
     } catch (e: unknown) {
-      alert(
-        `Art generation failed: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Art generation failed: ${errorMsg}`);
     } finally {
       setGenArt(null);
     }
@@ -107,8 +115,10 @@ export function Universes({
       setSelectedUniverse(updated);
       setEditing(null);
       refresh();
+      toast.success(`Updated ${universe.name}`);
     } catch (e: unknown) {
-      alert(`Update failed: ${e instanceof Error ? e.message : String(e)}`);
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Update failed: ${errorMsg}`);
     }
   };
 
@@ -120,8 +130,10 @@ export function Universes({
       if (selectedUniverse?.id === id) setSelectedUniverse(null);
       onUniverseDeleted?.(id);
       refresh();
+      toast.success("Universe deleted successfully!");
     } catch (e: unknown) {
-      alert(`Delete failed: ${e instanceof Error ? e.message : String(e)}`);
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Delete failed: ${errorMsg}`);
     } finally {
       setDeleting(null);
     }
@@ -599,6 +611,8 @@ function UniverseEditForm({
   onCancel,
 }: UniverseEditFormProps) {
   const { initialData, isAiGenerated } = useFormInitialData("universe");
+  const { setDirty } = useFormDirtyState();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     ...universe,
@@ -611,10 +625,22 @@ function UniverseEditForm({
   });
   const [saving, setSaving] = useState(false);
 
+  const set =
+    (field: string) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >,
+    ) => {
+      setDirty(true);
+      setForm({ ...form, [field]: e.target.value });
+    };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       onSave(form);
+      setDirty(false);
     } finally {
       setSaving(false);
     }
@@ -649,9 +675,7 @@ function UniverseEditForm({
               className="form-input"
               style={{ minHeight: "300px", fontFamily: "monospace" }}
               value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
+              onChange={set("description")}
               placeholder="Full world description..."
             />
           </div>
@@ -664,9 +688,7 @@ function UniverseEditForm({
               type="text"
               className="form-input"
               value={form.genre_hints}
-              onChange={(e) =>
-                setForm({ ...form, genre_hints: e.target.value })
-              }
+              onChange={set("genre_hints")}
               placeholder="synthwave|cyberpunk|ambient"
             />
           </div>
@@ -679,7 +701,7 @@ function UniverseEditForm({
               type="text"
               className="form-input"
               value={form.mood_hints}
-              onChange={(e) => setForm({ ...form, mood_hints: e.target.value })}
+              onChange={set("mood_hints")}
               placeholder="dark|mysterious|energetic"
             />
           </div>
@@ -699,7 +721,7 @@ function UniverseEditForm({
                 type="text"
                 className="form-input"
                 value={form.setting}
-                onChange={(e) => setForm({ ...form, setting: e.target.value })}
+                onChange={set("setting")}
                 placeholder="e.g. futuristic city"
               />
             </div>
@@ -710,7 +732,7 @@ function UniverseEditForm({
                 type="text"
                 className="form-input"
                 value={form.era}
-                onChange={(e) => setForm({ ...form, era: e.target.value })}
+                onChange={set("era")}
                 placeholder="e.g. futuristic"
               />
             </div>
@@ -723,7 +745,7 @@ function UniverseEditForm({
               id="status"
               className="form-input"
               value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              onChange={set("status")}
             >
               <option value="draft">Draft</option>
               <option value="reviewed">Reviewed</option>

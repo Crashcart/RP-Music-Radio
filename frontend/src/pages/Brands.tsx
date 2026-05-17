@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { api, type Brand } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 import { useFormManager } from "../contexts/FormManagerContext";
+import { useFormDirtyState } from "../contexts/FormDirtyStateContext";
+import { useToast } from "../components/Toast";
 
 export function Brands() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -424,6 +426,8 @@ function BrandForm({
   onSave: () => void;
 }) {
   const { initialData, isAiGenerated } = useFormInitialData("brand");
+  const { setDirty } = useFormDirtyState();
+  const toast = useToast();
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -454,21 +458,30 @@ function BrandForm({
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >,
-    ) =>
+    ) => {
+      setDirty(true);
       setForm((f) => ({ ...f, [field]: e.target.value }));
+    };
 
   const handleSave = async () => {
-    if (!form.name.trim()) return alert("Brand name is required");
+    if (!form.name.trim()) {
+      toast.error("Brand name is required");
+      return;
+    }
     setSaving(true);
     try {
       if (existing) {
         await api.updateBrand(existing.id, form);
+        toast.success(`Updated ${form.name}`);
       } else {
         await api.createBrand(form);
+        toast.success(`Created ${form.name} successfully!`);
       }
+      setDirty(false);
       onSave();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : String(e));
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toast.error(`Failed to save: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
