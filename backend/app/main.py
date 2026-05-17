@@ -37,11 +37,53 @@ async def lifespan(app: FastAPI):
     logger.info("AetherWave API starting up")
     init_db()
 
-    # Check Google API key at startup
+    # ─ Model Detection & Testing ───────────────────────────────────────────
+    logger.info("━━━ AI MODEL DETECTION & SYSTEM TEST ━━━")
+    logger.info("Running model detection to determine which AI will be used...")
+
+    try:
+        from app.integrations.ai_factory import ModelDetector
+
+        enable_detection = os.getenv("ENABLE_MODEL_DETECTION", "true").lower() == "true"
+
+        if enable_detection:
+            # Run model detection
+            available_model = ModelDetector.detect_available_model()
+
+            if available_model:
+                logger.info(
+                    f"✅ Llama Model Ready: Using '{available_model}' for local processing"
+                )
+                logger.info(
+                    f"   Benefits: Fast (local), cost-effective (no API calls), fully offline capable"
+                )
+            else:
+                logger.warning(
+                    "⚠️  No local Llama models available. Checking cloud fallback..."
+                )
+                api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+                if api_key and api_key != "your-api-key-here":
+                    logger.info(
+                        "✅ Cloud Fallback Ready: Will use Google Gemini (if local unavailable)"
+                    )
+                    logger.info(
+                        "   When Ollama goes down: Auto-switches to Gemini without manual intervention"
+                    )
+                else:
+                    logger.warning(
+                        "⚠️  GOOGLE_API_KEY not set. System will be offline-only."
+                    )
+
+        logger.info("━━━ MODEL DETECTION COMPLETE ━━━")
+
+    except Exception as e:
+        logger.error(f"Model detection failed: {e}", exc_info=False)
+
+    # ─ Check Google API key at startup ──────────────────────────────────────
     api_key = os.getenv("GOOGLE_API_KEY", "").strip()
     if not api_key:
         logger.warning(
-            "⚠️  GOOGLE_API_KEY is not set. AI features (Gemini, image generation) will be offline."
+            "⚠️  GOOGLE_API_KEY is not set. Cloud AI features (Gemini, image generation) will be offline."
         )
     elif api_key == "your-api-key-here" or api_key.startswith("your-"):
         logger.warning(

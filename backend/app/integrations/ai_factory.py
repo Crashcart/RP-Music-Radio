@@ -49,6 +49,143 @@ logger = logging.getLogger(__name__)
 AIClient = Union[GeminiClient, OllamaClient]
 
 
+class ModelDetector:
+    """
+    Detects available Llama models at startup and tests system compatibility.
+
+    Llama models supported:
+    - llama2 (7B/13B): Excellent quality, good speed, recommended
+    - neural-chat (4.1GB): Fast, good for real-time
+    - orca-mini (1.3GB): Low-resource option
+    """
+
+    RECOMMENDED_MODELS = ["llama2", "llama2:13b", "neural-chat", "orca-mini", "mistral"]
+
+    @staticmethod
+    def detect_available_model(ollama_client: OllamaClient | None = None) -> str | None:
+        """
+        Detect which Llama model is available and can run with current resources.
+
+        Returns:
+            Llama model name if available, None if no models found or Ollama unavailable
+        """
+        if ollama_client is None:
+            ollama_client = OllamaClient()
+
+        # Check if Ollama is available
+        if not ollama_client._is_available():
+            logger.info("Model detection: Ollama unavailable, will use Gemini cloud")
+            return None
+
+        # Get current configuration
+        configured_model = os.getenv("OLLAMA_MODEL", "llama2")
+        logger.info(
+            f"Model detection: Testing configured model '{configured_model}'..."
+        )
+
+        # Test configured model
+        try:
+            # Try to ping the model with a simple request
+            result = ollama_client.generate_script(
+                character="test",
+                setting="test",
+                genre="test",
+                script_style="short",
+                timeout_seconds=5,
+            )
+            if result:
+                logger.info(
+                    f"✓ Model detection SUCCESS: '{configured_model}' is available and working"
+                )
+                return configured_model
+        except Exception as exc:
+            logger.warning(
+                f"Model detection: '{configured_model}' test failed: {exc}. Trying alternatives..."
+            )
+
+        # Try recommended models in order
+        for model in ModelDetector.RECOMMENDED_MODELS:
+            if model == configured_model:
+                continue  # Already tried this one
+
+            logger.info(f"Model detection: Testing '{model}'...")
+            try:
+                # Update client model temporarily
+                original_model = ollama_client.model
+                ollama_client.model = model
+
+                result = ollama_client.generate_script(
+                    character="test",
+                    setting="test",
+                    genre="test",
+                    script_style="short",
+                    timeout_seconds=5,
+                )
+
+                if result:
+                    logger.info(
+                        f"✓ Model detection SUCCESS: Found working model '{model}'"
+                    )
+                    return model
+
+            except Exception as exc:
+                logger.debug(f"Model detection: '{model}' not available: {exc}")
+            finally:
+                ollama_client.model = original_model
+
+        logger.warning(
+            "Model detection: No Llama models available locally. System will use Gemini cloud with automatic fallback."
+        )
+        return None
+
+    @staticmethod
+    def get_model_info(model_name: str) -> dict:
+        """Get information about a specific model."""
+        model_info = {
+            "llama2": {
+                "description": "Meta Llama 2 (7B or 13B)",
+                "recommended": True,
+                "size_gb": 3.8,  # 7B variant
+                "speed": "good",
+                "quality": "excellent",
+                "use_case": "General purpose, high quality",
+            },
+            "llama2:13b": {
+                "description": "Meta Llama 2 (13B)",
+                "recommended": True,
+                "size_gb": 7.3,
+                "speed": "moderate",
+                "quality": "excellent",
+                "use_case": "Best quality, requires more RAM",
+            },
+            "neural-chat": {
+                "description": "Intel Neural Chat",
+                "recommended": False,
+                "size_gb": 4.1,
+                "speed": "very fast",
+                "quality": "good",
+                "use_case": "Real-time applications",
+            },
+            "orca-mini": {
+                "description": "Orca Mini (low resource)",
+                "recommended": False,
+                "size_gb": 1.3,
+                "speed": "extremely fast",
+                "quality": "fair",
+                "use_case": "Very limited RAM environments",
+            },
+            "mistral": {
+                "description": "Mistral (7B)",
+                "recommended": False,
+                "size_gb": 4.0,
+                "speed": "fast",
+                "quality": "good",
+                "use_case": "Speed over quality",
+            },
+        }
+        return model_info.get(model_name, {})
+
+
 @dataclass
 class SystemResources:
     """System resource information for model selection."""
