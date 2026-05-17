@@ -6,6 +6,126 @@
 
 ---
 
+## CRITICAL PRIORITY: Chat-to-Form Entity Creation Polish (HIGH PRIORITY — MAIN BRAGGABLE FEATURE)
+
+**Status**: Implementation exists but needs end-to-end polish, testing, and UX refinement
+
+**Objective**: Make the chat interface a seamless, fully-functioning showcase feature where users can request entity creation in natural language and have AI generate data that auto-fills form fields. This is the flagship feature demonstrating AI-driven content creation.
+
+**Current State**:
+- ✅ ChatAssistant component exists (1685 lines)
+- ✅ ENTITY_SUGGESTION parsing implemented
+- ✅ FormPreviewDialog exists
+- ✅ Entity staging and form submission partially working
+- ❌ End-to-end workflow not fully polished
+- ❌ Error handling and edge cases not comprehensive
+- ❌ UX transitions between chat → form → submission unclear
+- ❌ Loading states and feedback inconsistent
+- ❌ Test coverage missing
+
+**Subtasks** (IN PRIORITY ORDER):
+
+1. **[BLOCKING] End-to-End Workflow Testing** (2-3 hours)
+   - [ ] Test: Chat request → AI generates entity → Form preview shows data
+   - [ ] Test: User edits fields in preview → Submits → Entity created
+   - [ ] Test: Each entity type (Station, Artist, Brand, Universe, Jingle, Track)
+   - [ ] Test: Return to chat after creation, user can create more entities
+   - [ ] Document all blockers found (break into sub-tasks if needed)
+
+2. **Form Field Auto-Fill Polish** (2-3 hours)
+   - [ ] Verify all form fields properly tagged with `data-field` attribute (CLAUDE.md spec)
+   - [ ] Ensure FormPreviewDialog correctly maps ENTITY_SUGGESTION fields to form inputs
+   - [ ] Visual feedback: highlight AI-filled fields with amber tint + "AI-Generated" label
+   - [ ] Field editing: all fields should be editable before submission
+   - [ ] Field validation: show errors for invalid inputs before save (not after)
+   - [ ] Test: Verify no field data loss during edit-submit cycle
+
+3. **UX & Feedback Improvements** (3-4 hours)
+   - [ ] Chat: Clear visual distinction between "reviewing suggestion" and "edit mode"
+   - [ ] Form Preview: Add banner warning if data is AI-generated (let user review/edit)
+   - [ ] Loading states: Show spinner while staging, consistent styling
+   - [ ] Success feedback: Toast/banner when entity created, show entity link
+   - [ ] Error messages: Clear, actionable errors (not technical API errors)
+   - [ ] Navigation: After creation, auto-suggest next action (view entity, create another, etc.)
+
+4. **Error Handling & Edge Cases** (3-4 hours)
+   - [ ] Handle API timeouts gracefully (retry UI)
+   - [ ] Handle rate limiting (quota exhausted message)
+   - [ ] Handle validation errors from backend (show field-level errors in form)
+   - [ ] Handle partial data (optional fields missing) — use sensible defaults
+   - [ ] Handle universe context loss — warn user if switching universes mid-creation
+   - [ ] Handle network failures — queue creation for retry
+
+5. **Data Consistency & Validation** (2-3 hours)
+   - [ ] Validate AI-generated data before form submission (client-side)
+   - [ ] Prevent duplicate entity names in universe (UX: show warning before save)
+   - [ ] Enforce required fields (name, type, etc.) — grey out submit if missing
+   - [ ] Handle field name mappings consistently (backstory → bio, etc.)
+   - [ ] Verify all entity types have proper field mapping
+
+6. **Chat Flow Improvements** (2-3 hours)
+   - [ ] After successful creation: Auto-navigate to entity detail view (not just alert)
+   - [ ] Show entity card in chat after creation (visual confirmation)
+   - [ ] Support batch creation: "Create 3 DJs" → show 3 form previews sequentially
+   - [ ] Add context preservation: if in Station/Artist view, pre-select context
+   - [ ] Warn user before clearing chat (unsaved suggestions)
+
+7. **Comprehensive Testing** (4-5 hours)
+   - [ ] Create test suite: chat → entity suggestion → form → submission
+   - [ ] Test all entity types in all universes
+   - [ ] Test editing suggestions before submission
+   - [ ] Test canceling vs. approving suggestions
+   - [ ] Test network failures and retries
+   - [ ] Test quota exceeded scenarios
+   - [ ] Test field validation and error messages
+   - [ ] Manual user acceptance testing (UAT) with realistic workflows
+
+8. **Documentation & Help Text** (1-2 hours)
+   - [ ] Add in-chat help: "Try: 'Create a DJ named...'"
+   - [ ] Form tooltips: explain each field (especially optional ones)
+   - [ ] Error messages include helpful suggestions
+   - [ ] Update CLAUDE.md with entity suggestion format examples
+   - [ ] Add troubleshooting guide for common chat issues
+
+**Success Criteria**:
+- ✅ User can request entity creation in natural language (any phrasing)
+- ✅ AI generates contextually appropriate data for current universe/station
+- ✅ Form preview shows all generated data, editable
+- ✅ User can approve/reject each field before submitting
+- ✅ Submission succeeds with clear success feedback
+- ✅ Entity appears in app immediately (no page reload needed)
+- ✅ User can create multiple entities in sequence without friction
+- ✅ All error states handled gracefully with user-friendly messages
+- ✅ No data loss on any edge case (network failure, edit, cancel)
+- ✅ Responsive and polished UX (mobile & desktop)
+
+**Testing Plan**:
+1. Manual end-to-end workflow testing (all 6 entity types)
+2. Automated test suite (unit + integration tests)
+3. User acceptance testing with realistic scenarios
+4. Edge case testing (network failures, quota limits, validation errors)
+5. Performance testing (response time, no jank, smooth animations)
+
+**Definition of Done**:
+- All subtasks completed
+- All tests passing (unit, integration, UAT)
+- No known bugs or regressions
+- Code review approved
+- Merged to alpha branch
+- Ready for user showcase
+
+**Effort Estimate**: 5-6 days (20-25 hours of focused work)
+
+**Blockers/Dependencies**: None — work can start immediately
+
+**Integration Points**:
+- Chat API: Verify responses include proper ENTITY_SUGGESTION blocks
+- FormManager: Ensure form context properly integrated with chat
+- Entity APIs: All create/update endpoints functioning
+- Universe context: Properly passed through chat → form → API
+
+---
+
 ## Current Session: Architecture & UI Realignment
 
 ### Governance & Documentation (✅ Completed)
