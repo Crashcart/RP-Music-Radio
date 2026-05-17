@@ -6,6 +6,7 @@ Strategy:
 2. If Ollama is unavailable, automatically fallback to Gemini (cloud)
 3. If OLLAMA_ENABLED=false, use Gemini directly
 4. Automatic health checking and fallback detection
+5. Task-aware selection: choose best AI for specific task type
 
 Supported modes:
 - HYBRID (default): Try Ollama → fallback to Gemini on failure
@@ -13,9 +14,16 @@ Supported modes:
 - GEMINI_ONLY: Use Gemini exclusively (ignore Ollama)
 - CLOUD_FALLBACK: Use Ollama with automatic cloud fallback
 
+Task types:
+- image_generation: Generate images (may prefer speed or quality)
+- script_generation: Generate scripts/stories
+- synthesis: Audio/media synthesis
+- brainstorm: Creative ideation
+
 This enables:
 ✓ Fast local processing when Ollama is running
 ✓ Automatic cloud failover if Ollama goes down
+✓ Task-aware selection of best available AI
 ✓ No manual switching needed
 ✓ Transparent to application code
 """
@@ -24,6 +32,7 @@ from __future__ import annotations
 
 import logging
 import os
+from enum import Enum
 from typing import Union
 
 from app.integrations.gemini_client import GeminiClient
@@ -32,6 +41,67 @@ from app.integrations.ollama_client import OllamaClient
 logger = logging.getLogger(__name__)
 
 AIClient = Union[GeminiClient, OllamaClient]
+
+
+class TaskType(Enum):
+    """Task categories for intelligent AI selection."""
+
+    IMAGE_GENERATION = "image_generation"
+    SCRIPT_GENERATION = "script_generation"
+    SYNTHESIS = "synthesis"
+    BRAINSTORM = "brainstorm"
+    TRANSCRIPTION = "transcription"
+    GENERIC = "generic"
+
+
+class TaskPreference:
+    """Preferences for task-aware AI selection."""
+
+    def __init__(
+        self,
+        task_type: TaskType,
+        prefer_speed: bool = False,
+        prefer_quality: bool = False,
+        prefer_offline: bool = False,
+    ):
+        """
+        Initialize task preference.
+
+        Args:
+            task_type: Type of task
+            prefer_speed: Prefer faster response (usually Ollama)
+            prefer_quality: Prefer higher quality output (usually Gemini)
+            prefer_offline: Strongly prefer local Ollama (fail rather than use cloud)
+        """
+        self.task_type = task_type
+        self.prefer_speed = prefer_speed
+        self.prefer_quality = prefer_quality
+        self.prefer_offline = prefer_offline
+
+    @staticmethod
+    def for_image_generation(prefer_speed: bool = False) -> TaskPreference:
+        """Create preference for image generation."""
+        return TaskPreference(
+            TaskType.IMAGE_GENERATION,
+            prefer_speed=prefer_speed,
+            prefer_quality=not prefer_speed,
+        )
+
+    @staticmethod
+    def for_script_generation(prefer_quality: bool = True) -> TaskPreference:
+        """Create preference for script generation."""
+        return TaskPreference(
+            TaskType.SCRIPT_GENERATION,
+            prefer_quality=prefer_quality,
+        )
+
+    @staticmethod
+    def for_synthesis(prefer_offline: bool = False) -> TaskPreference:
+        """Create preference for synthesis/media tasks."""
+        return TaskPreference(
+            TaskType.SYNTHESIS,
+            prefer_offline=prefer_offline,
+        )
 
 
 class HybridAIClient:
@@ -128,6 +198,77 @@ class HybridAIClient:
         """Return name of currently active client."""
         return self._active_client or ("ollama" if self.prefer_ollama else "gemini")
 
+    def select_best_client(self, preference: TaskPreference | None = None) -> str:
+        """
+        Select the best available AI client based on task preference.
+
+        Intelligent selection prioritizes:
+        1. Task-specific preferences (speed, quality, offline)
+        2. Service availability
+        3. Fallback chain (prefer_ollama → auto_fallback → gemini)
+
+        Args:
+            preference: Task preference (None uses default strategy)
+
+        Returns:
+            Name of selected client: "ollama" or "gemini"
+        """
+        if preference is None:
+            # Default: use standard preference logic
+            if self.prefer_ollama and self._check_ollama_available():
+                return "ollama"
+            elif self._check_ollama_available():
+                return "ollama"
+            elif self.auto_fallback:
+                return "gemini"
+            else:
+                return "ollama"  # Fail on Ollama if no fallback
+
+        # Task-aware selection
+        ollama_available = self._check_ollama_available()
+        gemini_available = True  # Assume Gemini available if key is set
+
+        # Strong offline preference: must use Ollama
+        if preference.prefer_offline:
+            if not ollama_available:
+                logger.warning(
+                    "Offline preference set but Ollama unavailable for %s",
+                    preference.task_type.value,
+                )
+            return "ollama"
+
+        # Quality preference: prefer Gemini, fallback to Ollama if unavailable
+        if preference.prefer_quality:
+            if gemini_available:
+                return "gemini"
+            elif ollama_available:
+                logger.info(
+                    "Quality preference set, but Gemini unavailable, using Ollama"
+                )
+                return "ollama"
+            else:
+                return "gemini"  # Fail if both unavailable
+
+        # Speed preference: prefer Ollama, fallback to Gemini if unavailable
+        if preference.prefer_speed:
+            if ollama_available:
+                return "ollama"
+            elif gemini_available and self.auto_fallback:
+                logger.info(
+                    "Speed preference set, but Ollama unavailable, using Gemini"
+                )
+                return "gemini"
+            else:
+                return "ollama"
+
+        # Default: use standard strategy
+        if self.prefer_ollama and ollama_available:
+            return "ollama"
+        elif gemini_available and self.auto_fallback:
+            return "gemini"
+        else:
+            return "ollama"
+
     def health_check(self) -> dict:
         """Check health of both AI services."""
         ollama_ok = self._ollama_client._is_available()
@@ -206,17 +347,53 @@ def get_ai_client_for_task(task_name: str) -> AIClient:
     """
     Get AI client with task-specific configuration.
 
-    For most tasks, the default client works fine. Some tasks could prefer:
-    - "synthesis": Prefer Ollama for speed
-    - "research": Prefer Gemini for quality
-    - "brainstorm": Either, use default
+    Intelligently selects best available AI based on task type:
+    - image_generation: Prefer Gemini for quality, fallback to Ollama for speed
+    - script_generation: Prefer Gemini for quality/accuracy
+    - synthesis: Prefer Ollama for speed, fallback to Gemini
+    - brainstorm: Default hybrid (speed + quality balanced)
 
     Args:
-        task_name: Name of the task (e.g., "synthesis", "research", "brainstorm")
+        task_name: Name of the task (e.g., "image_generation", "script_generation", "synthesis")
 
     Returns:
-        Appropriate AI client for the task
+        HybridAIClient with task-aware selection, or specific client instance
     """
-    # For now, just use the default client
-    # In the future, could route different tasks to different models
-    return get_ai_client()
+    # Get base client (hybrid if available)
+    client = get_ai_client()
+
+    # If it's not a hybrid client, return as-is
+    if not isinstance(client, HybridAIClient):
+        return client
+
+    # Task-specific preferences
+    task_lower = task_name.lower().strip()
+
+    if "image" in task_lower or "art" in task_lower:
+        # Image generation: quality is important, accept fallback to Ollama for speed
+        pref = TaskPreference.for_image_generation(prefer_speed=False)
+        best_client_name = client.select_best_client(pref)
+    elif "script" in task_lower or "story" in task_lower or "content" in task_lower:
+        # Script/content generation: quality and consistency matter
+        pref = TaskPreference.for_script_generation(prefer_quality=True)
+        best_client_name = client.select_best_client(pref)
+    elif "synthesis" in task_lower or "audio" in task_lower or "media" in task_lower:
+        # Synthesis: speed matters more, but quality acceptable
+        pref = TaskPreference.for_synthesis(prefer_offline=False)
+        best_client_name = client.select_best_client(pref)
+    else:
+        # Default: use default hybrid behavior
+        best_client_name = client.select_best_client()
+
+    # Log selection for debugging
+    logger.info(
+        "Task-aware AI selection: task=%s → client=%s",
+        task_name,
+        best_client_name,
+    )
+
+    # Return the actual client instance
+    if best_client_name == "ollama":
+        return client._ollama_client
+    else:
+        return client._gemini_client
