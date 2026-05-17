@@ -429,6 +429,11 @@ class Universe(Base):
         String, default=""
     )  # "futuristic", "medieval", "post-apocalyptic", etc.
 
+    # AI staging workflow — added for AI universe generation feature
+    # Values: "draft" (AI-staged), "published" (default for manual creation)
+    created_by = Column(String, nullable=True)  # Who initiated AI generation
+    expires_at = Column(DateTime, nullable=True)  # TTL for draft records
+
     # Admin/audit
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)

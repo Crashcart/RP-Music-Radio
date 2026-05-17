@@ -8,6 +8,17 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 
+# Import all ORM models so they're registered with Base.metadata before create_all()
+from app.models.database import (
+    Artist,
+    Brand,
+    Draft,
+    GenerationHistory,
+    Jingle,
+    Station,
+    Universe,
+)
+
 # NOTE: app.main import moved to client() fixture to avoid pytest discovery hang
 # See .github/ROOT_CAUSE_API_HANG.md
 
