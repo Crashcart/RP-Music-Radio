@@ -13,6 +13,7 @@ import {
   normalizeEntityType,
 } from "../contexts/FormManagerContext";
 import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
+import type { UsageStats } from "./TokenUsageWidget";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -256,11 +257,7 @@ interface ChatAssistantProps {
   onEntityCreated?: () => void;
   currentStationId?: string;
   selectedStation?: Station | null;
-  usageStats?: {
-    usage_percentage: number;
-    warning_level: "normal" | "warning" | "critical";
-    is_quota_exceeded: boolean;
-  } | null;
+  usageStats?: UsageStats | null;
 }
 
 export function ChatAssistant({

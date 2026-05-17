@@ -98,11 +98,18 @@ def get_usage_stats() -> dict:
     days_until_reset = get_days_until_reset()
     warning_level = get_warning_level()
 
+    now = datetime.now(timezone.utc)
+    if now.month == 12:
+        next_month = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        next_month = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
+    reset_date = next_month.strftime("%Y-%m-%d")
+
     return {
         "tokens_used": used,
         "quota_limit": limit,
         "usage_percentage": percentage,
-        "reset_date": f"{datetime.now(timezone.utc).year}-{datetime.now(timezone.utc).month + 1 if datetime.now(timezone.utc).month < 12 else 1:02d}-01",
+        "reset_date": reset_date,
         "days_until_reset": days_until_reset,
         "is_quota_exceeded": is_quota_exceeded(),
         "warning_level": warning_level,
