@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { api, type Station } from "../api/client";
+import { api, type Station, type Universe } from "../api/client";
 import {
   parseEntitySuggestions,
   mapSuggestionByType,
@@ -128,6 +128,7 @@ const parseDJSuggestions = (text: string): DJSuggestion[] => {
 const buildSystemPrompt = (
   currentStationId: string | undefined,
   selectedStation: Station | null,
+  activeUniverse: Universe | null,
 ): string => {
   let prompt =
     "You are AetherWave AI, a creative assistant for building fictional radio stations. " +
@@ -235,20 +236,31 @@ UNIVERSE (World/Setting): name, description (required)
 6. Pipes (|) separate list items: phrase1 | phrase2 | phrase3
 7. Always end with a blank line after each block`;
 
+  if (activeUniverse) {
+    prompt += `
+
+=== UNIVERSE CONTEXT ===
+Universe: "${activeUniverse.name}"`;
+    if (activeUniverse.description) {
+      prompt += `
+Description: ${activeUniverse.description}`;
+    }
+  }
+
   if (currentStationId && selectedStation) {
     prompt += `
 
-=== CURRENT CONTEXT ===
+=== STATION CONTEXT ===
 Station: "${selectedStation.name}"${
       selectedStation.frequency ? ` (${selectedStation.frequency})` : ""
     }${selectedStation.genre ? `, ${selectedStation.genre}` : ""}
 
 When creating entities for this station, maintain consistency with its vibe and genre.`;
-  } else {
+  } else if (!activeUniverse) {
     prompt += `
 
-=== NO STATION CONTEXT ===
-User is not editing a specific station. Generate universes, standalone brands, or generic tracks.`;
+=== NO CONTEXT ===
+User is not in a specific universe or station. Generate new universes or standalone entities.`;
   }
 
   return prompt;
@@ -258,6 +270,7 @@ interface ChatAssistantProps {
   onEntityCreated?: () => void;
   currentStationId?: string;
   selectedStation?: Station | null;
+  activeUniverse?: Universe | null;
   usageStats?: UsageStats | null;
 }
 
@@ -265,6 +278,7 @@ export function ChatAssistant({
   onEntityCreated,
   currentStationId,
   selectedStation = null,
+  activeUniverse = null,
   usageStats,
 }: ChatAssistantProps) {
   const [open, setOpen] = useState(false);
@@ -297,7 +311,11 @@ export function ChatAssistant({
     setLoading(true);
 
     try {
-      const systemPrompt = buildSystemPrompt(currentStationId, selectedStation);
+      const systemPrompt = buildSystemPrompt(
+        currentStationId,
+        selectedStation,
+        activeUniverse,
+      );
       const data = await api.chat({
         message: text,
         system_prompt: systemPrompt,

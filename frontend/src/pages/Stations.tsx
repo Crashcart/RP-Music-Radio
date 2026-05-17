@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { api, type Station, type Artist, type Jingle } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 import { useFormManager } from "../contexts/FormManagerContext";
+import { useFormDirtyState } from "../contexts/FormDirtyStateContext";
 
 /** Toast notification for undo after approve. */
 interface UndoToast {
@@ -1097,6 +1098,7 @@ function StationForm({
   onSave: () => void;
 }) {
   const { initialData, isAiGenerated } = useFormInitialData("station");
+  const { setDirty } = useFormDirtyState();
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1123,8 +1125,10 @@ function StationForm({
       e: React.ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >,
-    ) =>
+    ) => {
+      setDirty(true);
       setForm((f) => ({ ...f, [field]: e.target.value }));
+    };
 
   const handleSave = async () => {
     if (!form.name.trim()) return alert("Station name is required");
@@ -1135,6 +1139,7 @@ function StationForm({
       } else {
         await api.createStation(form);
       }
+      setDirty(false);
       onSave();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : String(e));
@@ -1332,7 +1337,13 @@ function StationForm({
       </div>
 
       <div className="form-actions">
-        <button className="btn btn-ghost" onClick={onCancel}>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setDirty(false);
+            onCancel();
+          }}
+        >
           Cancel
         </button>
         <button
@@ -1365,6 +1376,7 @@ export function ArtistForm({
 }) {
   const [stations, setStations] = useState<Station[]>([]);
   const { initialData, isAiGenerated } = useFormInitialData("artist");
+  const { setDirty } = useFormDirtyState();
 
   const [form, setForm] = useState({
     name: existing?.name || initialData?.name || "",
@@ -1417,6 +1429,7 @@ export function ArtistForm({
       >,
     ) => {
       const value = e.target.value;
+      setDirty(true);
       setForm((f) => ({ ...f, [field]: value }));
       const err = validateField(field, value);
       setFieldErrors((prev) => ({ ...prev, [field]: err }));
@@ -1436,6 +1449,7 @@ export function ArtistForm({
       } else {
         await api.createArtist(payload);
       }
+      setDirty(false);
       onSave();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : String(e));
@@ -1683,7 +1697,13 @@ export function ArtistForm({
       </div>
 
       <div className="form-actions">
-        <button className="btn btn-ghost" onClick={onCancel}>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setDirty(false);
+            onCancel();
+          }}
+        >
           Cancel
         </button>
         <button

@@ -5,6 +5,10 @@ import {
   FormManagerContext,
   getFormPageRoute,
 } from "./contexts/FormManagerContext";
+import {
+  FormDirtyStateProvider,
+  useFormDirtyState,
+} from "./contexts/FormDirtyStateContext";
 import { Stations } from "./pages/Stations";
 import { Artists } from "./pages/Artists";
 import { Brands } from "./pages/Brands";
@@ -14,6 +18,7 @@ import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { SplashScreen } from "./components/SplashScreen";
+import { ConfirmNavigationDialog } from "./components/ConfirmNavigationDialog";
 import {
   TokenUsageWidget,
   type UsageStats,
@@ -72,10 +77,13 @@ const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
   { id: "settings", label: "Settings", icon: "⚙️" },
 ];
 
-export default function App() {
+function AppContent() {
   const isMobile = useIsMobile();
+  const formDirtyState = useFormDirtyState();
   const [showSplash, setShowSplash] = useState(true);
   const [page, setPage] = useState<Page>("stations");
+  const [pendingPage, setPendingPage] = useState<Page | null>(null);
+  const [showNavConfirm, setShowNavConfirm] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
   const [activeStation, setActiveStation] = useState<Station | null>(null);
@@ -153,6 +161,34 @@ export default function App() {
   }, [apiOk]);
 
   const handleSplashDone = useCallback(() => setShowSplash(false), []);
+
+  const handlePageNavigation = useCallback(
+    (targetPage: Page) => {
+      if (targetPage === page) return; // Already on this page
+
+      if (formDirtyState.isDirty) {
+        setPendingPage(targetPage);
+        setShowNavConfirm(true);
+      } else {
+        setPage(targetPage);
+      }
+    },
+    [page, formDirtyState.isDirty],
+  );
+
+  const handleConfirmNavigation = useCallback(() => {
+    if (pendingPage) {
+      formDirtyState.reset();
+      setPage(pendingPage);
+      setPendingPage(null);
+      setShowNavConfirm(false);
+    }
+  }, [pendingPage, formDirtyState]);
+
+  const handleCancelNavigation = useCallback(() => {
+    setPendingPage(null);
+    setShowNavConfirm(false);
+  }, []);
 
   const refreshDrafts = useCallback(() => {
     api
@@ -249,7 +285,7 @@ export default function App() {
   };
 
   return (
-    <FormManagerProvider>
+    <>
       <FormNavigator onPageChange={setPage} />
       <div className={`app-layout ${isMobile ? "mobile" : ""}`}>
         {showSplash && <SplashScreen onDone={handleSplashDone} />}
@@ -271,7 +307,7 @@ export default function App() {
                 <div
                   key={item.id}
                   className={`nav-item ${page === item.id ? "active" : ""}`}
-                  onClick={() => setPage(item.id)}
+                  onClick={() => handlePageNavigation(item.id)}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   {item.label}
@@ -291,7 +327,7 @@ export default function App() {
                 <div
                   className="stat-mini"
                   style={{ marginBottom: "var(--space-sm)", cursor: "pointer" }}
-                  onClick={() => setPage("universes")}
+                  onClick={() => handlePageNavigation("universes")}
                   title={`Active universe: ${activeUniverse.name}`}
                 >
                   <span style={{ fontSize: "0.9rem" }}>🌍</span>
@@ -316,7 +352,7 @@ export default function App() {
                     cursor: "pointer",
                     color: "var(--status-warning, #f59e0b)",
                   }}
-                  onClick={() => setPage("universes")}
+                  onClick={() => handlePageNavigation("universes")}
                   title="No universe set — click to create one"
                 >
                   <span style={{ fontSize: "0.9rem" }}>⚠️</span>
@@ -463,7 +499,7 @@ export default function App() {
               <button
                 key={item.id}
                 className={`mobile-nav-item ${page === item.id ? "active" : ""}`}
-                onClick={() => setPage(item.id)}
+                onClick={() => handlePageNavigation(item.id)}
               >
                 <span className="mobile-nav-icon">{item.icon}</span>
                 <span className="mobile-nav-label">
@@ -482,6 +518,7 @@ export default function App() {
           }}
           currentStationId={activeStation?.id}
           selectedStation={activeStation}
+          activeUniverse={activeUniverse}
           usageStats={usageStats}
         />
         {usageStats && (
@@ -491,7 +528,30 @@ export default function App() {
             onClose={() => setShowUsageModal(false)}
           />
         )}
+
+        {/* Navigation Confirmation Dialog */}
+        <ConfirmNavigationDialog
+          isOpen={showNavConfirm}
+          onConfirm={handleConfirmNavigation}
+          onCancel={handleCancelNavigation}
+          targetPageLabel={
+            pendingPage
+              ? NAV_ITEMS.find((item) => item.id === pendingPage)?.label ||
+                pendingPage
+              : ""
+          }
+        />
       </div>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <FormManagerProvider>
+      <FormDirtyStateProvider>
+        <AppContent />
+      </FormDirtyStateProvider>
     </FormManagerProvider>
   );
 }
