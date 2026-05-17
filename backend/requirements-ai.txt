@@ -1,9 +1,17 @@
 # ─ BASE + AI ─────────────────────────────────────────────────────────
-# Adds Gemini API for script generation and content creation
+# Adds support for AI script generation via Gemini (cloud) or Ollama (local).
 # Include if you need AI features (ChatAssistant, script generation, etc.)
 
 -r requirements-base.txt
 
 google-genai>=1.0.0
+requests>=2.31.0  # For Ollama HTTP client
 
 # Install with: pip install -r requirements-ai.txt
+#
+# Configuration via environment variables:
+# - GEMINI_ENABLED=true/false (use Google Gemini API)
+# - GOOGLE_API_KEY=<your-api-key> (required for Gemini)
+# - OLLAMA_ENABLED=true/false (use local Ollama instance)
+# - OLLAMA_HOST=http://localhost:11434 (Ollama endpoint)
+# - OLLAMA_MODEL=mistral (or llama2, neural-chat, etc.)
