@@ -69,15 +69,15 @@ def synthesize_track(self, draft_id: str) -> dict:
         history.style_seed = station.style_seed
         db.commit()
 
-        # ── Step 2: Generate script via Gemini ────────────────────
+        # ── Step 2: Generate script via AI (Gemini or Ollama) ──────
         self.update_state(
             state="PROGRESS", meta={"stage": "generating_script", "progress": 25}
         )
 
-        from app.integrations.gemini_client import GeminiClient
+        from app.integrations.ai_factory import get_ai_client
 
-        gemini = GeminiClient()
-        script_result = gemini.generate_script(
+        ai_client = get_ai_client()
+        script_result = ai_client.generate_script(
             station_name=draft.station_name,
             artist_name=draft.artist_name,
             genre=draft.genre,
