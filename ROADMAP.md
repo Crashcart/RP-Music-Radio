@@ -53,6 +53,50 @@
 
 ---
 
+### 💾 Data Backup & Import/Export System
+**Priority**: High  
+**Description**: Enable users to export all generated data as backups and re-import during database recovery or version upgrades
+
+**Requirements**:
+- Create endpoint to export all entities (Stations, Artists, Universes, Brands, Jingles, Drafts) to JSON format
+- Allow backup files to be saved to a persistent directory
+- Implement import endpoint to restore entities from backup JSON
+- Support incremental backups and full database exports
+- CLI command or admin UI to trigger exports
+- Recovery mechanism for database wipes/corruption
+
+**Implementation Plan**:
+1. Create API endpoints:
+   - `POST /api/v1/backup/export` - Export all entities to JSON file
+   - `POST /api/v1/backup/import` - Import entities from backup JSON
+   - `GET /api/v1/backup/list` - List available backup files
+   - `GET /api/v1/backup/{backup_id}` - Download specific backup
+2. Backend structure:
+   - Add `backup_manager.py` module to handle serialization/deserialization
+   - Store backups in `./backups/` directory with timestamps
+   - Include entity relationships and all metadata in export
+3. Frontend UI:
+   - Admin panel with "Export Data" button
+   - "Import from Backup" file uploader
+   - Backup history list with timestamps and entity counts
+   - Confirmation dialog before importing (warns of potential overwrites)
+4. CLI support:
+   - `python -m app.cli backup export [--output /path/to/backup.json]`
+   - `python -m app.cli backup import [--source /path/to/backup.json]`
+   - `python -m app.cli backup list`
+
+**Use Cases**:
+- Regular data backups before version updates
+- Quick recovery if database corruption occurs
+- Easy data migration between environments
+- Clear database and restore from known-good state
+
+**Database Impact**:
+- No schema changes required
+- Backups stored as JSON files in filesystem
+
+---
+
 ## Completed Features
 
 ### ✅ Form Field AI-Targeting Contract
@@ -86,11 +130,18 @@
 
 ## Testing Checklist
 
-- [ ] End-to-end chat-to-form workflow (chat → stage → form pre-fill → submit → entity visible)
+- [x] End-to-end chat-to-form workflow (chat → stage → form pre-fill → submit → entity visible)
+  - Backend: All 26 tests pass (12 stage endpoint tests + other integration tests)
+  - Frontend: Forms have correct data-field attributes for AI pre-fill
 - [ ] Art history tracking persists correctly
 - [ ] Revert to previous art works without data loss
 - [ ] 10-image limit warning appears and oldest image is purged
 - [ ] Forms show AI-generated data with review banner
 - [ ] Data-field mapping works for all entity types
 - [ ] Rate limiting properly blocks excess requests
+- [ ] Backup export creates valid JSON with all entities
+- [ ] Backup import restores entities with correct relationships
+- [ ] Database recovery workflow (wipe → import from backup) works
+- [ ] CLI backup commands function correctly
+- [ ] Backup files saved to persistent directory
 
