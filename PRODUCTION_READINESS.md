@@ -102,6 +102,22 @@ AetherWave is a **fully functional, polished, production-ready application** tha
 - Graceful degradation (system continues operating even if preferred service is down)
 - Production-ready with monitoring visibility
 
+### System Resource Awareness (NEW)
+- ✅ CPU/RAM/GPU monitoring: Detects available hardware resources
+- ✅ Model recommendations: Suggests optimal model sizes based on hardware (tiny/small/medium/large/xlarge)
+- ✅ Resource constraints: Prevents Ollama from running if insufficient RAM
+- ✅ Debug endpoint: GET /debug/ai provides comprehensive AI selection diagnostics
+- ✅ Enhanced health check: /health/ai now includes system_resources section
+- ✅ Graceful fallback: Recommends Gemini if local models won't fit available RAM
+- ✅ GPU detection: Automatically detects NVIDIA CUDA capability when available
+
+**Impact**:
+- Prevents out-of-memory crashes by checking resources before running models
+- Administrators can see recommended model sizes for their hardware
+- Debug endpoint helps troubleshoot AI service selection issues
+- System automatically degrades to cloud AI if local models exceed RAM limits
+- Enables smarter deployment decisions based on actual system constraints
+
 ---
 
 ## Deployment Checklist ✅
