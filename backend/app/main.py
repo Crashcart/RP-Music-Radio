@@ -156,11 +156,44 @@ def health_check():
     return {"status": "ok", "service": "AetherWave API", "version": "1.0.4"}
 
 
+@app.get("/health/ai")
+def health_check_ai():
+    """Check health of AI services (Ollama + Gemini)."""
+    from app.integrations.ai_factory import get_ai_client
+
+    try:
+        client = get_ai_client()
+
+        # Check if client has health_check method (HybridAIClient does)
+        if hasattr(client, "health_check"):
+            health_info = client.health_check()
+            return {
+                "status": "ok",
+                "service": "AI Services",
+                "ai_health": health_info,
+            }
+
+        # Fallback for clients without health_check
+        return {
+            "status": "ok",
+            "service": "AI Services",
+            "client_type": client.__class__.__name__,
+        }
+    except Exception as e:
+        logger.error("AI health check failed: %s", e)
+        return {
+            "status": "error",
+            "service": "AI Services",
+            "error": str(e),
+        }
+
+
 @app.get("/")
 def read_root():
     return {
         "message": "Welcome to AetherWave",
         "docs": "/docs",
         "health": "/health",
+        "health_ai": "/health/ai",
         "api": "/api/v1",
     }
