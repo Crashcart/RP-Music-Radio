@@ -10,7 +10,8 @@ export type EntityType =
   | "artist"
   | "jingle"
   | "draft"
-  | "universe";
+  | "universe"
+  | "dj";
 
 export interface EntitySuggestion {
   entityType: EntityType;

@@ -22,8 +22,6 @@ export function Universes({
     null,
   );
   const [showCreate, setShowCreate] = useState(false);
-  const [newUniverseName, setNewUniverseName] = useState("");
-  const [creating, setCreating] = useState(false);
   const [researching, setResearching] = useState<string | null>(null);
   const [genArt, setGenArt] = useState<string | null>(null);
   const [editing, setEditing] = useState<Universe | null>(null);
@@ -54,31 +52,6 @@ export function Universes({
 
   const getUniverseStations = (universeId: string) => {
     return stations.filter((s) => s.universe_id === universeId);
-  };
-
-  const handleCreateUniverse = async () => {
-    if (!newUniverseName.trim()) {
-      toast.error("Universe name required");
-      return;
-    }
-    setCreating(true);
-    try {
-      const universe = await api.createUniverse({ name: newUniverseName });
-      setNewUniverseName("");
-      setShowCreate(false);
-      formManager.confirmForm();
-      refresh();
-      // Auto-select the new universe for research
-      setSelectedUniverse(universe);
-      // Notify App-level gate that a universe now exists
-      onUniverseCreated?.();
-      toast.success(`Created ${universe.name} successfully!`);
-    } catch (e: unknown) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      toast.error(`Failed to create universe: ${errorMsg}`);
-    } finally {
-      setCreating(false);
-    }
   };
 
   const handleResearch = async (universeId: string) => {
@@ -187,12 +160,10 @@ export function Universes({
         <UniverseCreateForm
           onCancel={() => {
             setShowCreate(false);
-            setNewUniverseName("");
             formManager.closeForm();
           }}
           onSave={() => {
             setShowCreate(false);
-            setNewUniverseName("");
             formManager.confirmForm();
             refresh();
             onUniverseCreated?.();
@@ -940,7 +911,6 @@ function UniverseEditForm({
 }: UniverseEditFormProps) {
   const { initialData, isAiGenerated } = useFormInitialData("universe");
   const { setDirty } = useFormDirtyState();
-  const toast = useToast();
 
   const [form, setForm] = useState({
     ...universe,

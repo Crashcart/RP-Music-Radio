@@ -1,4 +1,5 @@
-import { EntityType, FormEntitySuggestion } from "../utils/entitySuggestions";
+import { FormEntitySuggestion } from "../utils/entitySuggestions";
+import type { FormEntityType } from "../contexts/FormManagerContext";
 
 interface FormPreviewDialogProps {
   suggestion: FormEntitySuggestion;
@@ -89,9 +90,10 @@ export function FormPreviewDialog({
 /**
  * Return human-readable label for entity type.
  */
-function entityTypeLabel(type: EntityType): string {
-  const labels: Record<EntityType, string> = {
+function entityTypeLabel(type: FormEntityType): string {
+  const labels: Record<FormEntityType, string> = {
     dj: "DJ",
+    artist: "Artist",
     jingle: "Jingle",
     draft: "Track",
     station: "Station",
@@ -163,6 +165,7 @@ function buildSummary(suggestion: FormEntitySuggestion): React.ReactNode {
       );
 
     case "dj":
+    case "artist":
       return (
         <div>
           <p>

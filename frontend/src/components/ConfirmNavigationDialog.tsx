@@ -1,5 +1,3 @@
-import React from "react";
-
 interface ConfirmNavigationDialogProps {
   isOpen: boolean;
   onConfirm: () => void;

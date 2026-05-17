@@ -204,11 +204,6 @@ function StationDetail({
   const [addDJMode, setAddDJMode] = useState<"manual" | "ai" | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showAddJingle, setShowAddJingle] = useState(false);
-  const [jingleForm, setJingleForm] = useState({
-    name: "",
-    jingle_type: "intro",
-  });
-  const [savingJingle, setSavingJingle] = useState(false);
   const [deletingJingleId, setDeletingJingleId] = useState<string | null>(null);
   const [deletingDJId, setDeletingDJId] = useState<string | null>(null);
 
@@ -953,11 +948,7 @@ function StationDetail({
           <h3>🔔 Jingles ({jingles.length})</h3>
           <button
             className="btn btn-secondary"
-            onClick={() => {
-              if (showAddJingle)
-                setJingleForm({ name: "", jingle_type: "intro" });
-              setShowAddJingle(!showAddJingle);
-            }}
+            onClick={() => setShowAddJingle(!showAddJingle)}
           >
             + Add Jingle
           </button>
@@ -967,12 +958,10 @@ function StationDetail({
             stationId={station.id}
             onSave={() => {
               setShowAddJingle(false);
-              setJingleForm({ name: "", jingle_type: "intro" });
               onRefresh();
             }}
             onCancel={() => {
               setShowAddJingle(false);
-              setJingleForm({ name: "", jingle_type: "intro" });
             }}
           />
         )}
