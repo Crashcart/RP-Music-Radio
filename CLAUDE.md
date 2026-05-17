@@ -247,7 +247,57 @@ When users ask ChatAssistant to "Create 3 DJs for this station":
 ## 🤖 AI Agent Efficiency Guidelines
 
 **Applies to**: Claude (all variants), other AI agents working on this codebase  
-**Purpose**: Maximize productivity while minimizing token consumption (cost + latency)
+**Purpose**: Maximize productivity while minimizing token consumption (cost + latency)  
+**Core Philosophy**: **Great code > Fast code**. Take longer if needed to use fewer tokens and produce sustainable, maintainable solutions. Token efficiency is about working smarter, not faster.
+
+### The Efficiency Principle
+
+**Token Efficiency ≠ Speed**
+- ❌ Don't: Rush to code → Discover bugs → Re-read code → Fix → Re-test (token waste)
+- ✅ Do: Read first → Plan → Code once → Test once (token efficiency)
+
+**Sustainable Code**
+- ❌ Don't: Write code that "works now" but creates technical debt
+- ✅ Do: Write code that's efficient to maintain, test, and extend
+
+**Metrics That Matter**
+- Tokens per feature: Lower is better
+- Lines changed per bug fix: Fewer is better  
+- Test-to-code ratio: Comprehensive is better
+- Time to review: Understandable code reviews faster
+- Maintenance burden: Simple code costs less to maintain
+
+---
+
+### Best Practices for Excellent Code
+
+**Before You Code**
+- [ ] Read 2-3 similar functions to understand patterns in this codebase
+- [ ] Identify the existing approach, not your preferred approach
+- [ ] Ask: "What would someone familiar with this codebase write?"
+- [ ] Plan the implementation (2-3 bullet points)
+- [ ] Identify test cases before writing code
+
+**While You Code**
+- [ ] Write for readability, not cleverness
+- [ ] Use established patterns and conventions
+- [ ] One logical change per commit
+- [ ] Include tests alongside code (not after)
+- [ ] Keep functions under 20 lines (refactor if longer)
+
+**After You Code**
+- [ ] Review your own code as if you didn't write it
+- [ ] Check for edge cases: null checks, empty lists, error handling
+- [ ] Verify database constraints match validation
+- [ ] Run tests locally before committing
+- [ ] Ensure error messages are user-friendly, not programmer-friendly
+
+**Token Efficiency in Action**
+- ✅ Spend 30 min reading before coding (saves 200 tokens on rework)
+- ✅ Write one test per feature (saves 150 tokens on debugging)
+- ✅ Keep functions small (saves 100 tokens on code review)
+- ✅ Use established patterns (saves 75 tokens on design discussion)
+- **Total savings: 525 tokens per feature** (compared to fast, buggy code)
 
 ### Token Efficiency Principles
 
@@ -255,26 +305,31 @@ When users ask ChatAssistant to "Create 3 DJs for this station":
    - Use Read tool to access existing code before asking for changes
    - Avoid explaining what you're about to do if you already have the context
    - Don't re-read files you just edited (tools auto-verify)
+   - ✅ **Result**: Fewer context setup tokens, more focused work
 
 2. **Parallel Operations**
    - When independent tasks can run simultaneously, batch them in a single tool call
    - Example: Run 3 grep commands in parallel, not sequentially
    - Reduces round-trip latency significantly
+   - ✅ **Result**: 3x faster execution, same token budget
 
 3. **Avoid Redundant Tool Calls**
    - Search once with comprehensive queries, don't search multiple times
    - Use grep/find with good patterns rather than making multiple passes
    - Combine related operations (e.g., grep + git in one Bash call)
+   - ✅ **Result**: Fewer round-trips, more information per call
 
 4. **Direct to Solution**
    - Identify the actual problem, not the symptom
    - Make targeted edits rather than broad refactors
    - Document decisions in code comments only when WHY is non-obvious
+   - ✅ **Result**: Surgical changes, easier reviews, less debugging
 
 5. **Scope Discipline**
-   - Don't fix unrelated bugs while fixing a target bug
-   - Don't add abstractions beyond what's required
+   - Don't fix unrelated bugs while fixing a target bug (save for separate task)
+   - Don't add abstractions beyond what's required (three similar lines is fine)
    - Don't implement features for "what if" scenarios
+   - ✅ **Result**: Focused commits, clear intent, zero technical debt creep
 
 ### Context Management Strategy
 
@@ -352,6 +407,50 @@ Bad commits to avoid:
 - Changes that belong in separate commits bundled together
 - Overly long messages that explain implementation details (that's what the code does)
 
+### Great Code vs Fast Code
+
+**The Paradox**: Taking time to understand and do things right USES FEWER TOKENS overall.
+
+**Fast Code (❌ High Total Token Cost)**
+```
+Session 1: Write feature quickly (100 tokens)
+  → Introduce bugs
+Session 2: Debug and fix (150 tokens)
+  → Design issues surface
+Session 3: Refactor architecture (200 tokens)
+  → Edge cases missed
+Session 4: Security audit and fixes (180 tokens)
+  → Performance problem found
+Session 5: Optimize and fix (140 tokens)
+─────────────────────────────
+TOTAL: 770 tokens over 5 sessions
+RESULT: Fragile, hard to maintain
+```
+
+**Great Code (✅ Lower Total Token Cost)**
+```
+Session 1: Read existing patterns (50 tokens)
+         Plan design (30 tokens)
+         Implement correctly (80 tokens)
+         Write comprehensive tests (40 tokens)
+         Document decisions (20 tokens)
+─────────────────────────────
+TOTAL: 220 tokens in 1 session
+RESULT: Sustainable, tested, documented
+NO future debug/fix sessions needed
+```
+
+**Why Great Code Uses Fewer Tokens**:
+1. **Less context switching** - One focused session vs multiple re-reads
+2. **Fewer bugs** - Proper implementation means no debug cycles
+3. **Easier reviews** - Clean code reviews faster (fewer clarifying questions)
+4. **Lower maintenance** - No technical debt to repay
+5. **Confidence in changes** - Less uncertainty = less re-verification
+
+**Guideline**: If a feature will take 4 hours to implement correctly vs 2 hours to hack, and there's any chance of bugs → do it right. Token math favors quality.
+
+---
+
 ### Token Budget Awareness
 
 This codebase uses approximately:
@@ -360,7 +459,7 @@ This codebase uses approximately:
 - 50 tokens per simple Bash call
 - 1000 tokens per context window compression
 
-**Strategy**: Compress early and often. Use references to summaries rather than re-reading when context grows large.
+**Strategy**: Compress early and often. Use references to summaries rather than re-reading when context grows large. Prioritize getting it right the first time over shipping fast.
 
 ---
 
