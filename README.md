@@ -13,6 +13,40 @@ AetherWave transforms user-defined seeds (genres, item lists, station vibes) int
 
 All metadata is baked directly into MP3 ID3v2.4 tags, making each file a portable "lore container."
 
+## ⚠️ Security Notice
+
+**IMPORTANT**: This application is designed to run on **local networks only**. 
+
+**No authentication or security hardening is currently implemented.** This means:
+- ❌ No user authentication or authorization
+- ❌ No rate limiting on sensitive endpoints (beyond basic chat-to-entity limits)
+- ❌ No HTTPS/TLS encryption
+- ❌ No input sanitization for malicious payloads
+- ❌ No database access controls
+- ❌ Any user with network access can create, modify, or delete content
+
+**This is acceptable for**:
+- Local development and testing
+- Private networks with trusted users
+- Internal game development teams
+- Closed LAN environments
+
+**Do NOT use in**:
+- Public internet deployments
+- Production with untrusted users
+- Any internet-facing environment
+
+**Security Roadmap**:
+- Future versions will add optional authentication (JWT, API keys)
+- HTTPS/TLS support coming in v1.1
+- Role-based access control (RBAC) planned
+- Content validation and input sanitization
+- Database encryption at rest
+
+For now, treat this as a **local development tool only**. If you need to expose it over the internet, run it behind a reverse proxy with authentication (nginx, Cloudflare, etc.).
+
+---
+
 ## Quick Start
 
 ### Prerequisites
