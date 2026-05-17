@@ -94,23 +94,35 @@ def get_usage_stats() -> dict:
     """Get complete usage statistics for display."""
     used = get_monthly_usage()
     limit = get_quota_limit()
-    percentage = get_usage_percentage()
-    days_until_reset = get_days_until_reset()
-    warning_level = get_warning_level()
+
+    if limit <= 0:
+        percentage = 0.0
+    else:
+        percentage = round((used / limit) * 100, 2)
+
+    if percentage >= 95:
+        warning_level = "critical"
+    elif percentage >= 80:
+        warning_level = "warning"
+    else:
+        warning_level = "normal"
+
+    is_exceeded = percentage >= 100.0
 
     now = datetime.now(timezone.utc)
     if now.month == 12:
         next_month = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc)
     else:
         next_month = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
-    reset_date = next_month.strftime("%Y-%m-%d")
+
+    days_remaining = (next_month - now).days
 
     return {
         "tokens_used": used,
         "quota_limit": limit,
         "usage_percentage": percentage,
-        "reset_date": reset_date,
-        "days_until_reset": days_until_reset,
-        "is_quota_exceeded": is_quota_exceeded(),
+        "reset_date": next_month.strftime("%Y-%m-%d"),
+        "days_until_reset": max(0, days_remaining),
+        "is_quota_exceeded": is_exceeded,
         "warning_level": warning_level,
     }
