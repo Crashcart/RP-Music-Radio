@@ -478,7 +478,18 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(artist)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        # Station_id is NOT NULL, so provide helpful error message
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Artist must be linked to a station. Provide a valid station_id.",
+                "code": "missing_station_id",
+            },
+        )
     db.refresh(artist)
 
     # ── Generate DJ portrait artwork ─────────────────────────────────
