@@ -303,7 +303,7 @@ git push origin branch  # No token visible in URL
 
 ### Rule 16: All User-Requested Tasks Must Be Planned Before Implementation
 
-**REQUIREMENT**: Every new task or feature request from the user MUST have a detailed plan documented in `.github/` before implementation begins. Plans must be written so other AI agents can review, understand, and edit them.
+**REQUIREMENT**: Every task given by the user — whether a new feature, bug fix, refactor, documentation update, or investigation — MUST have a detailed plan documented in `.github/` BEFORE implementation begins. No exceptions. Plans must be written so other AI agents can review, understand, and edit them.
 
 **PLANNING DOCUMENTS**:
 - **Primary**: `.github/TODO.md` — Add feature to appropriate section with clear description, subtasks, and effort estimate
@@ -361,7 +361,18 @@ git push origin branch  # No token visible in URL
 - Creates audit trail (git history shows thinking process)
 - Reduces rework when scope changes
 
-**APPLIES TO**: All new features, refactors, and significant changes requested by user
+**APPLIES TO**: ALL tasks requested by user, including:
+- New features and enhancements
+- Bug fixes and debugging sessions
+- Refactoring and code cleanup
+- Documentation updates
+- Performance investigations
+- Security audits
+- Integration testing
+- Database migrations
+- Configuration changes
+
+**NO EXCEPTIONS**: Plan-first applies universally to every user directive.
 
 ---
 
