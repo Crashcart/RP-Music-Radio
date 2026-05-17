@@ -98,25 +98,25 @@ export default function App() {
   }, []);
 
   // ── Token usage polling ────────────────────────────────────────────
+  const refreshUsageStats = useCallback(async () => {
+    try {
+      const response = await fetch("/api/v1/usage-stats");
+      if (response.ok) {
+        const data = (await response.json()) as UsageStats;
+        setUsageStats(data);
+      }
+    } catch (e) {
+      console.debug("Failed to fetch usage stats:", e);
+    }
+  }, []);
+
   useEffect(() => {
     if (apiOk !== true) return;
 
-    const fetchUsageStats = async () => {
-      try {
-        const response = await fetch("/api/v1/usage-stats");
-        if (response.ok) {
-          const data = (await response.json()) as UsageStats;
-          setUsageStats(data);
-        }
-      } catch (e) {
-        console.debug("Failed to fetch usage stats:", e);
-      }
-    };
-
-    fetchUsageStats();
-    const interval = setInterval(fetchUsageStats, 30000); // Poll every 30s
+    refreshUsageStats();
+    const interval = setInterval(refreshUsageStats, 30000); // Poll every 30s
     return () => clearInterval(interval);
-  }, [apiOk]);
+  }, [apiOk, refreshUsageStats]);
 
   // ── Universe gate — runs once after API comes online ──────────────
   useEffect(() => {
@@ -476,9 +476,13 @@ export default function App() {
 
         {/* AI Chat Assistant — receives station context when user is in a station detail view */}
         <ChatAssistant
-          onEntityCreated={refreshDrafts}
+          onEntityCreated={() => {
+            refreshDrafts();
+            refreshUsageStats();
+          }}
           currentStationId={activeStation?.id}
           selectedStation={activeStation}
+          usageStats={usageStats}
         />
         {usageStats && (
           <TokenUsageModal

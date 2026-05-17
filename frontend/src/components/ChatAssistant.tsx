@@ -256,12 +256,18 @@ interface ChatAssistantProps {
   onEntityCreated?: () => void;
   currentStationId?: string;
   selectedStation?: Station | null;
+  usageStats?: {
+    usage_percentage: number;
+    warning_level: "normal" | "warning" | "critical";
+    is_quota_exceeded: boolean;
+  } | null;
 }
 
 export function ChatAssistant({
   onEntityCreated,
   currentStationId,
   selectedStation = null,
+  usageStats,
 }: ChatAssistantProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -794,6 +800,58 @@ export function ChatAssistant({
           ✕
         </button>
       </div>
+
+      {usageStats && usageStats.warning_level !== "normal" && (
+        <div
+          className="quota-alert"
+          style={{
+            padding: "var(--space-md)",
+            marginBottom: "var(--space-md)",
+            borderRadius: "var(--radius-sm)",
+            backgroundColor:
+              usageStats.warning_level === "critical"
+                ? "rgba(220, 38, 38, 0.1)"
+                : "rgba(202, 138, 4, 0.1)",
+            borderLeft: `4px solid ${
+              usageStats.warning_level === "critical" ? "#dc2626" : "#ca8a04"
+            }`,
+            color:
+              usageStats.warning_level === "critical" ? "#fee2e2" : "#fef08a",
+          }}
+        >
+          {usageStats.is_quota_exceeded ? (
+            <>
+              <div style={{ fontWeight: "600", marginBottom: "0.25em" }}>
+                ❌ Quota Exhausted
+              </div>
+              <div style={{ fontSize: "0.9em" }}>
+                Your monthly API quota is exhausted. Check back on{" "}
+                <strong>{usageStats.reset_date}</strong> for a fresh allotment.
+              </div>
+            </>
+          ) : usageStats.warning_level === "critical" ? (
+            <>
+              <div style={{ fontWeight: "600", marginBottom: "0.25em" }}>
+                ⚠️ Critical Usage
+              </div>
+              <div style={{ fontSize: "0.9em" }}>
+                API quota is {usageStats.usage_percentage.toFixed(1)}% used. New
+                generations may fail.
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontWeight: "600", marginBottom: "0.25em" }}>
+                ⚠️ Warning
+              </div>
+              <div style={{ fontSize: "0.9em" }}>
+                API quota is {usageStats.usage_percentage.toFixed(1)}% used.
+                Consider limiting new generations.
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="chat-messages">
         {messages.map((msg, msgIdx) => (
@@ -1608,14 +1666,19 @@ export function ChatAssistant({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            currentStationId && selectedStation
-              ? `Ask about ${selectedStation.name}...`
-              : "Ask me about stations, DJs, brands..."
+            usageStats?.is_quota_exceeded
+              ? "API quota exhausted. Check back when quota resets."
+              : currentStationId && selectedStation
+                ? `Ask about ${selectedStation.name}...`
+                : "Ask me about stations, DJs, brands..."
           }
-          disabled={loading}
+          disabled={loading || usageStats?.is_quota_exceeded}
           autoComplete="off"
         />
-        <button onClick={send} disabled={loading || !input.trim()}>
+        <button
+          onClick={send}
+          disabled={loading || !input.trim() || usageStats?.is_quota_exceeded}
+        >
           →
         </button>
       </div>
