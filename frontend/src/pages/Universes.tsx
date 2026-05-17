@@ -22,6 +22,7 @@ export function Universes({
   const [newUniverseName, setNewUniverseName] = useState("");
   const [creating, setCreating] = useState(false);
   const [researching, setResearching] = useState<string | null>(null);
+  const [genArt, setGenArt] = useState<string | null>(null);
   const [editing, setEditing] = useState<Universe | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const formManager = useFormManager();
@@ -81,6 +82,25 @@ export function Universes({
     }
   };
 
+  const handleGenArt = async (universeId: string) => {
+    setGenArt(universeId);
+    try {
+      await api.generateUniverseArt(universeId);
+      refresh();
+      // Update selectedUniverse if it's the one we just generated art for
+      if (selectedUniverse?.id === universeId) {
+        const updated = universes.find((u) => u.id === universeId);
+        if (updated) setSelectedUniverse(updated);
+      }
+    } catch (e: unknown) {
+      alert(
+        `Art generation failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      setGenArt(null);
+    }
+  };
+
   const handleUpdateUniverse = async (universe: Universe) => {
     try {
       const updated = await api.updateUniverse(universe.id, universe);
@@ -123,9 +143,11 @@ export function Universes({
         universe={selectedUniverse}
         onBack={() => setSelectedUniverse(null)}
         onResearch={() => handleResearch(selectedUniverse.id)}
+        onGenArt={() => handleGenArt(selectedUniverse.id)}
         onEdit={() => setEditing(selectedUniverse)}
         onDelete={() => handleDeleteUniverse(selectedUniverse.id)}
         isResearching={researching === selectedUniverse.id}
+        isGenArt={genArt === selectedUniverse.id}
         isDeleting={deleting === selectedUniverse.id}
       />
     );
@@ -225,18 +247,35 @@ export function Universes({
             >
               <div
                 className="entity-card-art"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  minHeight: "150px",
-                  borderRadius: "var(--radius-md)",
-                  marginBottom: "var(--space-md)",
-                }}
+                style={{ marginBottom: "var(--space-md)" }}
               >
-                <span style={{ fontSize: "3rem" }}>🌍</span>
+                {u.art_path ? (
+                  <img
+                    src={u.art_path}
+                    alt={u.name}
+                    style={{
+                      width: "100%",
+                      height: "160px",
+                      objectFit: "cover",
+                      borderRadius: "var(--radius-md)",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background:
+                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      minHeight: "160px",
+                      borderRadius: "var(--radius-md)",
+                      fontSize: "3rem",
+                    }}
+                  >
+                    🌍
+                  </div>
+                )}
               </div>
               <div className="entity-card-info">
                 <h3>{u.name}</h3>
@@ -277,9 +316,11 @@ interface UniverseDetailProps {
   universe: Universe;
   onBack: () => void;
   onResearch: () => void;
+  onGenArt: () => void;
   onEdit: () => void;
   onDelete: () => void;
   isResearching: boolean;
+  isGenArt: boolean;
   isDeleting: boolean;
 }
 
@@ -287,9 +328,11 @@ function UniverseDetail({
   universe,
   onBack,
   onResearch,
+  onGenArt,
   onEdit,
   onDelete,
   isResearching,
+  isGenArt,
   isDeleting,
 }: UniverseDetailProps) {
   return (
@@ -353,6 +396,62 @@ function UniverseDetail({
             <DetailField label="Publisher" value={universe.publisher} />
             <DetailField label="Setting" value={universe.setting} />
             <DetailField label="Era" value={universe.era} />
+          </div>
+        </div>
+
+        {/* Artwork */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Artwork</h3>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-md)",
+            }}
+          >
+            {universe.art_path ? (
+              <div>
+                <img
+                  src={universe.art_path}
+                  alt={universe.name}
+                  style={{
+                    width: "100%",
+                    maxHeight: "300px",
+                    objectFit: "cover",
+                    borderRadius: "var(--radius-md)",
+                    marginBottom: "var(--space-md)",
+                  }}
+                />
+                <button
+                  className="btn btn-secondary"
+                  onClick={onGenArt}
+                  disabled={isGenArt}
+                >
+                  {isGenArt ? "🎨 Generating..." : "🎨 Regenerate Artwork"}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p
+                  style={{
+                    color: "var(--text-secondary)",
+                    marginBottom: "var(--space-md)",
+                  }}
+                >
+                  No artwork generated yet. Click below to create visual art for
+                  this universe.
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={onGenArt}
+                  disabled={isGenArt}
+                >
+                  {isGenArt ? "🎨 Generating..." : "🎨 Generate Artwork"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

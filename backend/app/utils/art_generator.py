@@ -42,6 +42,7 @@ class ArtType(str, Enum):
     DJ_PORTRAIT = "dj_portrait"
     STATION_LOGO = "station_logo"
     BRAND_LOGO = "brand_logo"
+    UNIVERSE_ART = "universe_art"
 
 
 # ── Prompt templates ──────────────────────────────────────────────────
@@ -114,11 +115,31 @@ Requirements:
 - Convey brand personality and industry
 """.strip()
 
+_UNIVERSE_ART_PROMPT = """
+Create a cinematic artwork representing a game world or fictional universe.
+Universe: {universe_name}
+Publisher: {publisher}
+Setting: {setting}
+Era: {era}
+Description: {description}
+Genre hints: {genre_hints}
+Mood: {mood_hints}
+
+Requirements:
+- Cinematic, evocative landscape or environment art
+- Capture the essence and aesthetic of the universe
+- Should feel immersive and atmospheric
+- High-quality, detailed illustration
+- No real-world trademarks or copyrighted characters
+- Professional game/media concept art quality
+""".strip()
+
 _PROMPTS = {
     ArtType.ALBUM_COVER: _ALBUM_COVER_PROMPT,
     ArtType.DJ_PORTRAIT: _DJ_PORTRAIT_PROMPT,
     ArtType.STATION_LOGO: _STATION_LOGO_PROMPT,
     ArtType.BRAND_LOGO: _BRAND_LOGO_PROMPT,
+    ArtType.UNIVERSE_ART: _UNIVERSE_ART_PROMPT,
 }
 
 
@@ -212,6 +233,62 @@ class ArtGenerator:
             station_name=brand_style.display_name,
             artist_name="",
             style_seed=brand_style.style_seed,
+        )
+        stamp_license_metadata(out_path, license_info)
+
+        return out_path
+
+    def generate_universe_art(self, universe_data: dict) -> Path | None:
+        """Generate universe artwork from universe metadata."""
+        template = _UNIVERSE_ART_PROMPT
+        prompt = template.format(
+            universe_name=universe_data.get("name", "Unknown Universe"),
+            publisher=universe_data.get("publisher", ""),
+            setting=universe_data.get("setting", ""),
+            era=universe_data.get("era", ""),
+            description=universe_data.get("description", "")[
+                :500
+            ],  # Limit to 500 chars
+            genre_hints=universe_data.get("genre_hints", ""),
+            mood_hints=universe_data.get("mood_hints", ""),
+        )
+
+        try:
+            response = self.client.models.generate_images(
+                model=self.model,
+                prompt=prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    output_mime_type="image/jpeg",
+                ),
+            )
+        except Exception as exc:
+            logger.error("Imagen API call failed: %s", exc, exc_info=True)
+            return None
+
+        if not response.generated_images:
+            logger.error("Imagen returned no images", exc_info=True)
+            return None
+
+        image_bytes = response.generated_images[0].image.image_bytes
+
+        # Determine filename
+        import re
+
+        safe = lambda s: re.sub(r"[^a-z0-9]+", "_", s.lower().strip()).strip("_")
+        universe_slug = safe(universe_data.get("name", "unknown"))
+        filename = f"universe_{universe_slug}.jpg"
+        out_path = self.output_dir / filename
+
+        out_path.write_bytes(image_bytes)
+        logger.info("Saved universe art: %s", out_path)
+
+        # Stamp licensing metadata
+        license_info = LicenseInfo.for_generated_art(
+            art_type="universe_art",
+            station_name="",
+            artist_name="",
+            style_seed="",
         )
         stamp_license_metadata(out_path, license_info)
 

@@ -1681,6 +1681,39 @@ Include a short summary (2-3 sentences) and full description.
         )
 
 
+@router.post("/universes/{universe_id}/art")
+def generate_universe_art(universe_id: str, db: Session = Depends(get_db)):
+    """Generate universe artwork via Imagen."""
+    universe = db.query(Universe).filter(Universe.id == universe_id).first()
+    if not universe:
+        raise HTTPException(404, "Universe not found")
+    try:
+        from app.utils.art_generator import ArtGenerator
+
+        art_gen = ArtGenerator()
+        art_path = art_gen.generate_universe_art(
+            {
+                "name": universe.name,
+                "publisher": universe.publisher,
+                "setting": universe.setting,
+                "era": universe.era,
+                "description": universe.description,
+                "genre_hints": universe.genre_hints,
+                "mood_hints": universe.mood_hints,
+            }
+        )
+        if art_path:
+            universe.art_path = str(art_path)
+            db.commit()
+            return {"art_path": str(art_path)}
+        raise HTTPException(500, "Art generation failed")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Universe art generation failed: %s", exc, exc_info=True)
+        raise HTTPException(500, f"Art generation failed: {exc}")
+
+
 class ChatRequest(BaseModel):
     message: str
     history: list[dict] = []

@@ -211,6 +211,7 @@ export interface Universe {
   research_links: string;
   status: string;
   research_summary: string;
+  art_path: string | null;
   genre_hints: string;
   mood_hints: string;
   setting: string;
@@ -558,6 +559,12 @@ export const api = {
     request<Universe>(`/api/v1/universes/${id}/research`, {
       method: "POST",
       body: JSON.stringify({}),
+    }),
+
+  /** Generate artwork for a universe. */
+  generateUniverseArt: (id: string) =>
+    request<{ art_path: string }>(`/api/v1/universes/${id}/art`, {
+      method: "POST",
     }),
 
   /**

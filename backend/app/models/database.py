@@ -414,6 +414,9 @@ class Universe(Base):
         Text, default=""
     )  # Short version for quick reference (lore, atmosphere)
 
+    # Visual
+    art_path = Column(String, nullable=True)  # AI-generated universe artwork
+
     # Content generation context
     genre_hints = Column(
         String, default=""

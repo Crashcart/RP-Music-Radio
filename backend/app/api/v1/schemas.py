@@ -702,6 +702,7 @@ class UniverseOut(BaseModel):
     research_links: str  # JSON array
     status: str
     research_summary: str
+    art_path: str | None = None
     genre_hints: str
     mood_hints: str
     setting: str
