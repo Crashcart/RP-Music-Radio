@@ -208,18 +208,7 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(station)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": f"A station named {station_data['name']!r} already exists. Choose a different name.",
-                "code": "duplicate_name",
-            },
-        )
-    db.refresh(station)
+    db.flush()  # Generate ID without committing
 
     # ── Generate station logo artwork ────────────────────────────────
     try:
@@ -232,11 +221,22 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
         art_path = art_gen.generate(ArtType.STATION_LOGO, station=station_style)
         if art_path:
             station.art_path = str(art_path)
-            db.commit()
             logger.info("Generated station logo: %s", art_path)
     except Exception as exc:
         logger.warning("Station logo generation failed: %s", exc)
         # Continue with staging even if image generation fails
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A station named {station_data['name']!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
 
     logger.info(
         "Staged AI station: id=%s name=%r created_by=%s",
@@ -478,19 +478,7 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(artist)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # Station_id is NOT NULL, so provide helpful error message
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "Artist must be linked to a station. Provide a valid station_id.",
-                "code": "missing_station_id",
-            },
-        )
-    db.refresh(artist)
+    db.flush()  # Generate ID without committing
 
     # ── Generate DJ portrait artwork ─────────────────────────────────
     try:
@@ -517,11 +505,23 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
         )
         if art_path:
             artist.portrait_path = str(art_path)
-            db.commit()
             logger.info("Generated DJ portrait: %s", art_path)
     except Exception as exc:
         logger.warning("DJ portrait generation failed: %s", exc)
         # Continue with staging even if image generation fails
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        # Station_id is NOT NULL, so provide helpful error message
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "Artist must be linked to a station. Provide a valid station_id.",
+                "code": "missing_station_id",
+            },
+        )
 
     logger.info(
         "Staged AI DJ: id=%s name=%r station=%s created_by=%s",
@@ -892,8 +892,7 @@ def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
         expires_at=now + timedelta(days=7),
     )
     db.add(brand)
-    db.commit()
-    db.refresh(brand)
+    db.flush()  # Generate ID without committing
 
     # ── Generate brand logo artwork ──────────────────────────────────
     try:
@@ -916,11 +915,12 @@ def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
         art_path = art_gen.generate_brand_logo(brand_data_dict, brand_style)
         if art_path:
             brand.logo_path = str(art_path)
-            db.commit()
             logger.info("Generated brand logo: %s", art_path)
     except Exception as exc:
         logger.warning("Brand logo generation failed: %s", exc)
         # Continue with staging even if image generation fails
+
+    db.commit()
 
     logger.info(
         "Staged AI brand: id=%s name=%r created_by=%s",
@@ -1749,18 +1749,7 @@ def stage_universe(payload: UniverseDraftCreate, db: Session = Depends(get_db)):
         status="draft",
     )
     db.add(universe)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": f"A universe named {universe_data['name']!r} already exists. Choose a different name.",
-                "code": "duplicate_name",
-            },
-        )
-    db.refresh(universe)
+    db.flush()  # Generate ID without committing
 
     # ── Generate universe artwork ────────────────────────────────────
     try:
@@ -1780,11 +1769,22 @@ def stage_universe(payload: UniverseDraftCreate, db: Session = Depends(get_db)):
         )
         if art_path:
             universe.art_path = str(art_path)
-            db.commit()
             logger.info("Generated universe art: %s", art_path)
     except Exception as exc:
         logger.warning("Universe art generation failed: %s", exc)
         # Continue with staging even if image generation fails
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A universe named {universe_data['name']!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
 
     logger.info(
         "Staged AI universe: id=%s name=%r created_by=%s",
