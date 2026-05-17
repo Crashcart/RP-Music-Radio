@@ -244,6 +244,143 @@ When users ask ChatAssistant to "Create 3 DJs for this station":
 
 ---
 
+## 🤖 AI Agent Efficiency Guidelines
+
+**Applies to**: Claude (all variants), other AI agents working on this codebase  
+**Purpose**: Maximize productivity while minimizing token consumption (cost + latency)
+
+### Token Efficiency Principles
+
+1. **Read First, Ask Later**
+   - Use Read tool to access existing code before asking for changes
+   - Avoid explaining what you're about to do if you already have the context
+   - Don't re-read files you just edited (tools auto-verify)
+
+2. **Parallel Operations**
+   - When independent tasks can run simultaneously, batch them in a single tool call
+   - Example: Run 3 grep commands in parallel, not sequentially
+   - Reduces round-trip latency significantly
+
+3. **Avoid Redundant Tool Calls**
+   - Search once with comprehensive queries, don't search multiple times
+   - Use grep/find with good patterns rather than making multiple passes
+   - Combine related operations (e.g., grep + git in one Bash call)
+
+4. **Direct to Solution**
+   - Identify the actual problem, not the symptom
+   - Make targeted edits rather than broad refactors
+   - Document decisions in code comments only when WHY is non-obvious
+
+5. **Scope Discipline**
+   - Don't fix unrelated bugs while fixing a target bug
+   - Don't add abstractions beyond what's required
+   - Don't implement features for "what if" scenarios
+
+### Context Management Strategy
+
+When approaching a new task:
+
+1. **Rapid Assessment** (Read + Bash)
+   - Read relevant files to understand structure
+   - Run grep/find to locate specific code
+   - Identify exact location of changes needed
+
+2. **Surgical Changes** (Edit only)
+   - Make minimal, targeted edits
+   - One logical change per commit
+   - Update only what's necessary
+
+3. **Test Verification** (Bash)
+   - Run tests to confirm changes work
+   - Don't assume; verify behavior
+   - Fail fast on errors rather than proceeding
+
+### Code Review as AI
+
+When reviewing code you wrote:
+
+- Focus on logic correctness, not style
+- Check for edge cases (null checks, empty lists, error handling)
+- Verify database constraints match schema validation
+- Ensure error messages are user-friendly
+- Look for missing try/except blocks around external APIs
+
+### Performance Considerations for AIs
+
+| Operation | Tokens | Time | Prefer When |
+|-----------|--------|------|-------------|
+| Read 2000 lines | ~1K | <100ms | Getting context, finding code |
+| Bash find/grep | ~50 | <500ms | Searching, locating patterns |
+| Bash full test | ~500 | 5-60s | Validating changes |
+| Bash git operations | ~100 | <1s | Committing, pushing |
+| Agent spawn | ~1K | 10-30s | Complex multi-step research |
+
+**Guideline**: Use Read for code exploration, Bash for locating patterns, Agent only for irreducible complexity.
+
+### Working with Large Codebases
+
+1. **Leverage grep over Read**
+   - `grep -r "pattern"` before reading full files
+   - Find exact line numbers first
+   - Read only the relevant sections
+
+2. **Use Explore agent for discovery**
+   - When searching for unknown file locations
+   - When mapping dependencies across modules
+   - When understanding codebase structure
+
+3. **Chunked file reading**
+   - Use `offset` and `limit` parameters for large files
+   - Read 50-100 lines at a time around the target
+   - Reduces token overhead for large files
+
+### Commit Message Quality
+
+Commits are small, focused, and describe the WHY:
+
+```
+fix: add IntegrityError handling for NOT NULL constraint
+
+Artist.station_id cannot be null, but schema was allowing Optional[str].
+Validate input and return helpful 400 error instead of 500 on constraint violation.
+
+[Reference to context/issue if applicable]
+```
+
+Bad commits to avoid:
+- "wip", "temp", "fix stuff"
+- Changes that belong in separate commits bundled together
+- Overly long messages that explain implementation details (that's what the code does)
+
+### Token Budget Awareness
+
+This codebase uses approximately:
+- 150 tokens per 100 lines of code
+- 100 tokens per Read tool call (averages)
+- 50 tokens per simple Bash call
+- 1000 tokens per context window compression
+
+**Strategy**: Compress early and often. Use references to summaries rather than re-reading when context grows large.
+
+---
+
+## Multi-AI Governance
+
+**For Human Operators**: Configure each AI agent with their own instance of this file with role-specific guidance:
+
+```
+/home/user/RP-Music-Radio/CLAUDE_<AGENT_NAME>.md
+```
+
+**Example**:
+- `CLAUDE_CLAUDE.md` → Main development AI (this file)
+- `CLAUDE_REVIEWER.md` → Code review AI (stricter rules)
+- `CLAUDE_DOCS.md` → Documentation AI (verbose allowed)
+
+Each AI follows their governance rules independently. Coordinating prompts should reference the appropriate rules file.
+
+---
+
 ## Future Extensions
 
 - [ ] Extend `data-field` tagging to other entity types (Jingles, Brands, Stations)
