@@ -12,11 +12,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # In Docker: sqlite:////app/data/aetherwave.db
-# Locally:  sqlite:///./data/aetherwave.db
+# Locally: use absolute path to avoid working directory issues
 _default_db = "sqlite:////app/data/aetherwave.db"
 if not os.path.exists("/app/data"):
-    os.makedirs("data", exist_ok=True)
-    _default_db = "sqlite:///./data/aetherwave.db"
+    # Fallback to absolute path in project directory
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_dir = os.path.dirname(backend_dir)
+    data_dir = os.path.join(project_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    _default_db = f"sqlite:///{data_dir}/aetherwave.db"
 
 DATABASE_URL = os.getenv("DATABASE_URL", _default_db)
 
