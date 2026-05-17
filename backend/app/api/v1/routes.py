@@ -178,6 +178,7 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
       • 20 staged stations per hour per requester (Redis-backed, cross-worker safe)
     Returns 429 if limit is exceeded.
     Draft expires automatically in 7 days if not approved.
+    Generates station logo artwork upon creation.
     """
     now = datetime.now(timezone.utc)
 
@@ -219,6 +220,24 @@ def stage_station(payload: StationDraftCreate, db: Session = Depends(get_db)):
             },
         )
     db.refresh(station)
+
+    # ── Generate station logo artwork ────────────────────────────────
+    try:
+        from app.utils.art_generator import ArtGenerator, ArtType
+        from app.utils.dna_manager import DNAManager
+
+        dna = DNAManager()
+        station_style = dna.get_or_create_station(station.name, mood=station.mood)
+        art_gen = ArtGenerator()
+        art_path = art_gen.generate(ArtType.STATION_LOGO, station=station_style)
+        if art_path:
+            station.art_path = str(art_path)
+            db.commit()
+            logger.info("Generated station logo: %s", art_path)
+    except Exception as exc:
+        logger.warning("Station logo generation failed: %s", exc)
+        # Continue with staging even if image generation fails
+
     logger.info(
         "Staged AI station: id=%s name=%r created_by=%s",
         station.id,
@@ -398,6 +417,7 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
       • 5 concurrent drafts per station (DB query, always accurate)
     Returns 429 if either limit is exceeded.
     Draft expires automatically in 7 days if not approved.
+    Generates DJ portrait artwork upon creation.
 
     Security note: created_by is accepted from the payload only as an opaque
     audit label (future: replace with server-side session identity).  It is
@@ -460,6 +480,38 @@ def stage_artist(payload: ArtistDraftCreate, db: Session = Depends(get_db)):
     db.add(artist)
     db.commit()
     db.refresh(artist)
+
+    # ── Generate DJ portrait artwork ─────────────────────────────────
+    try:
+        from app.utils.art_generator import ArtGenerator, ArtType
+        from app.utils.dna_manager import DNAManager
+        from app.models.persona import PersonaDNA
+
+        dna = DNAManager()
+        station = db.query(Station).filter(Station.id == artist.station_id).first()
+        station_style = dna.get_or_create_station(
+            station.name if station else "Independent"
+        )
+        persona = PersonaDNA(
+            display_name=artist.display_name or artist.name,
+            backstory=artist.bio or "",
+            habits=[s.strip() for s in (artist.quirks or "").split("|") if s.strip()],
+        )
+        art_gen = ArtGenerator()
+        art_path = art_gen.generate(
+            ArtType.DJ_PORTRAIT,
+            station=station_style,
+            persona=persona,
+            genre=artist.genre,
+        )
+        if art_path:
+            artist.portrait_path = str(art_path)
+            db.commit()
+            logger.info("Generated DJ portrait: %s", art_path)
+    except Exception as exc:
+        logger.warning("DJ portrait generation failed: %s", exc)
+        # Continue with staging even if image generation fails
+
     logger.info(
         "Staged AI DJ: id=%s name=%r station=%s created_by=%s",
         artist.id,
@@ -799,6 +851,7 @@ def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
       • 20 staged brands per hour per requester (Redis-backed, cross-worker safe)
     Returns 429 if limit is exceeded.
     Draft expires automatically in 7 days if not approved.
+    Generates brand logo artwork upon creation.
     """
     now = datetime.now(timezone.utc)
 
@@ -830,6 +883,34 @@ def stage_brand(payload: BrandDraftCreate, db: Session = Depends(get_db)):
     db.add(brand)
     db.commit()
     db.refresh(brand)
+
+    # ── Generate brand logo artwork ──────────────────────────────────
+    try:
+        from app.utils.art_generator import ArtGenerator
+        from app.models.persona import StationStyle
+
+        art_gen = ArtGenerator()
+        brand_style = StationStyle(
+            station_id=f"brand-{brand.id}",
+            display_name=brand.name,
+            style_seed=brand.id or str(uuid.uuid4()),
+            colors=[brand.color_primary] if brand.color_primary else [],
+        )
+        brand_data_dict = {
+            "brand_name": brand.name,
+            "slogan": brand.slogan or "",
+            "industry": brand.industry or "",
+            "tone": brand.tone or "",
+        }
+        art_path = art_gen.generate_brand_logo(brand_data_dict, brand_style)
+        if art_path:
+            brand.logo_path = str(art_path)
+            db.commit()
+            logger.info("Generated brand logo: %s", art_path)
+    except Exception as exc:
+        logger.warning("Brand logo generation failed: %s", exc)
+        # Continue with staging even if image generation fails
+
     logger.info(
         "Staged AI brand: id=%s name=%r created_by=%s",
         brand.id,
@@ -983,6 +1064,8 @@ def stage_jingle(payload: JingleDraftCreate, db: Session = Depends(get_db)):
     Applies rate limiting:
       • 20 staged jingles per hour per requester (Redis-backed, cross-worker safe)
     Returns 429 if limit is exceeded.
+
+    TODO: Add jingle_art_path field to Jingle model to support image generation for jingles.
     """
     # ── Verify station exists ────────────────────────────────────────
     station = db.query(Station).filter(Station.id == payload.station_id).first()
@@ -1158,6 +1241,9 @@ def stage_draft(payload: DraftDraftCreate, db: Session = Depends(get_db)):
     Applies rate limiting:
       • 20 staged drafts per hour per requester (Redis-backed, cross-worker safe)
     Returns 429 if limit is exceeded.
+
+    TODO: Add album_art_path field to Draft model to support album cover generation.
+    Album artwork will be generated when the draft is synthesized (in synthesis pipeline).
     """
     now = datetime.now(timezone.utc)
 
@@ -1623,6 +1709,7 @@ def stage_universe(payload: UniverseDraftCreate, db: Session = Depends(get_db)):
     Applies rate limiting:
       • 20 staged universes per hour per requester (Redis-backed, cross-worker safe)
     Returns 429 if limit is exceeded.
+    Generates universe artwork upon creation.
     """
     now = datetime.now(timezone.utc)
 
@@ -1663,6 +1750,31 @@ def stage_universe(payload: UniverseDraftCreate, db: Session = Depends(get_db)):
             },
         )
     db.refresh(universe)
+
+    # ── Generate universe artwork ────────────────────────────────────
+    try:
+        from app.utils.art_generator import ArtGenerator
+
+        art_gen = ArtGenerator()
+        art_path = art_gen.generate_universe_art(
+            {
+                "name": universe.name,
+                "publisher": universe.publisher,
+                "setting": universe.setting,
+                "era": universe.era,
+                "description": universe.description,
+                "genre_hints": universe.genre_hints,
+                "mood_hints": universe.mood_hints,
+            }
+        )
+        if art_path:
+            universe.art_path = str(art_path)
+            db.commit()
+            logger.info("Generated universe art: %s", art_path)
+    except Exception as exc:
+        logger.warning("Universe art generation failed: %s", exc)
+        # Continue with staging even if image generation fails
+
     logger.info(
         "Staged AI universe: id=%s name=%r created_by=%s",
         universe.id,
