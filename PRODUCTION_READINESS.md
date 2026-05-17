@@ -118,6 +118,24 @@ AetherWave is a **fully functional, polished, production-ready application** tha
 - System automatically degrades to cloud AI if local models exceed RAM limits
 - Enables smarter deployment decisions based on actual system constraints
 
+### Llama Support with Automatic Cloud Fallback (NEW)
+- ✅ Llama models: Primary local AI (llama2, llama2:13b, neural-chat, orca-mini)
+- ✅ ModelDetector: Auto-tests available models at startup
+- ✅ Startup diagnostics: Clear logs showing which model is active
+- ✅ Automatic fallback: If Llama unavailable → seamlessly switches to Gemini
+- ✅ No manual intervention: User not aware of fallback (transparent)
+- ✅ Cost-effective: Free local processing, cloud only if needed
+- ✅ Offline-capable: Can operate without internet using Llama
+- ✅ Comprehensive documentation: LLAMA_SUPPORT.md with full guide
+
+**Impact**:
+- Fast local processing with Meta's Llama models
+- Reduced API costs (no Gemini calls unless Llama fails)
+- Production reliability (automatic cloud fallback guarantees uptime)
+- Clear startup diagnostics so operators know which AI is active
+- Resource-aware model selection prevents crashes on low-resource systems
+- Users see transparent logs showing model detection process
+
 ---
 
 ## Deployment Checklist ✅

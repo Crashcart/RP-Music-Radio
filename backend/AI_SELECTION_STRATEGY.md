@@ -2,13 +2,23 @@
 
 **Last Updated**: 2026-05-17  
 **Status**: ✅ ACTIVE  
-**Purpose**: Automatic selection of best-available AI for different task types
+**Purpose**: Automatic selection of best-available AI with Llama as primary local option
 
 ---
 
 ## Overview
 
-The AetherWave system now intelligently selects between Ollama (local) and Gemini (cloud) based on the type of task being performed. Rather than always using the same AI service, the system evaluates task requirements and available resources to choose the best option.
+The AetherWave system intelligently selects between **Llama models** (local, primary) and **Google Gemini** (cloud, fallback) based on task type and system resources.
+
+**Key Guarantee**: If Llama becomes unavailable, system automatically and transparently switches to Gemini cloud without manual intervention.
+
+Rather than always using the same AI service, the system evaluates:
+1. Task type and preferences (image generation, scripts, synthesis, etc.)
+2. System resources (CPU, RAM, GPU availability)
+3. Model availability (is Llama running? Which models are available?)
+4. Cloud fallback readiness (is Gemini API key configured?)
+
+Selection is automatic, transparent, and logged for monitoring.
 
 ## Task Types & Selection Strategy
 
