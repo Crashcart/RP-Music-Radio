@@ -8,41 +8,78 @@ All 6 entity types tested successfully end-to-end with comprehensive test suite 
 - Creation via `/api/v1/universes/staged` 
 - Status: draft (as expected for AI-generated)
 - Visible in list: `/api/v1/universes?status=draft`
-- Fields persisted: name, description, genre_hints, mood_hints, setting, era, publisher
+- **Image generation**: `art_path` generated via ArtGenerator.generate_universe_art()
+- Fields persisted: name, description, genre_hints, mood_hints, setting, era, publisher, art_path
 
 ### 2. **Station** ✓
 - Creation via `/api/v1/stations/staged`
 - Status: draft (as expected for AI-generated)
 - Visible in list: `/api/v1/stations?status=draft`
 - Linked to Universe: universe_id foreign key works
-- Fields persisted: name, frequency, genre
+- **Image generation**: `art_path` generated via ArtGenerator (STATION_LOGO type)
+- Fields persisted: name, frequency, genre, art_path
 
 ### 3. **Brand** ✓
 - Creation via `/api/v1/brands/staged`
 - Status: draft (as expected for AI-generated)
 - Visible in list: `/api/v1/brands?status=draft`
-- Fields persisted: name, industry, tagline, company_description
+- **Image generation**: `logo_path` generated via ArtGenerator.generate_brand_logo()
+- Fields persisted: name, industry, tagline, company_description, logo_path
 
 ### 4. **Artist (DJ)** ✓
 - Creation via `/api/v1/artists/staged`
 - Status: draft (as expected for AI-generated)
 - Visible in list: `/api/v1/artists?status=draft`
 - **Critical**: Must include `station_id` (NOT NULL constraint)
-- Fields persisted: name, display_name, artist_type, personality, speaking_style
+- **Image generation**: `portrait_path` generated via ArtGenerator (DJ_PORTRAIT type)
+- Fields persisted: name, display_name, artist_type, personality, speaking_style, portrait_path
 
-### 5. **Jingle** ✓
+### 5. **Jingle** ⏳
 - Creation via `/api/v1/jingles/staged`
 - Status: pending (note: differs from draft for other entities)
 - Visible in list: `/api/v1/stations/{station_id}/jingles`
 - **Critical**: Must include `station_id` (NOT NULL constraint)
+- **Image generation**: ⏳ Deferred (no jingle_art_path field; pending schema migration)
 - Fields persisted: name, jingle_type, description
 
-### 6. **Draft** ✓
+### 6. **Draft** ⏳
 - Creation via `/api/v1/drafts/staged`
 - Status: draft (as expected)
 - Visible in list: `/api/v1/drafts` (returns DraftListResponse with .drafts array)
 - **Critical**: Must include `station_name`, `artist_name` (string fields, not IDs)
+- **Image generation**: ⏳ Deferred (album cover generated during synthesis pipeline, not staging)
 - Fields persisted: station_name, artist_name, genre, mood, items, script, backstory, market_research
+
+---
+
+## 🎨 Image Generation Integration
+
+### Overview
+AI-generated images are created immediately during entity staging and stored in the database for retrieval:
+
+### Implemented Image Generation
+
+| Entity | Image Type | Field | Stored At | ArtGenerator Method | Status |
+|--------|-----------|-------|-----------|-------------------|--------|
+| **Universe** | Universe artwork | `art_path` | `/app/output/art/universe_*.jpg` | `generate_universe_art()` | ✅ Done |
+| **Station** | Station logo | `art_path` | `/app/output/art/station_*.jpg` | `generate()` (STATION_LOGO) | ✅ Done |
+| **Brand** | Brand logo | `logo_path` | `/app/output/art/brand_*.jpg` | `generate_brand_logo()` | ✅ Done |
+| **Artist (DJ)** | DJ portrait | `portrait_path` | `/app/output/art/artist_*.jpg` | `generate()` (DJ_PORTRAIT) | ✅ Done |
+| **Jingle** | Jingle artwork | `jingle_art_path` | — | — | ⏳ Deferred |
+| **Draft** | Album cover | `album_art_path` | — | — | ⏳ Deferred |
+
+### Technical Details
+- **Image Format**: JPEG with embedded licensing metadata (Lore Ledger)
+- **API Model**: Google Imagen (image-3.0-generate-002)
+- **Error Handling**: Graceful degradation — image generation failures log warnings but don't block entity creation
+- **Database**: Image paths stored as nullable String columns in each entity model
+- **Retrieval**: Images returned in API responses; clients display via `art_path`/`portrait_path`/`logo_path` URLs
+
+### Test Coverage
+Image generation verified in `test_all_chat_entities.sh`:
+- Checks that image path fields are populated (not null)
+- Verifies image files exist on disk
+- Validates file format and size > 0 bytes
 
 ---
 
@@ -133,6 +170,10 @@ bash test_all_chat_entities.sh
 ## 📌 Future Enhancement Considerations
 
 ### High Priority
+- [ ] **Image Generation: Jingles** - Add `jingle_art_path` field via migration; generate artwork during stage_jingle()
+- [ ] **Image Generation: Drafts** - Generate album covers during synthesis pipeline (not staging); store in album_art_path
+- [ ] **Lyrics Database & File Storage** - Add lyrics field to Draft model; persist as text file to /app/output/lyrics/; embed in MP3 USLT ID3v2 tag during synthesis
+- [ ] **FLAC Audio Support** - Detect FLAC vs MP3 in synthesis; implement mutagen.flac handler; support both formats in metadata tagging
 - [ ] **Add GET /api/v1/jingles/{jingle_id}** endpoint for API symmetry with other entities
 - [ ] **Document status field inconsistency** - Jingles use "pending" while others use "draft" for staged entities
 - [ ] **Consider batch operations** for test cleanup (DELETE /jingles or DELETE /drafts for testing)
@@ -163,11 +204,12 @@ bash test_all_chat_entities.sh
 
 ## 📅 Status
 
-- **Last Updated**: 2026-05-17
-- **Test Status**: ✅ PASSING (all 6 entity types verified)
-- **Production Ready**: Yes — complete workflow tested and working
+- **Last Updated**: 2026-05-17 (Image generation integration complete)
+- **Test Status**: ✅ PASSING (all 6 entity types verified + image generation verified for 4 entities)
+- **Production Ready**: Yes — complete workflow tested and working with image generation for Universe, Station, Brand, and Artist
+- **Image Generation**: ✅ Implemented (4 of 6 entities); ⏳ Deferred for Jingle and Draft
 - **Known Issues**: None — all discovered issues fixed
 
 ---
 
-**Test Results**: All 6 entity types (Universe, Station, Brand, Artist, Jingle, Draft) work end-to-end as specified. Chat-to-entity feature is production-ready for all entity types with proper validation, rate limiting, and status tracking.
+**Test Results**: All 6 entity types (Universe, Station, Brand, Artist, Jingle, Draft) work end-to-end as specified. 4 entity types (Universe, Station, Brand, Artist) generate nano images during staging. Chat-to-entity feature is production-ready for all entity types with proper validation, rate limiting, status tracking, and image generation.
