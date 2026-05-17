@@ -167,6 +167,314 @@ bash test_all_chat_entities.sh
 
 ---
 
+## 🔧 Codebase Improvement & Optimization Plan
+
+### Architecture & Refactoring
+
+#### 1. **Reduce Routes.py Size & Complexity**
+**Priority**: HIGH  
+**Current State**: 2264 lines, 62 functions, 43 db.commit() calls  
+**Impact**: Hard to maintain, difficult to test in isolation, slow to navigate
+
+**Actions**:
+- [ ] Extract entity CRUD operations into separate modules:
+  - `services/station_service.py` - All Station CRUD + staging logic
+  - `services/artist_service.py` - All Artist CRUD + staging logic
+  - `services/brand_service.py` - All Brand CRUD + staging logic
+  - `services/universe_service.py` - All Universe CRUD + staging logic
+  - `services/jingle_service.py` - All Jingle CRUD + staging logic
+  - `services/draft_service.py` - All Draft CRUD + staging logic
+- [ ] Keep routes.py as thin dispatcher layer (just FastAPI decorators + error handling)
+- [ ] Each service method returns (status_code, response_body) tuple
+- [ ] Benefits: Easier unit testing, reusable business logic, cleaner error handling
+
+**Effort**: 8-12 hours  
+**Testing Strategy**: Create unit tests for each service, keep existing integration tests
+
+---
+
+#### 2. **Transaction Optimization**
+**Priority**: MEDIUM  
+**Current Issue**: 4 image generation endpoints commit twice (entity creation, then image path)  
+**Impact**: Slower database operations, especially with high concurrency
+
+**Actions**:
+- [ ] Consolidate commits in `stage_station()` - set art_path before final commit
+- [ ] Consolidate commits in `stage_artist()` - set portrait_path before final commit
+- [ ] Consolidate commits in `stage_brand()` - set logo_path before final commit
+- [ ] Consolidate commits in `stage_universe()` - set art_path before final commit
+- [ ] Audit other endpoints for similar patterns (especially batch operations)
+
+**Effort**: 1-2 hours  
+**Testing**: Run existing tests to ensure behavior unchanged
+
+---
+
+### Error Handling & Validation
+
+#### 3. **Comprehensive Error Handling Coverage**
+**Priority**: HIGH  
+**Current State**: 31 exception handlers covering obvious cases; edge cases missing  
+**Identified Gaps**:
+- [ ] FileSystemError - Image generation directory missing/unwritable
+- [ ] RedisConnectionError - Rate limiter fallback when Redis unavailable
+- [ ] DatabaseConstraintError - Status field invalid value (not in enum)
+- [ ] PayloadValidationError - All Pydantic validation errors have user-friendly messages
+- [ ] TombstoneError - Accessing expired draft records
+
+**Actions**:
+- [ ] Create `exceptions.py` with custom exception classes
+- [ ] Implement central error handler middleware
+- [ ] Add @app.exception_handler for each custom exception
+- [ ] Ensure all responses follow consistent error format:
+  ```json
+  {
+    "error": "human_readable_message",
+    "code": "SYSTEM_ERROR_CODE",
+    "timestamp": "2026-05-17T...",
+    "request_id": "uuid"
+  }
+  ```
+
+**Effort**: 3-4 hours  
+**Testing**: Add tests for each error path
+
+---
+
+#### 4. **Input Validation Enhancements**
+**Priority**: MEDIUM  
+**Current State**: Pydantic handles most validation  
+**Gaps**:
+- [ ] Art path/filename validation (prevent path traversal attacks)
+- [ ] File size limits for uploaded artwork
+- [ ] Rate limit header injection prevention
+- [ ] CSRF token replay attack prevention
+
+**Actions**:
+- [ ] Add Pydantic validators for file paths (whitelist allowed characters)
+- [ ] Add max file size checks (10MB for images)
+- [ ] Implement CSRF token rotation on each request
+- [ ] Add rate limit delay fingerprinting (detect circumvention attempts)
+
+**Effort**: 2-3 hours
+
+---
+
+### API Completeness & Consistency
+
+#### 5. **Missing API Endpoints**
+**Priority**: MEDIUM  
+**Current Gaps**:
+- [ ] `GET /api/v1/jingles/{jingle_id}` - Individual jingle detail (currently must query via station)
+- [ ] `GET /api/v1/drafts/{draft_id}` - Individual draft detail (currently only list endpoint)
+- [ ] `DELETE /api/v1/drafts` - Batch delete expired/rejected drafts
+- [ ] `DELETE /api/v1/jingles` - Batch delete jingles by station
+- [ ] `GET /api/v1/generation-history` - Query past synthesis jobs
+- [ ] `GET /api/v1/stats/generation-time` - Analytics on synthesis duration by entity type
+
+**Actions**:
+- [ ] Implement 6 new endpoints with proper error handling
+- [ ] Add integration tests for each endpoint
+- [ ] Document query parameters and filters
+
+**Effort**: 4-6 hours
+
+---
+
+#### 6. **Status Field Standardization**
+**Priority**: LOW  
+**Current Inconsistency**: Jingles use "pending" while other staged entities use "draft"  
+**Impact**: Confusing for API consumers, harder to implement generic status filtering
+
+**Actions**:
+- [ ] Create migration to convert Jingle status values:
+  - "pending" → "draft" (for staged jingles)
+- [ ] Update JingleDraftCreate schema to use standard status values
+- [ ] Document decision in ARCHITECTURE.md
+
+**Effort**: 1-2 hours + migration
+
+---
+
+### Database & Performance
+
+#### 7. **Database Indexes & Query Optimization**
+**Priority**: MEDIUM  
+**Current State**: Basic schema, no explicit indexes on frequently-queried columns  
+**Opportunities**:
+- [ ] Add index on `status` column (filter by draft/published across entities)
+- [ ] Add index on `expires_at` (cleanup queries)
+- [ ] Add index on `created_at` (sort by newest)
+- [ ] Add compound index on `(station_id, status)` for artist queries
+- [ ] Add index on `generation_history.task_id` (task status polling)
+
+**Actions**:
+- [ ] Review slow query logs (if available)
+- [ ] Add indexes via Alembic migration
+- [ ] Run EXPLAIN PLAN on common queries
+- [ ] Benchmark before/after
+
+**Effort**: 2-3 hours
+
+---
+
+#### 8. **Cleanup & Maintenance Utilities**
+**Priority**: MEDIUM  
+**Current State**: No automated cleanup mechanism  
+**Gaps**:
+- [ ] No periodic expiration of draft records (7-day TTL exists but not enforced)
+- [ ] No cleanup of orphaned generation history
+- [ ] No disk cleanup for unreferenced image files
+- [ ] No database vacuum/optimize scheduling
+
+**Actions**:
+- [ ] Create management command: `python -m app.cli cleanup expired-drafts [--dry-run]`
+- [ ] Create management command: `python -m app.cli cleanup orphaned-files [--dry-run]`
+- [ ] Add scheduled Celery task to run nightly
+- [ ] Document in SCRIPTS_HELP.md
+
+**Effort**: 3-4 hours
+
+---
+
+### Testing & Monitoring
+
+#### 9. **Test Coverage Expansion**
+**Priority**: HIGH  
+**Current State**: 84 tests passing, ~80% coverage  
+**Gaps**:
+- [ ] No tests for error paths (e.g., Redis down, image generation timeout)
+- [ ] No tests for concurrent requests hitting rate limits
+- [ ] No tests for file system errors during image save
+- [ ] No tests for malformed CSRF tokens
+- [ ] No tests for database constraint violations
+
+**Actions**:
+- [ ] Add parametrized tests for all error conditions
+- [ ] Add concurrent test using pytest-asyncio or threading
+- [ ] Mock file system failures with monkeypatch
+- [ ] Add tests for security boundaries
+
+**Effort**: 4-6 hours
+
+---
+
+#### 10. **Structured Logging & Observability**
+**Priority**: MEDIUM  
+**Current State**: Basic Python logging  
+**Improvements**:
+- [ ] Add request ID to all logs (trace across API calls)
+- [ ] Log all image generation attempts + success/failure
+- [ ] Log rate limit rejections (detect circumvention patterns)
+- [ ] Log database transaction duration (detect slowdowns)
+- [ ] Add log aggregation hook for centralized monitoring
+
+**Actions**:
+- [ ] Add request ID middleware (uuid per request)
+- [ ] Implement context vars to propagate request ID
+- [ ] Add timing decorators to critical functions
+- [ ] Document log format in ARCHITECTURE.md
+
+**Effort**: 2-3 hours
+
+---
+
+### Frontend Enhancements
+
+#### 11. **Artwork History & Refresh Management**
+**Priority**: HIGH  
+**Current State**: Documented in ROADMAP.md  
+**Actions** (from ROADMAP):
+- [ ] Add `art_history` JSON field to Station, Artist, Brand, Universe models
+- [ ] Create API endpoints: `GET /api/v1/{entity}/{id}/art-history`, `POST /api/v1/{entity}/{id}/art/revert/{index}`
+- [ ] Update frontend to show "Image X of 10" with prev/next navigation
+- [ ] Implement FIFO tourniquet (delete oldest when reaching 10)
+- [ ] Add visual timeline of previous artwork
+
+**Effort**: 8-10 hours (database + API + frontend)
+
+---
+
+#### 12. **Data Backup & Import/Export**
+**Priority**: HIGH  
+**Current State**: Documented in ROADMAP.md  
+**Actions** (from ROADMAP):
+- [ ] Create `POST /api/v1/backup/export` endpoint
+- [ ] Create `POST /api/v1/backup/import` endpoint
+- [ ] Implement backup manager with JSON serialization
+- [ ] Add admin UI for backup history
+- [ ] Add CLI commands for backup operations
+
+**Effort**: 6-8 hours
+
+---
+
+### Documentation & Governance
+
+#### 13. **API Documentation Improvements**
+**Priority**: MEDIUM  
+**Current State**: Code-level documentation; no API spec tool  
+**Actions**:
+- [ ] Generate OpenAPI/Swagger spec from FastAPI
+- [ ] Add examples for all endpoint request/response formats
+- [ ] Document rate limiting headers and behavior
+- [ ] Document error response codes for each endpoint
+- [ ] Create client SDK generation guide (from OpenAPI)
+
+**Effort**: 3-4 hours
+
+---
+
+#### 14. **Code Comments & Docstring Enhancement**
+**Priority**: LOW  
+**Current State**: Minimal comments per CLAUDE.md guidelines  
+**Actions**:
+- [ ] Add docstrings to complex algorithms (e.g., rate limiting, DNA generation)
+- [ ] Document non-obvious business logic decisions
+- [ ] Add docstring examples for service methods
+- [ ] Update docstrings in routes.py after refactoring
+
+**Effort**: 1-2 hours
+
+---
+
+### Performance & Scalability
+
+#### 15. **Caching Strategy**
+**Priority**: MEDIUM  
+**Current State**: No caching layer  
+**Opportunities**:
+- [ ] Cache entity list queries (invalidate on create/update)
+- [ ] Cache universe/station style seeds (rarely change)
+- [ ] Cache generation history summaries
+- [ ] Add ETag support for GET endpoints
+
+**Actions**:
+- [ ] Implement Redis-based caching with TTL
+- [ ] Add cache invalidation on entity updates
+- [ ] Benchmark impact on response times
+
+**Effort**: 4-6 hours
+
+---
+
+#### 16. **Batch Operation Support**
+**Priority**: MEDIUM  
+**Current State**: No batch endpoints  
+**Opportunities**:
+- [ ] `POST /api/v1/artists/batch-create` - Create multiple artists at once
+- [ ] `DELETE /api/v1/artists/batch-delete` - Remove multiple artists
+- [ ] `PATCH /api/v1/artists/batch-update` - Update multiple artists status
+
+**Actions**:
+- [ ] Design batch request/response format
+- [ ] Implement with atomic transaction handling
+- [ ] Add tests for partial failure scenarios
+
+**Effort**: 3-4 hours
+
+---
+
 ## 📌 Future Enhancement Considerations
 
 ### High Priority
