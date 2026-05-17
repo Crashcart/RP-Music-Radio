@@ -1,8 +1,9 @@
 # Enterprise AI Agent Instructions for RP-Music-Radio
 
-**Version 3.4** | **Last Updated**: 2026-05-10  
+**Version 3.5** | **Last Updated**: 2026-05-17  
 **Status**: 🔒 GOVERNANCE FILE — Protected by Rule 10. Follow full workflow when editing.  
-**Changes in v3.4**: Added Rule 15 (Claude-Only Credential Storage) to keep sensitive credentials local-only, inaccessible to other AI agents.
+**Changes in v3.5**: Added Rule 16 (All User-Requested Tasks Must Be Planned) to ensure every new task/feature has documented plan in `.github/` before implementation, enabling multi-AI collaboration and context sharing.
+**Previous (v3.4)**: Added Rule 15 (Claude-Only Credential Storage) to keep sensitive credentials local-only, inaccessible to other AI agents.
 **Previous (v3.3)**: Added Rule 14 (Autocompact Threshold for Multi-Session Stability) to enable aggressive context compaction at 50% in long-running sessions across multiple AI agents.
 **Previous (v3.2)**: Added Rule 13 (Log Archiving for Multi-AI Access) to enable shared log storage in `.github/logs/` for other AIs and developers to access without manual re-passing.
 **Previous (v3.1)**: Added Rule 1.5 (Session Branch Enforcement) to prevent accidental pushes to non-designated branches; updated Phase 0 and Phase 2 with checkpoints.
@@ -26,9 +27,9 @@ This document establishes mandatory rules for all AI agents (Claude, etc.) worki
 
 ---
 
-## The Governance Rules (15 Rules + 1 Sub-rule)
+## The Governance Rules (16 Rules + 1 Sub-rule)
 
-**Summary**: 15 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions. Rule 15 keeps sensitive credentials local-only, accessible only to Claude.
+**Summary**: 16 rules establish mandatory workflow discipline across all AI agents working on this project. Rules 1-11 define base requirements (branch protection, documentation, testing, conflict handling, hook compliance, branch switching). Rule 1.5 adds session-specific branch enforcement. Rule 12 unifies PR monitoring with escalating fixes and the "never stop at first green" principle. Rule 13 enables multi-AI coordination via shared log storage. Rule 14 ensures context stability across long-running sessions. Rule 15 keeps sensitive credentials local-only, accessible only to Claude. Rule 16 ensures every user-requested task has a documented plan in `.github/` before implementation, enabling multi-AI review and collaboration.
 
 ### Rule 1: Never Push to Main
 - **REQUIREMENT**: All development work happens on feature branches (e.g., `feat/`, `fix/`, `docs/`, `chore/`)
@@ -299,6 +300,68 @@ git push origin branch  # No token visible in URL
 **RATIONALE**: Other AI agents (ChatGPT, Copilot, etc.) will NOT have access to local `~/.git-credentials` files. Keeping credentials local-only ensures they remain Claude-exclusive and cannot be accessed or compromised by other systems.
 
 **APPLIES TO**: Claude agents only (Rule 15 does not apply to other AIs)
+
+### Rule 16: All User-Requested Tasks Must Be Planned Before Implementation
+
+**REQUIREMENT**: Every new task or feature request from the user MUST have a detailed plan documented in `.github/` before implementation begins. Plans must be written so other AI agents can review, understand, and edit them.
+
+**PLANNING DOCUMENTS**:
+- **Primary**: `.github/TODO.md` — Add feature to appropriate section with clear description, subtasks, and effort estimate
+- **Secondary**: `.github/PLANNING.md` — Document high-level approach, architecture decisions, dependencies, and blockers
+- **Optional**: Create new `.github/{TASK_NAME}_PLAN.md` for complex features (use existing templates like `FEATURE2_PLAN.md`)
+
+**PLAN REQUIREMENTS**:
+1. **Clear Objective** — What problem does this solve? What's the user's intent?
+2. **Subtasks** — Break into 3-5 concrete steps (not vague)
+3. **Database Schema Changes** — If applicable, document new tables/columns
+4. **API Endpoints** — If applicable, list new routes with methods (GET, POST, etc.)
+5. **Frontend Components** — If applicable, list new files and integration points
+6. **Integration Points** — How does this connect to existing systems? (Chat, Memory Ledger, etc.)
+7. **Effort Estimate** — Days/hours, with breakdown per subtask
+8. **Dependencies** — What must exist before this work starts?
+9. **Success Criteria** — What does "done" look like?
+10. **Risks** — Known blockers or technical challenges
+
+**FORMAT** (for `.github/TODO.md`):
+```markdown
+### Feature X: {Feature Title} (STATUS — BRIEF DESCRIPTION)
+
+**Objective**: One sentence explaining user intent and value.
+
+**Tasks** [or **Database Schema**, **API**, **Frontend**, etc.]:
+- [ ] Subtask 1 — Clear, actionable description
+- [ ] Subtask 2
+- [ ] Subtask 3
+
+**Effort**: X days (breakdown: API 1 day, frontend 2 days, etc.)
+
+**Dependencies**: What must exist first?
+
+**Integration Points**: How connects to Chat, Memory Ledger, etc.
+
+**Success Criteria**: What does done look like?
+```
+
+**ENFORCEMENT**:
+- ✅ ALLOWED: Start implementation immediately after plan is written and committed to feature branch
+- ❌ BLOCKED: Implementation without written plan in `.github/` files
+- ✅ ALLOWED: Update plan during implementation as learnings emerge
+- ✅ ALLOWED: Other AI agents to read, comment on, and edit plans in GitHub
+
+**SHARING & COLLABORATION**:
+- All plans live in tracked `.github/` files (part of git history)
+- Other AI agents (ChatGPT, Copilot, Gemini) can read plans by accessing the repository
+- Plans are intentionally written in Markdown (human-readable, AI-parseable)
+- If other AI suggests edits, Claude accepts/rejects with justification
+
+**RATIONALE**: 
+- Ensures alignment with user intent before coding starts
+- Enables multi-AI collaboration (other agents understand context)
+- Prevents duplicate work (plans visible to all)
+- Creates audit trail (git history shows thinking process)
+- Reduces rework when scope changes
+
+**APPLIES TO**: All new features, refactors, and significant changes requested by user
 
 ---
 

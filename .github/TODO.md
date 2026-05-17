@@ -113,6 +113,80 @@
 - Memory limit (5 states only, auto-purge older)
 - No duplicate images in history
 
+### Feature 11: Artist Album Organization — Hierarchical Song Structure (PLANNING — AWAITING APPROVAL)
+
+**Objective**: Organize songs into albums, with albums nested under artists, enabling better music library management and broadcast organization.
+
+**Database Schema**:
+- Create new `Album` table:
+  - `id` (UUID, PK)
+  - `artist_id` (FK to Artist, NOT NULL)
+  - `universe_id` (FK to Universe, NOT NULL)
+  - `name` (String, required)
+  - `release_date` (Date, nullable)
+  - `cover_art_path` (String, nullable) — AI-generated album cover
+  - `description` (Text, nullable)
+  - `status` (Enum: draft, reviewed, published)
+  - `created_at`, `updated_at` (Timestamps)
+  - Index: (artist_id, universe_id), (artist_id, status)
+
+- Modify `Track` table:
+  - Add `album_id` (FK to Album, nullable) — allow orphan tracks temporarily
+  - Update constraint: `album.artist_id = track.artist_id` (foreign key chain)
+  - Add `track_number` (Integer, nullable) — position within album
+  - Index: (album_id, track_number)
+
+**Backend Tasks**:
+- [ ] Create Alembic migration: add Album table, modify Track table
+- [ ] Create Album Pydantic schema (AlbumIn, AlbumOut, AlbumCreate)
+- [ ] Add CRUD endpoints:
+  - [ ] `POST /api/v1/artists/{artist_id}/albums` — Create album
+  - [ ] `GET /api/v1/artists/{artist_id}/albums` — List albums for artist
+  - [ ] `GET /api/v1/albums/{album_id}` — Get album with tracks
+  - [ ] `PATCH /api/v1/albums/{album_id}` — Update album metadata
+  - [ ] `DELETE /api/v1/albums/{album_id}` — Delete album (handle orphaned tracks)
+  - [ ] `POST /api/v1/albums/{album_id}/art` — Generate album cover via Imagen
+- [ ] Add AI album generation:
+  - [ ] Extend `ArtGenerator` with `generate_album_cover()` method
+  - [ ] Prompt template for album artwork (consistent with universe/station style)
+  - [ ] Prompt template for album metadata (name, description, release_date)
+- [ ] Track management:
+  - [ ] Endpoint to move track between albums: `PATCH /api/v1/tracks/{track_id}` (album_id, track_number)
+  - [ ] Reorder tracks within album: `PATCH /api/v1/albums/{album_id}/reorder`
+  - [ ] Validation: prevent duplicate track_numbers within album
+
+**Frontend Tasks**:
+- [ ] Create `Albums.tsx` component — Artist detail view with album sub-view
+- [ ] Create `AlbumDetail.tsx` — Album view with track list
+- [ ] Update `Artists.tsx` — Show album grid under each artist
+- [ ] Update API client (`api/client.ts`):
+  - [ ] Album CRUD methods
+  - [ ] Track move/reorder methods
+  - [ ] Album art generation method
+- [ ] UI/UX:
+  - [ ] Album creation form (name, description, cover art)
+  - [ ] Album grid display (cover art, artist, track count)
+  - [ ] Drag-and-drop track reordering within album
+  - [ ] Track-to-album assignment during track creation/edit
+  - [ ] Album cover display (generated art or placeholder)
+  - [ ] Release date picker (optional)
+  - [ ] Album hierarchy visualization (Artist → Albums → Tracks)
+
+**Integration Points**:
+- Chat: "Create an album called X with 5 songs" → Parse album name + count → Generate tracks + create album
+- Broadcast: Organize by album during sequence generation
+- Memory Ledger: Track album release events and milestones
+- Universe Context: Albums inherit universe_id from artist
+
+**Effort**: 4-5 days (backend schema + API + frontend UI)
+
+**Priority**: MEDIUM (improves music organization, enables album-scoped broadcast features)
+
+**Dependencies**:
+- Artist entity fully functional
+- Track entity fully functional
+- Form system ready for album creation
+
 ---
 
 ## CURRENT SPRINT: Welcome Screen & Natural Language Chat Interface
