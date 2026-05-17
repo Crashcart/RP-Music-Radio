@@ -35,11 +35,12 @@ AetherWave is a **fully functional, polished, production-ready application** tha
 
 ### Integration
 ```
-✅ AI Factory: Gemini/Ollama switching
+✅ AI Factory: HybridAIClient with automatic failover
 ✅ Database models: fully defined
 ✅ CSRF protection: implemented
 ✅ Structured logging: JSON format
 ✅ Docker build: fixed and optimized
+✅ AI Health Monitoring: /health/ai endpoint
 ```
 
 ---
@@ -82,15 +83,24 @@ AetherWave is a **fully functional, polished, production-ready application** tha
 
 ## New Features ✅
 
-### Ollama Support
+### Ollama Support with Automatic Failover
 - ✅ OllamaClient: local LLM alternative to Gemini
-- ✅ AI Factory: intelligent provider selection
-- ✅ Environment-driven configuration
+- ✅ HybridAIClient: intelligent provider selection with transparent failover
+- ✅ Automatic detection: detects Ollama unavailability and switches to Gemini
+- ✅ Health monitoring: /health/ai endpoint shows active service and availability
+- ✅ Caching: minimizes repeated health checks for better performance
+- ✅ Environment-driven configuration: OLLAMA_ENABLED, OLLAMA_AUTO_FALLBACK, AI_PREFER_CLOUD
+- ✅ Multiple deployment modes: HYBRID (default), OLLAMA_ONLY, GEMINI_ONLY, CLOUD_FALLBACK
 - ✅ GitHub Actions integration
 - ✅ Docker Compose profile
 - ✅ Comprehensive documentation (OLLAMA_SUPPORT.md)
 
-**Impact**: Enables offline development, reduces API costs, provides fallback
+**Impact**: 
+- Enables offline development (local Ollama processing)
+- Reduces API costs (local LLM when available)
+- Provides automatic cloud fallback (no manual intervention needed)
+- Graceful degradation (system continues operating even if preferred service is down)
+- Production-ready with monitoring visibility
 
 ---
 
@@ -163,9 +173,12 @@ AetherWave is a **fully functional, polished, production-ready application** tha
 
 | Item | Impact | Workaround |
 |------|--------|-----------|
-| Ollama requires 8GB+ RAM | Memory constraint | Use Gemini or smaller models |
+| Ollama requires 8GB+ RAM | Memory constraint | Use Gemini or set OLLAMA_ENABLED=false |
+| Ollama startup time | 30-60s on first pull | System auto-detects, automatically falls back to Gemini |
 | Database is SQLite by default | Single-user | Upgrade to PostgreSQL for production |
 | Canvas rendering test limitations | jsdom limitation | Full E2E browser tests in CI/CD |
+
+**Note**: The hybrid AI client automatically detects when Ollama is unavailable and transparently switches to Gemini, so even in resource-constrained environments, the system continues functioning.
 
 ---
 
@@ -184,26 +197,47 @@ curl http://localhost:8433/health  # API
 curl http://localhost:8432         # Frontend
 ```
 
-### With Ollama (Local Development)
+### Hybrid Mode (Recommended for Most Deployments)
 ```bash
-docker-compose --profile ollama up ollama
-# Wait for Ollama to start, then:
-docker-compose up api frontend
-
-# Enable Ollama in API
+# Ollama as primary with automatic Gemini failover
 export OLLAMA_ENABLED=true
-docker-compose restart api
+export OLLAMA_AUTO_FALLBACK=true
+export GOOGLE_API_KEY=your-api-key
+
+docker-compose --profile ollama up -d
+# API will use Ollama when available, automatically fallback to Gemini if Ollama goes down
+
+# Monitor AI service health
+curl http://localhost:8433/health/ai
 ```
 
-### Production Deployment
+### With Ollama Only (Local Development, No Internet)
 ```bash
-# Set environment variables
-export GOOGLE_API_KEY=your-key
-export GEMINI_ENABLED=true
-export OLLAMA_ENABLED=false  # Use Gemini
+# Use only Ollama, fail if unavailable (for offline environments)
+export OLLAMA_ENABLED=true
+export OLLAMA_AUTO_FALLBACK=false
 
-# Deploy
-docker-compose -f docker-compose.yml up -d
+docker-compose --profile ollama up -d
+```
+
+### With Gemini Only (Cloud Production)
+```bash
+# Use only Gemini, ignore Ollama
+export OLLAMA_ENABLED=false
+export GOOGLE_API_KEY=your-api-key
+
+docker-compose up -d
+```
+
+### Prefer Cloud (Low-Latency Inference)
+```bash
+# Try Ollama, but prefer Gemini for better quality
+export OLLAMA_ENABLED=true
+export OLLAMA_AUTO_FALLBACK=true
+export AI_PREFER_CLOUD=true
+export GOOGLE_API_KEY=your-api-key
+
+docker-compose --profile ollama up -d
 ```
 
 ---
@@ -236,8 +270,11 @@ docker-compose -f docker-compose.yml up -d
 - Fixed Docker build missing dependencies
 
 ### New in v1.0
-- Ollama support for local LLM
-- AI Factory pattern for provider selection
+- Ollama support for local LLM with automatic cloud failover
+- HybridAIClient for intelligent provider selection
+- AI health monitoring endpoint (/health/ai)
+- Multiple deployment modes (HYBRID, OLLAMA_ONLY, GEMINI_ONLY, CLOUD_FALLBACK)
+- Automatic Ollama unavailability detection with graceful fallback to Gemini
 - GitHub Actions CI/CD
 - Comprehensive documentation
 
