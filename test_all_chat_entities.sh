@@ -227,6 +227,58 @@ verify_field "Brand" "brands" "$BRAND_ID" "name" "Test Brand $SUFFIX"
 verify_field "Artist" "artists" "$ARTIST_ID" "name" "Test DJ"
 
 echo ""
+
+# Verify image generation
+echo "=================================================="
+echo "VERIFICATION: Image generation for entities"
+echo "=================================================="
+echo ""
+
+verify_image() {
+  local entity_type=$1
+  local endpoint=$2
+  local entity_id=$3
+  local image_field=$4
+
+  detail=$(curl -s "$API/$endpoint/$entity_id" \
+    -H "X-CSRF-Token: $CSRF_TOKEN" \
+    -b "$COOKIE_JAR")
+
+  image_path=$(echo "$detail" | jq -r ".$image_field" 2>/dev/null)
+
+  if [[ -z "$image_path" ]] || [[ "$image_path" == "null" ]]; then
+    echo "✗ $entity_type.$image_field not generated"
+    FAILED=$((FAILED + 1))
+    return 1
+  fi
+
+  if [[ ! -f "$image_path" ]]; then
+    echo "✗ $entity_type image file not found at $image_path"
+    FAILED=$((FAILED + 1))
+    return 1
+  fi
+
+  file_size=$(stat -c%s "$image_path" 2>/dev/null || stat -f%z "$image_path" 2>/dev/null || echo 0)
+  if [[ "$file_size" -eq 0 ]]; then
+    echo "✗ $entity_type image file is empty"
+    FAILED=$((FAILED + 1))
+    return 1
+  fi
+
+  file_type=$(file -b "$image_path" 2>/dev/null | grep -o "JPEG\|image" || echo "unknown")
+  echo "✓ $entity_type image generated: $image_path ($file_size bytes, $file_type)"
+  return 0
+}
+
+verify_image "Universe" "universes" "$UNIVERSE_ID" "art_path"
+verify_image "Station" "stations" "$STATION_ID" "art_path"
+verify_image "Brand" "brands" "$BRAND_ID" "logo_path"
+verify_image "Artist" "artists" "$ARTIST_ID" "portrait_path"
+
+echo ""
+echo "Note: Jingle and Draft image generation is deferred (pending database schema)"
+echo ""
+
 echo "=================================================="
 if [[ $FAILED -eq 0 ]]; then
   echo "✅ ALL TESTS PASSED"
