@@ -2,6 +2,10 @@
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /home/user/RP-Music-Radio/.claude/statusline-command.sh"
+  },
   "hooks": {
     "PostToolUse": [
       {
