@@ -245,15 +245,25 @@ export function Universes({
                       <img
                         src={u.art_path}
                         alt={u.name}
+                        onClick={() => setSelectedUniverse(u)}
                         style={{
                           width: "100%",
                           height: "160px",
                           objectFit: "cover",
                           borderRadius: "var(--radius-md)",
+                          cursor: "pointer",
+                          transition: "opacity 0.2s ease",
                         }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.opacity = "0.8")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.opacity = "1")
+                        }
                       />
                     ) : (
                       <div
+                        onClick={() => setSelectedUniverse(u)}
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -263,7 +273,15 @@ export function Universes({
                           minHeight: "160px",
                           borderRadius: "var(--radius-md)",
                           fontSize: "3rem",
+                          cursor: "pointer",
+                          transition: "opacity 0.2s ease",
                         }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.opacity = "0.8")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.opacity = "1")
+                        }
                       >
                         🌍
                       </div>
@@ -718,9 +736,18 @@ function UniverseCreateForm({ onCancel, onSave }: UniverseCreateFormProps) {
     }
     setSaving(true);
     try {
-      await api.stageUniverse(form);
+      const universe = await api.stageUniverse(form);
       toast.success(`Staged ${form.name} for review!`);
       setDirty(false);
+
+      // Auto-generate artwork for the new universe
+      try {
+        await api.generateUniverseArt(universe.id);
+        toast.success(`✨ Generated artwork for ${form.name}!`);
+      } catch (artError) {
+        console.debug("Artwork generation queued (may take a moment)");
+      }
+
       onSave();
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
