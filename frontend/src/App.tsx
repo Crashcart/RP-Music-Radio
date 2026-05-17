@@ -14,6 +14,11 @@ import { GenerationQueue } from "./pages/GenerationQueue";
 import { SettingsPage } from "./pages/Settings";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { SplashScreen } from "./components/SplashScreen";
+import {
+  TokenUsageWidget,
+  type UsageStats,
+} from "./components/TokenUsageWidget";
+import { TokenUsageModal } from "./components/TokenUsageModal";
 import { api, type Draft, type Station, type Universe } from "./api/client";
 
 type Page =
@@ -78,6 +83,8 @@ export default function App() {
   const [activeUniverse, setActiveUniverse] = useState<Universe | null>(null);
   /** True while the startup universe check is running (blocks nav to stations). */
   const [universeCheckDone, setUniverseCheckDone] = useState(false);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [showUsageModal, setShowUsageModal] = useState(false);
 
   // ── Health check ──────────────────────────────────────────────────
   useEffect(() => {
@@ -89,6 +96,27 @@ export default function App() {
         setApiOk(false);
       });
   }, []);
+
+  // ── Token usage polling ────────────────────────────────────────────
+  useEffect(() => {
+    if (apiOk !== true) return;
+
+    const fetchUsageStats = async () => {
+      try {
+        const response = await fetch("/api/v1/usage-stats");
+        if (response.ok) {
+          const data = (await response.json()) as UsageStats;
+          setUsageStats(data);
+        }
+      } catch (e) {
+        console.debug("Failed to fetch usage stats:", e);
+      }
+    };
+
+    fetchUsageStats();
+    const interval = setInterval(fetchUsageStats, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [apiOk]);
 
   // ── Universe gate — runs once after API comes online ──────────────
   useEffect(() => {
@@ -311,6 +339,14 @@ export default function App() {
                       : "Checking..."}
                 </span>
               </div>
+              {usageStats && (
+                <div style={{ marginTop: "var(--space-sm)" }}>
+                  <TokenUsageWidget
+                    stats={usageStats}
+                    onExpand={() => setShowUsageModal(true)}
+                  />
+                </div>
+              )}
             </div>
           </aside>
         )}
@@ -444,6 +480,13 @@ export default function App() {
           currentStationId={activeStation?.id}
           selectedStation={activeStation}
         />
+        {usageStats && (
+          <TokenUsageModal
+            stats={usageStats}
+            isOpen={showUsageModal}
+            onClose={() => setShowUsageModal(false)}
+          />
+        )}
       </div>
     </FormManagerProvider>
   );

@@ -429,3 +429,33 @@ class Universe(Base):
     # Admin/audit
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Token Usage Log (Gemini API quota tracking)
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TokenUsageLog(Base):
+    """
+    Tracks Gemini API token consumption per call.
+
+    Used to monitor monthly quota usage and warn users when approaching limits.
+    Entries created whenever GeminiClient.generate_script() completes.
+    """
+
+    __tablename__ = "token_usage_logs"
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+
+    # API call details
+    endpoint = Column(String, nullable=False)  # e.g., "generate_script"
+    model = Column(String, default="gemini-2.5-flash")
+    task_id = Column(String, nullable=True)  # Link to Celery task
+
+    # Token counts
+    prompt_tokens = Column(Integer, default=0)
+    completion_tokens = Column(Integer, default=0)
+
+    # Timestamp for monthly aggregation
+    created_at = Column(DateTime, default=_utcnow, index=True)

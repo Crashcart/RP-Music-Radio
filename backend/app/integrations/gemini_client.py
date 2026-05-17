@@ -19,6 +19,9 @@ import os
 from google import genai
 from google.genai import types
 
+from app.database import SessionLocal
+from app.models.database import TokenUsageLog
+
 logger = logging.getLogger(__name__)
 
 # ── Prompt template ──────────────────────────────────────────────────
@@ -103,6 +106,29 @@ class GeminiClient:
 
         self.client = genai.Client(api_key=self.api_key or "")
 
+    def _log_token_usage(
+        self,
+        endpoint: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        task_id: str | None = None,
+    ) -> None:
+        try:
+            db = SessionLocal()
+            log = TokenUsageLog(
+                endpoint=endpoint,
+                model=self.model,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                task_id=task_id,
+            )
+            db.add(log)
+            db.commit()
+        except Exception as exc:
+            logger.error("Failed to log token usage: %s", exc)
+        finally:
+            db.close()
+
     def generate_script(
         self,
         *,
@@ -142,6 +168,17 @@ class GeminiClient:
                     response_mime_type="application/json",
                 ),
             )
+
+            # Extract and log token usage
+            try:
+                usage = response.usage_metadata
+                prompt_tokens = usage.prompt_token_count if usage else 0
+                completion_tokens = usage.candidates_token_count if usage else 0
+                self._log_token_usage(
+                    "generate_script", prompt_tokens, completion_tokens
+                )
+            except Exception as exc:
+                logger.warning("Could not extract token usage: %s", exc)
 
             # Parse the JSON response
             raw_text = response.text.strip()

@@ -1408,6 +1408,19 @@ This rule prevents data model corruption."""
 
 
 # ═══════════════════════════════════════════════════════════════════
+#  API Usage & Quota Tracking
+# ═══════════════════════════════════════════════════════════════════
+
+
+@router.get("/usage-stats")
+def get_usage_stats():
+    """Get Gemini API token usage statistics and quota information."""
+    from app.utils.quota_tracker import get_usage_stats
+
+    return get_usage_stats()
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  Universes / Game Worlds
 # ═══════════════════════════════════════════════════════════════════
 
