@@ -1740,18 +1740,18 @@ function JingleForm({ stationId, onSave, onCancel }: JingleFormProps) {
     }
     setSaving(true);
     try {
-      await api.createJingle({
+      await api.stageJingle({
         station_id: stationId,
         name: form.name,
         jingle_type: form.jingle_type,
         description: form.description,
       });
-      toast.success(`Created ${form.name} successfully!`);
+      toast.success(`Staged ${form.name} for review!`);
       setDirty(false);
       onSave();
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      toast.error(`Failed to create jingle: ${errorMsg}`);
+      toast.error(`Failed to stage jingle: ${errorMsg}`);
     } finally {
       setSaving(false);
     }

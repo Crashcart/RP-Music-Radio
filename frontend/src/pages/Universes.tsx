@@ -606,13 +606,13 @@ function UniverseCreateForm({ onCancel, onSave }: UniverseCreateFormProps) {
     }
     setSaving(true);
     try {
-      await api.createUniverse(form);
-      toast.success(`Created ${form.name} successfully!`);
+      await api.stageUniverse(form);
+      toast.success(`Staged ${form.name} for review!`);
       setDirty(false);
       onSave();
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      toast.error(`Failed to create universe: ${errorMsg}`);
+      toast.error(`Failed to stage universe: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
