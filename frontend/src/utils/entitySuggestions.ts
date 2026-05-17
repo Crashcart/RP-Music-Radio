@@ -1,5 +1,5 @@
 /**
- * Generic entity suggestion parser and mappers for Feature 2.
+ * Generic entity suggestion parser and mappers.
  * Supports all 6 entity types: Station, Brand, Artist/DJ, Jingle, Draft, Universe.
  * Maintains backward compatibility with DJ_SUGGESTION blocks.
  */
@@ -17,6 +17,12 @@ export interface EntitySuggestion {
   confidence: "high" | "medium" | "low";
   fields: Record<string, string>;
   aiGenerated: true;
+}
+
+export interface FormEntitySuggestion {
+  type: EntityType;
+  data: Record<string, string>;
+  confidence: "high" | "medium" | "low";
 }
 
 /**
@@ -220,3 +226,15 @@ export const mapSuggestionByType = (
       return {};
   }
 };
+
+/**
+ * Convert EntitySuggestion to FormEntitySuggestion for FormManager.
+ * This is a simple format conversion between parser interface and form interface.
+ */
+export const toFormSuggestion = (
+  suggestion: EntitySuggestion,
+): FormEntitySuggestion => ({
+  type: suggestion.entityType,
+  data: suggestion.fields,
+  confidence: suggestion.confidence,
+});

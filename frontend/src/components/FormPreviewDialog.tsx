@@ -1,7 +1,7 @@
-import { EntityType, EntitySuggestion } from "../utils/entitySuggestionParser";
+import { EntityType, FormEntitySuggestion } from "../utils/entitySuggestions";
 
 interface FormPreviewDialogProps {
-  suggestion: EntitySuggestion;
+  suggestion: FormEntitySuggestion;
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -104,7 +104,7 @@ function entityTypeLabel(type: EntityType): string {
 /**
  * Build a readable summary of the suggested entity based on its type.
  */
-function buildSummary(suggestion: EntitySuggestion): React.ReactNode {
+function buildSummary(suggestion: FormEntitySuggestion): React.ReactNode {
   const { type, data } = suggestion;
 
   switch (type) {

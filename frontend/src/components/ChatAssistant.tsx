@@ -3,7 +3,9 @@ import { api, type Station } from "../api/client";
 import {
   parseEntitySuggestions,
   mapSuggestionByType,
+  toFormSuggestion,
   type EntitySuggestion,
+  type FormEntitySuggestion,
 } from "../utils/entitySuggestions";
 import { EntitySuggestionCard } from "./EntitySuggestionCard";
 import { FormPreviewDialog } from "./FormPreviewDialog";
@@ -12,7 +14,6 @@ import {
   requiresFormPreview,
   normalizeEntityType,
 } from "../contexts/FormManagerContext";
-import type { EntitySuggestion as EntitySuggestionNew } from "../utils/entitySuggestionParser";
 import type { UsageStats } from "./TokenUsageWidget";
 
 interface ChatMessage {
@@ -276,7 +277,7 @@ export function ChatAssistant({
 
   // Form preview dialog state
   const [selectedSuggestionForPreview, setSelectedSuggestionForPreview] =
-    useState<EntitySuggestionNew | null>(null);
+    useState<FormEntitySuggestion | null>(null);
   const [showFormPreview, setShowFormPreview] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -657,19 +658,16 @@ export function ChatAssistant({
     // Normalize so "dj", "host", "musician" etc. all map to "artist"
     const entityType = normalizeEntityType(suggestion.entityType);
 
-    // Convert to new format for FormManager
-    const newFormatSuggestion: EntitySuggestionNew = {
-      type: entityType as unknown as EntitySuggestionNew["type"],
-      data: suggestion.fields,
-      confidence: suggestion.confidence,
-    };
+    // Convert to form format
+    const formSuggestion: FormEntitySuggestion = toFormSuggestion(suggestion);
+    formSuggestion.type = entityType;
 
     // Check if this entity type requires preview dialog
     const needsPreview = requiresFormPreview(entityType);
 
     if (needsPreview) {
       // Show preview dialog for major entities
-      setSelectedSuggestionForPreview(newFormatSuggestion);
+      setSelectedSuggestionForPreview(formSuggestion);
       setShowFormPreview(true);
     } else {
       // Auto-open form for quick-creates
@@ -696,8 +694,9 @@ export function ChatAssistant({
 
     setPreviewLoading(true);
     try {
+      const entityType = normalizeEntityType(selectedSuggestionForPreview.type);
       formManager.openForm({
-        entityType: normalizeEntityType(selectedSuggestionForPreview.type),
+        entityType,
         initialData: selectedSuggestionForPreview.data,
         aiGenerated: true,
         sourceUniverse: currentStationId,
