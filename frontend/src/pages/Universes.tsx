@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api, type Universe } from "../api/client";
+import { api, type Universe, type Station } from "../api/client";
 import { useFormInitialData } from "../hooks/useFormInitialData";
 import { useFormManager } from "../contexts/FormManagerContext";
 import { useFormDirtyState } from "../contexts/FormDirtyStateContext";
@@ -17,6 +17,7 @@ export function Universes({
   onUniverseDeleted,
 }: UniversesProps = {}) {
   const [universes, setUniverses] = useState<Universe[]>([]);
+  const [stations, setStations] = useState<Station[]>([]);
   const [selectedUniverse, setSelectedUniverse] = useState<Universe | null>(
     null,
   );
@@ -35,6 +36,10 @@ export function Universes({
       .listUniverses()
       .then(setUniverses)
       .catch((e) => console.error("Failed to load universes:", e));
+    api
+      .listStations()
+      .then(setStations)
+      .catch((e) => console.error("Failed to load stations:", e));
   };
 
   useEffect(() => {
@@ -46,6 +51,10 @@ export function Universes({
       setShowCreate(true);
     }
   }, [formManager.isOpen, formManager.request]);
+
+  const getUniverseStations = (universeId: string) => {
+    return stations.filter((s) => s.universe_id === universeId);
+  };
 
   const handleCreateUniverse = async () => {
     if (!newUniverseName.trim()) {
@@ -217,73 +226,176 @@ export function Universes({
           </button>
         </div>
       ) : (
-        <div className="entity-grid">
-          {universes.map((u) => (
-            <div
-              key={u.id}
-              className="card entity-card"
-              onClick={() => setSelectedUniverse(u)}
-              style={{ cursor: "pointer" }}
-            >
-              <div
-                className="entity-card-art"
-                style={{ marginBottom: "var(--space-md)" }}
-              >
-                {u.art_path ? (
-                  <img
-                    src={u.art_path}
-                    alt={u.name}
-                    style={{
-                      width: "100%",
-                      height: "160px",
-                      objectFit: "cover",
-                      borderRadius: "var(--radius-md)",
-                    }}
-                  />
-                ) : (
+        <div>
+          {universes.map((u) => {
+            const universeStations = getUniverseStations(u.id);
+            return (
+              <div key={u.id} style={{ marginBottom: "var(--space-xxl)" }}>
+                {/* Universe Card */}
+                <div
+                  className="card entity-card"
+                  onClick={() => setSelectedUniverse(u)}
+                  style={{ cursor: "pointer", marginBottom: "var(--space-lg)" }}
+                >
+                  <div
+                    className="entity-card-art"
+                    style={{ marginBottom: "var(--space-md)" }}
+                  >
+                    {u.art_path ? (
+                      <img
+                        src={u.art_path}
+                        alt={u.name}
+                        style={{
+                          width: "100%",
+                          height: "160px",
+                          objectFit: "cover",
+                          borderRadius: "var(--radius-md)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          minHeight: "160px",
+                          borderRadius: "var(--radius-md)",
+                          fontSize: "3rem",
+                        }}
+                      >
+                        🌍
+                      </div>
+                    )}
+                  </div>
+                  <div className="entity-card-info">
+                    <h3>{u.name}</h3>
+                    {u.publisher && (
+                      <span className="entity-card-sub">
+                        Publisher: {u.publisher}
+                      </span>
+                    )}
+                    <div className="entity-card-tags">
+                      <span className={`tag badge-${u.status}`}>
+                        {u.status}
+                      </span>
+                      {u.era && <span className="tag">{u.era}</span>}
+                      {u.setting && <span className="tag">{u.setting}</span>}
+                      <span className="tag" style={{ marginLeft: "auto" }}>
+                        📻 {universeStations.length} stations
+                      </span>
+                    </div>
+                    {u.description && (
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "var(--text-secondary)",
+                          marginTop: "var(--space-sm)",
+                        }}
+                      >
+                        {u.description.substring(0, 80)}
+                        {u.description.length > 80 ? "…" : ""}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Entities Below Universe */}
+                {universeStations.length > 0 && (
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      minHeight: "160px",
-                      borderRadius: "var(--radius-md)",
-                      fontSize: "3rem",
+                      marginLeft: "var(--space-md)",
+                      paddingLeft: "var(--space-lg)",
+                      borderLeft: "2px solid var(--border-color)",
                     }}
                   >
-                    🌍
+                    <div
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "var(--text-secondary)",
+                        marginBottom: "var(--space-md)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      📻 Stations
+                    </div>
+                    <div
+                      className="entity-grid"
+                      style={{
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(200px, 1fr))",
+                      }}
+                    >
+                      {universeStations.slice(0, 6).map((station) => (
+                        <div
+                          key={station.id}
+                          className="card entity-card"
+                          style={{
+                            cursor: "pointer",
+                            fontSize: "0.9rem",
+                            padding: "var(--space-md)",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Future: navigate to station detail view
+                          }}
+                        >
+                          {station.art_path && (
+                            <img
+                              src={station.art_path}
+                              alt={station.name}
+                              style={{
+                                width: "100%",
+                                height: "80px",
+                                objectFit: "cover",
+                                borderRadius: "var(--radius-sm)",
+                                marginBottom: "var(--space-sm)",
+                              }}
+                            />
+                          )}
+                          <h4 style={{ margin: "0 0 var(--space-xs) 0" }}>
+                            {station.name}
+                          </h4>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "0.8rem",
+                              color: "var(--text-secondary)",
+                            }}
+                          >
+                            {station.frequency && `${station.frequency} FM`}
+                          </p>
+                          <p
+                            style={{
+                              margin: "var(--space-xs) 0 0 0",
+                              fontSize: "0.8rem",
+                              color: "var(--text-secondary)",
+                            }}
+                          >
+                            {station.genre}
+                          </p>
+                        </div>
+                      ))}
+                      {universeStations.length > 6 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "var(--space-md)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          +{universeStations.length - 6} more stations
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="entity-card-info">
-                <h3>{u.name}</h3>
-                {u.publisher && (
-                  <span className="entity-card-sub">
-                    Publisher: {u.publisher}
-                  </span>
-                )}
-                <div className="entity-card-tags">
-                  <span className={`tag badge-${u.status}`}>{u.status}</span>
-                  {u.era && <span className="tag">{u.era}</span>}
-                  {u.setting && <span className="tag">{u.setting}</span>}
-                </div>
-                {u.description && (
-                  <p
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "var(--text-secondary)",
-                      marginTop: "var(--space-sm)",
-                    }}
-                  >
-                    {u.description.substring(0, 80)}
-                    {u.description.length > 80 ? "…" : ""}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

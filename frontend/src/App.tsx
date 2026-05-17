@@ -82,7 +82,7 @@ function AppContent() {
   const isMobile = useIsMobile();
   const formDirtyState = useFormDirtyState();
   const [showSplash, setShowSplash] = useState(true);
-  const [page, setPage] = useState<Page>("stations");
+  const [page, setPage] = useState<Page>("universes");
   const [pendingPage, setPendingPage] = useState<Page | null>(null);
   const [showNavConfirm, setShowNavConfirm] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
