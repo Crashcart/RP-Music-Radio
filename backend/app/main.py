@@ -188,6 +188,39 @@ def health_check_ai():
         }
 
 
+@app.get("/debug/ai")
+def debug_ai():
+    """Get comprehensive AI debugging information including resource awareness."""
+    from app.integrations.ai_factory import get_ai_client
+
+    try:
+        client = get_ai_client()
+
+        # Check if client has debug info method (HybridAIClient does)
+        if hasattr(client, "get_debug_info"):
+            debug_info = client.get_debug_info()
+            return {
+                "status": "ok",
+                "service": "AI Debug Info",
+                "debug": debug_info,
+            }
+
+        # Fallback for clients without debug support
+        return {
+            "status": "ok",
+            "service": "AI Debug Info",
+            "client_type": client.__class__.__name__,
+            "message": "Debug info not available for this client",
+        }
+    except Exception as e:
+        logger.error("AI debug request failed: %s", e, exc_info=True)
+        return {
+            "status": "error",
+            "service": "AI Debug Info",
+            "error": str(e),
+        }
+
+
 @app.get("/")
 def read_root():
     return {
@@ -195,5 +228,6 @@ def read_root():
         "docs": "/docs",
         "health": "/health",
         "health_ai": "/health/ai",
+        "debug_ai": "/debug/ai",
         "api": "/api/v1",
     }

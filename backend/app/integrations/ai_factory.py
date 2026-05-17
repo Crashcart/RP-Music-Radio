@@ -32,8 +32,14 @@ from __future__ import annotations
 
 import logging
 import os
+from dataclasses import dataclass
 from enum import Enum
 from typing import Union
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from app.integrations.gemini_client import GeminiClient
 from app.integrations.ollama_client import OllamaClient
@@ -41,6 +47,120 @@ from app.integrations.ollama_client import OllamaClient
 logger = logging.getLogger(__name__)
 
 AIClient = Union[GeminiClient, OllamaClient]
+
+
+@dataclass
+class SystemResources:
+    """System resource information for model selection."""
+
+    cpu_count: int  # Number of CPU cores
+    cpu_percent: float  # Current CPU usage (0-100)
+    memory_total_gb: float  # Total RAM in GB
+    memory_available_gb: float  # Available RAM in GB
+    memory_percent: float  # Memory usage (0-100)
+    gpu_available: bool  # Whether GPU is detected
+    gpu_memory_gb: float  # GPU memory in GB (0 if not available)
+
+    @staticmethod
+    def get_current() -> SystemResources:
+        """Get current system resource information."""
+        if psutil is None:
+            # Fallback if psutil not available
+            return SystemResources(
+                cpu_count=1,
+                cpu_percent=0,
+                memory_total_gb=8,
+                memory_available_gb=4,
+                memory_percent=50,
+                gpu_available=False,
+                gpu_memory_gb=0,
+            )
+
+        try:
+            cpu_count = psutil.cpu_count(logical=True) or 1
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+            mem_info = psutil.virtual_memory()
+            memory_total_gb = mem_info.total / (1024**3)
+            memory_available_gb = mem_info.available / (1024**3)
+            memory_percent = mem_info.percent
+
+            # GPU detection (check for NVIDIA CUDA capability)
+            gpu_available = False
+            gpu_memory_gb = 0
+            try:
+                import subprocess
+
+                result = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=memory.total",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
+                if result.returncode == 0:
+                    gpu_memory_mb = int(result.stdout.strip().split()[0])
+                    gpu_available = gpu_memory_mb > 0
+                    gpu_memory_gb = gpu_memory_mb / 1024
+            except (
+                ImportError,
+                FileNotFoundError,
+                subprocess.TimeoutExpired,
+                Exception,
+            ):
+                # GPU detection failed; that's okay
+                pass
+
+            return SystemResources(
+                cpu_count=cpu_count,
+                cpu_percent=cpu_percent,
+                memory_total_gb=memory_total_gb,
+                memory_available_gb=memory_available_gb,
+                memory_percent=memory_percent,
+                gpu_available=gpu_available,
+                gpu_memory_gb=gpu_memory_gb,
+            )
+        except Exception as exc:
+            logger.warning("Failed to get system resources: %s", exc)
+            return SystemResources(
+                cpu_count=1,
+                cpu_percent=0,
+                memory_total_gb=8,
+                memory_available_gb=4,
+                memory_percent=50,
+                gpu_available=False,
+                gpu_memory_gb=0,
+            )
+
+    def can_fit_model(self, model_size_gb: float, buffer_gb: float = 2) -> bool:
+        """Check if a model can fit in available memory with safety buffer."""
+        required_gb = model_size_gb + buffer_gb
+        return self.memory_available_gb >= required_gb
+
+    def recommended_model_size(self) -> str:
+        """Recommend model size based on available resources."""
+        available = self.memory_available_gb
+        if available < 2:
+            return "tiny"  # Sub-1GB models (tiny, minimal)
+        elif available < 4:
+            return "small"  # 1-3GB models
+        elif available < 8:
+            return "medium"  # 4-7GB models (mistral: 4GB, llama2: 3.8GB)
+        elif available < 16:
+            return "large"  # 8-13GB models (neural-chat: 4.1GB, orca-mini: 1.3GB)
+        else:
+            return "xlarge"  # 13GB+ models (neural-chat: 4.1GB, larger variants)
+
+    def __str__(self) -> str:
+        """Human-readable resource summary."""
+        gpu_str = f", GPU: {self.gpu_memory_gb:.1f}GB" if self.gpu_available else ""
+        return (
+            f"CPU: {self.cpu_count} cores ({self.cpu_percent:.1f}% used), "
+            f"RAM: {self.memory_available_gb:.1f}GB / {self.memory_total_gb:.1f}GB"
+            f"{gpu_str}"
+        )
 
 
 class TaskType(Enum):
@@ -130,6 +250,37 @@ class HybridAIClient:
         self._gemini_client = GeminiClient()
         self._ollama_available = None  # Cache availability status
         self._active_client = None  # Track which client is actively being used
+        self._system_resources = None  # Cache system resources
+        self._resources_cache_time = None  # Time of last resources check
+
+    def get_system_resources(self) -> SystemResources:
+        """Get current system resources, with caching."""
+        resources = SystemResources.get_current()
+        self._system_resources = resources
+        return resources
+
+    def get_recommended_model(self) -> str:
+        """
+        Get recommended Ollama model based on available system resources.
+
+        Returns:
+            Recommended model size: "tiny", "small", "medium", "large", or "xlarge"
+        """
+        resources = self.get_system_resources()
+        recommended = resources.recommended_model_size()
+        logger.info(
+            "Resource-aware model selection: %s → recommended=%s",
+            resources,
+            recommended,
+        )
+        return recommended
+
+    def can_run_ollama(self) -> bool:
+        """Check if Ollama can run with current system resources."""
+        resources = self.get_system_resources()
+        # Ollama + small model needs ~2-4GB; large models need 8GB+
+        # Be conservative and require at least 2GB available
+        return resources.memory_available_gb >= 2
 
     def _check_ollama_available(self) -> bool:
         """Check if Ollama is available (with caching)."""
@@ -197,6 +348,56 @@ class HybridAIClient:
     def get_active_client_name(self) -> str:
         """Return name of currently active client."""
         return self._active_client or ("ollama" if self.prefer_ollama else "gemini")
+
+    def get_debug_info(self) -> dict:
+        """Get comprehensive debugging information about AI selection and resources."""
+        resources = self.get_system_resources()
+        ollama_ok = self._ollama_client._is_available()
+
+        return {
+            "timestamp": __import__("datetime").datetime.now().isoformat(),
+            "active_client": self.get_active_client_name(),
+            "prefer_ollama": self.prefer_ollama,
+            "auto_fallback_enabled": self.auto_fallback,
+            "ollama_available": ollama_ok,
+            "ollama_host": self._ollama_client.host,
+            "ollama_model": self._ollama_client.model,
+            "ollama_can_run": self.can_run_ollama(),
+            "system_resources": {
+                "cpu_count": resources.cpu_count,
+                "cpu_percent": resources.cpu_percent,
+                "memory_available_gb": round(resources.memory_available_gb, 2),
+                "memory_total_gb": round(resources.memory_total_gb, 2),
+                "memory_percent": resources.memory_percent,
+                "gpu_available": resources.gpu_available,
+                "gpu_memory_gb": round(resources.gpu_memory_gb, 2),
+            },
+            "model_recommendation": {
+                "recommended_size": resources.recommended_model_size(),
+                "explanation": self._get_model_recommendation_explanation(resources),
+            },
+            "configuration": {
+                "OLLAMA_ENABLED": os.getenv("OLLAMA_ENABLED", "true"),
+                "OLLAMA_AUTO_FALLBACK": os.getenv("OLLAMA_AUTO_FALLBACK", "true"),
+                "AI_PREFER_CLOUD": os.getenv("AI_PREFER_CLOUD", "false"),
+            },
+        }
+
+    def _get_model_recommendation_explanation(self, resources: SystemResources) -> str:
+        """Get human-readable explanation of model recommendation."""
+        available = resources.memory_available_gb
+        if available < 2:
+            return "Very limited RAM: can only run tiny models (sub-1GB)"
+        elif available < 4:
+            return "Limited RAM: recommended for small models (1-3GB), e.g., orca-mini"
+        elif available < 8:
+            return "Moderate RAM: good for medium models (4-7GB), e.g., mistral, llama2"
+        elif available < 16:
+            return "Good RAM: can run larger models (8-13GB), e.g., neural-chat, larger variants"
+        else:
+            return (
+                "Excellent RAM: can run very large models (13GB+), optimal for quality"
+            )
 
     def select_best_client(self, preference: TaskPreference | None = None) -> str:
         """
@@ -270,7 +471,7 @@ class HybridAIClient:
             return "ollama"
 
     def health_check(self) -> dict:
-        """Check health of both AI services."""
+        """Check health of both AI services and system resources."""
         ollama_ok = self._ollama_client._is_available()
         gemini_ok = (
             self._gemini_client._is_available()
@@ -278,15 +479,29 @@ class HybridAIClient:
             else True
         )
 
+        resources = self.get_system_resources()
+        recommended_model = resources.recommended_model_size()
+
         return {
             "ollama": {
                 "available": ollama_ok,
                 "host": self._ollama_client.host,
                 "model": self._ollama_client.model,
+                "can_run": self.can_run_ollama(),
             },
             "gemini": {
                 "available": gemini_ok,
                 "configured": bool(os.getenv("GOOGLE_API_KEY", "").strip()),
+            },
+            "system_resources": {
+                "cpu_cores": resources.cpu_count,
+                "cpu_percent": resources.cpu_percent,
+                "memory_available_gb": resources.memory_available_gb,
+                "memory_total_gb": resources.memory_total_gb,
+                "memory_percent": resources.memory_percent,
+                "gpu_available": resources.gpu_available,
+                "gpu_memory_gb": resources.gpu_memory_gb,
+                "recommended_model_size": recommended_model,
             },
             "active_client": self.get_active_client_name(),
             "auto_fallback_enabled": self.auto_fallback,
