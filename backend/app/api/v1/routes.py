@@ -53,12 +53,16 @@ from app.api.v1.schemas import (
     BulkUndoResponse,
     CommitRequest,
     CommitResponse,
+    DraftDraftCreate,
+    DraftDraftResponse,
     DraftListResponse,
     DraftOut,
     DraftUpdate,
     IngestRequest,
     IngestResponse,
     JingleCreate,
+    JingleDraftCreate,
+    JingleDraftResponse,
     JingleOut,
     StationCreate,
     StationDraftCreate,
@@ -67,6 +71,8 @@ from app.api.v1.schemas import (
     StationUpdate,
     TaskStatus,
     UniverseCreate,
+    UniverseDraftCreate,
+    UniverseDraftResponse,
     UniverseOut,
     UniverseResearchRequest,
     UniverseResearchResponse,
@@ -968,6 +974,61 @@ def delete_jingle(jingle_id: str, db: Session = Depends(get_db)):
     return {"deleted": jingle_id}
 
 
+@router.post("/jingles/staged", response_model=JingleDraftResponse)
+def stage_jingle(payload: JingleDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated jingle for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged jingles per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    """
+    # ── Verify station exists ────────────────────────────────────────
+    station = db.query(Station).filter(Station.id == payload.station_id).first()
+    if not station:
+        raise HTTPException(404, "Station not found")
+
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged jingles per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft jingle ──────────────────────────────────────
+    jingle_data = payload.model_dump(exclude={"created_by"})
+    jingle = Jingle(
+        **jingle_data,
+        status="pending",
+    )
+    db.add(jingle)
+    db.commit()
+    db.refresh(jingle)
+    logger.info(
+        "Staged AI jingle: id=%s name=%r station=%s created_by=%s",
+        jingle.id,
+        jingle.name,
+        jingle.station_id,
+        payload.created_by,
+        extra={"jingle_id": jingle.id},
+    )
+    return JingleDraftResponse.model_validate(jingle)
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Drafts (legacy ingest + CRUD)
 # ═══════════════════════════════════════════════════════════════════
@@ -1086,6 +1147,56 @@ def retry_draft(draft_id: str, db: Session = Depends(get_db)):
     db.refresh(draft)
     logger.info("Retried draft %s with task %s", draft_id, celery_task.id)
     return DraftOut.model_validate(draft)
+
+
+@router.post("/drafts/staged", response_model=DraftDraftResponse)
+def stage_draft(payload: DraftDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated draft for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged drafts per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged drafts per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft ─────────────────────────────────────────────
+    draft_data = payload.model_dump(exclude={"created_by"})
+    draft = Draft(
+        **draft_data,
+        status="draft",
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    logger.info(
+        "Staged AI draft: id=%s station=%s artist=%s created_by=%s",
+        draft.id,
+        draft.station_name,
+        draft.artist_name,
+        payload.created_by,
+        extra={"draft_id": draft.id},
+    )
+    return DraftDraftResponse.model_validate(draft)
 
 
 @router.post("/commit", response_model=CommitResponse)
@@ -1501,6 +1612,65 @@ def delete_universe(universe_id: str, db: Session = Depends(get_db)):
     db.commit()
     logger.info("Deleted universe: %s", universe.name)
     return {"deleted": universe_id}
+
+
+@router.post("/universes/staged", response_model=UniverseDraftResponse)
+def stage_universe(payload: UniverseDraftCreate, db: Session = Depends(get_db)):
+    """
+    Stage an AI-generated universe for user review.
+
+    Validates all input via Pydantic before touching the database.
+    Applies rate limiting:
+      • 20 staged universes per hour per requester (Redis-backed, cross-worker safe)
+    Returns 429 if limit is exceeded.
+    """
+    now = datetime.now(timezone.utc)
+
+    # ── Security: sanitise requester key ─────────────────────────────
+    requester_key = (payload.created_by or "anon").strip() or "anon"
+
+    # ── Hourly rate limit (Redis-backed, shared across all workers) ──
+    if _check_hourly_rate_limit(requester_key):
+        logger.warning(
+            "Rate limit exceeded for requester=%s (hourly cap %d)",
+            requester_key,
+            _RATE_LIMIT_PER_HOUR,
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": f"Rate limit exceeded: max {_RATE_LIMIT_PER_HOUR} staged universes per hour. Please wait before staging more.",
+                "code": "rate_limit_hourly",
+            },
+        )
+
+    # ── Create the draft universe ────────────────────────────────────
+    universe_data = payload.model_dump()
+    universe = Universe(
+        **universe_data,
+        status="draft",
+    )
+    db.add(universe)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": f"A universe named {universe_data['name']!r} already exists. Choose a different name.",
+                "code": "duplicate_name",
+            },
+        )
+    db.refresh(universe)
+    logger.info(
+        "Staged AI universe: id=%s name=%r created_by=%s",
+        universe.id,
+        universe.name,
+        universe.created_by if hasattr(universe, "created_by") else None,
+        extra={"universe_id": universe.id},
+    )
+    return UniverseDraftResponse.model_validate(universe)
 
 
 # ═══════════════════════════════════════════════════════════════════

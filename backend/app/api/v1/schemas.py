@@ -738,6 +738,114 @@ class UniverseResearchResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class UniverseDraftCreate(BaseModel):
+    """Schema for staging an AI-generated universe."""
+
+    name: str = Field(
+        ..., min_length=1, max_length=200, description="Universe name (required)"
+    )
+    description: str = Field(default="", max_length=5000)
+    publisher: str = Field(default="", max_length=500)
+    key_features: str = Field(default="", max_length=2000)
+    research_links: str = Field(default="", max_length=3000)
+    research_summary: str = Field(default="", max_length=3000)
+    genre_hints: str = Field(default="", max_length=500)
+    mood_hints: str = Field(default="", max_length=500)
+    setting: str = Field(default="", max_length=500)
+    era: str = Field(default="", max_length=200)
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+
+class UniverseDraftResponse(BaseModel):
+    """Response returned after successfully staging an AI-generated universe."""
+
+    id: str
+    name: str
+    description: str
+    publisher: str
+    key_features: str
+    research_links: str
+    status: str
+    research_summary: str
+    art_path: Optional[str] = None
+    genre_hints: str
+    mood_hints: str
+    setting: str
+    era: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class JingleDraftCreate(BaseModel):
+    """Schema for staging an AI-generated jingle."""
+
+    station_id: str
+    name: str = Field(..., min_length=1, max_length=200)
+    jingle_type: str = Field(default="bumper", max_length=50)
+    description: str = Field(default="", max_length=1000)
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+
+class JingleDraftResponse(BaseModel):
+    """Response returned after successfully staging an AI-generated jingle."""
+
+    id: str
+    station_id: str
+    name: str
+    jingle_type: str
+    description: str
+    audio_path: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DraftDraftCreate(BaseModel):
+    """Schema for staging a draft via AI generation."""
+
+    station_id: Optional[str] = None
+    artist_id: Optional[str] = None
+    brand_id: Optional[str] = None
+    station_name: str = Field(..., min_length=1, max_length=200)
+    artist_name: str = Field(..., min_length=1, max_length=200)
+    genre: str = Field(default="", max_length=200)
+    mood: str = Field(default="", max_length=200)
+    items: str = Field(default="", max_length=2000)
+    script: str = Field(default="", max_length=5000)
+    backstory: str = Field(default="", max_length=3000)
+    market_research: str = Field(default="", max_length=3000)
+    filler_protocol: bool = False
+    created_by: Optional[str] = Field(default=None, max_length=200)
+
+
+class DraftDraftResponse(BaseModel):
+    """Response returned after successfully staging a draft."""
+
+    id: str
+    station_id: Optional[str] = None
+    artist_id: Optional[str] = None
+    brand_id: Optional[str] = None
+    station_name: str
+    artist_name: str
+    genre: str
+    mood: str
+    items: str
+    script: str
+    backstory: str
+    market_research: str
+    filler_protocol: bool
+    status: str
+    task_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Settings
 # ═══════════════════════════════════════════════════════════════════
