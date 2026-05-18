@@ -1,8 +1,13 @@
-# CLAUDE.md — AI-Friendly Form Field Contract
+# CLAUDE.md — AI-Friendly Form Field Contract + Claude Governance Rules
 
-**Last Updated**: 2026-05-02  
+**Last Updated**: 2026-05-18  
+**Version**: 4.0  
 **Project**: AetherWave / RP-Music-Radio  
-**Audience**: AI agents (ChatAssistant, automation systems, screen readers)
+**Audience**: AI agents (ChatAssistant, automation systems, screen readers)  
+**Status**: ACTIVE Governance File  
+**Supplements**: `.github/copilot-instructions.md` v3.5 (Rules 1-13)
+
+**IMPORTANT**: This document establishes Claude-specific governance rules and project-specific form field contracts. For general governance (Rules 1-13), see `.github/copilot-instructions.md`. For Claude-only rules, see this file (Rules 1.5, 12, 14, 15, 16, plus form field contract).
 
 ---
 
@@ -269,13 +274,188 @@ When users ask ChatAssistant to "Create 3 DJs for this station":
 
 ---
 
+### Rule 16: All User-Requested Tasks Must Be Planned Before Implementation (CRITICAL)
+
+**REQUIREMENT**: Every task given by the user — whether a new feature, bug fix, refactor, documentation update, or investigation — MUST have a detailed plan documented in `.github/` BEFORE implementation begins. **NO EXCEPTIONS.**
+
+**PLANNING DOCUMENTS**:
+- Primary: `.github/TODO.md` — Add task with description, subtasks, effort estimate
+- Secondary: `.github/PLANNING.md` — Document approach, decisions, dependencies
+- Complex: `.github/{TASK_NAME}_PLAN.md` (e.g., FEATURE2_PLAN.md)
+
+**PLAN REQUIREMENTS**:
+1. Clear Objective — What problem does this solve? What's the user's intent?
+2. Subtasks — Break into 3-5 concrete steps (not vague)
+3. Database Schema Changes — If applicable, document new tables/columns
+4. API Endpoints — If applicable, list routes with methods
+5. Frontend Components — If applicable, list new files and integration points
+6. Integration Points — How does this connect to existing systems?
+7. Effort Estimate — Days/hours with breakdown per subtask
+8. Dependencies — What must exist before this work starts?
+9. Success Criteria — What does "done" look like?
+10. Risks — Known blockers or technical challenges
+
+**ENFORCEMENT**:
+- ✅ ALLOWED: Start implementation immediately after plan is written and committed
+- ❌ BLOCKED: Implementation without written plan in `.github/` files
+- ✅ ALLOWED: Update plan during implementation as learnings emerge
+- ✅ ALLOWED: Other AI agents to read, comment on, and edit plans
+
+**CONSEQUENCE**: Attempting to implement without a documented plan = escalate to human and wait for plan approval before coding.
+
+**APPLIES TO**: ALL tasks, including:
+- New features and enhancements
+- Bug fixes and debugging sessions
+- Refactoring and code cleanup
+- Documentation updates
+- Performance investigations
+- Security audits
+- Integration testing
+- Database migrations
+- Configuration changes
+
+**NO EXCEPTIONS**: Plan-first applies universally to every user directive.
+
+---
+
+### Rule 1.5: Session Work ONLY to Designated Branch (CRITICAL)
+
+**REQUIREMENT**: All commits during an active session MUST push to the designated branch specified in the session header. NO exceptions for governance, documentation, or planning.
+
+**SESSION BRANCH IDENTIFICATION**: Read session header at start for designated branch (e.g., `alpha`, `claude/issue-N`, etc.). This is the ONLY branch where session work is pushed. If unclear, STOP and ask human.
+
+**ENFORCEMENT CHECKPOINT**: Before EVERY push, verify branch:
+- Run: `git branch -vv`
+- Confirm current branch matches session designation
+- If wrong: `git checkout <correct-branch>` then push
+
+**SCOPE**: Applies to ALL changes (code, governance files, documentation, planning)
+
+**CONSEQUENCE**: Commits to wrong branch = blocker; must revert and re-push to correct branch
+
+**RATIONALE**: Prevents accidental merges of unfinished work; keeps session work isolated until human review; ensures correct review gates
+
+---
+
+### Rule 12: Continuous PR Monitoring with Escalating Fixes (Never Stop at First Green)
+
+**CORE PRINCIPLE**: When a PR has failures, continue working through ALL issues until the entire PR is ALL GREEN. Do NOT stop when one issue is fixed.
+
+**MONITORING WINDOW**: 8 minutes maximum
+- Check PR status **once per minute** (not continuously/obsessively)
+- After 8 minutes, escalate remaining issues to human as blocker
+- Rationale: Ensures progress without creating endless loops
+
+**ESCALATION LEVELS**:
+- **Jr** (Junior): Minor issues, 1-minute fix (docs, lint, config)
+- **Sr** (Senior): Major issues, 5-30 min fix (code logic, architecture)
+- **Cr** (Critical): Blockers, escalate to human (blocked dependencies, env issues)
+
+**FIX WORKFLOW** (Per Issue):
+1. Create/update subtask in `.github/TODO.md` with issue ID and severity
+2. Document fix approach in `.github/PLANNING.md`
+3. Implement fix on feature branch
+4. Run full verification (build, test, lint, audit)
+5. Commit with conventional prefix: `fix:`, `refactor:`, `docs:`
+6. Push immediately
+7. Update `.github/TODO.md` with completion status
+8. Update `.github/PLANNING.md` with fix summary
+9. Add PR comment: "Fixed [Jr-1, Sr-2] in cycle N"
+
+**REPEAT UNTIL ALL GREEN**:
+- After each fix, pause 1 minute for CI to update
+- Immediately re-check ALL checks (not just the one you fixed)
+- Check for regressions or newly revealed issues
+- If ANY check still failing → continue to next issue
+- If ALL checks green → verify stability, then STOP
+
+**SUCCESS CRITERIA** — PR Ready to Merge Only When:
+- ✅ All CI checks green (verify, build, test-frontend, test-backend, lint, audit, security)
+- ✅ 0 failed checks (no red ✗)
+- ✅ 0 blockers (mergeable_state = "clean")
+- ✅ All issues fixed and documented in governance files
+- ✅ PR comment added: "All checks passing — ready to merge"
+
+---
+
+### Rule 14: Autocompact Threshold for Multi-Session Stability
+
+**REQUIREMENT**: Set `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=50` to trigger context compaction at 50% capacity instead of default 85%.
+
+**PURPOSE**: 
+- Prevents context window bloat in long-running sessions
+- Enables cleaner handoffs between AI agents
+- Avoids token exhaustion near 100% limit
+- Maintains predictable compaction cycles
+
+**CONFIGURATION**:
+- **Global User Setting** (`~/.claude/settings.json`):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+    }
+  }
+  ```
+- **Project Setting** (`.claude/settings.json` in repo):
+  ```json
+  {
+    "env": {
+      "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "50"
+    }
+  }
+  ```
+
+**VERIFICATION**:
+- Run: `echo $CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`
+- Expected output: `50`
+
+**RATIONALE**: At 50% threshold, context compacts before reaching danger zone. Prevents bloat in long sessions with multiple agent handoffs.
+
+---
+
+### Rule 15: Claude-Only Credential Storage (Local Files Only)
+
+**REQUIREMENT**: Store all sensitive credentials (GitHub tokens, API keys, etc.) **locally in user files only** — NEVER embed in git URLs, config files, or tracked repository files.
+
+**STORAGE METHOD**:
+- **GitHub tokens**: `~/.git-credentials` (local user file, not tracked by git)
+- **API keys**: Environment variables or `.env.local` (git-ignored)
+- **SSH keys**: `~/.ssh/` (local user directory)
+
+**ENFORCEMENT**:
+- ✅ DO: Store token in `~/.git-credentials`, use git credential helper
+- ✅ DO: Store token in environment variable for runtime use
+- ❌ DON'T: Embed token in git remote URL (e.g., `https://token@github.com/...`)
+- ❌ DON'T: Commit token to `.git/config` or any config file
+- ❌ DON'T: Store token in git history
+
+**GIT CREDENTIAL HELPER**:
+```bash
+# Store token locally
+cat > ~/.git-credentials <<'EOF'
+https://x-access-token:YOUR_TOKEN@github.com
+https://YOUR_TOKEN@github.com
+EOF
+chmod 600 ~/.git-credentials
+
+# Git automatically uses it for all operations
+git push origin branch  # No token visible in URL
+```
+
+**RATIONALE**: Other AI agents (ChatGPT, Copilot, etc.) do NOT have access to local `~/.git-credentials` files. Keeping credentials local-only ensures they remain Claude-exclusive.
+
+---
+
 ### Best Practices for Excellent Code
 
-**Before You Code**
+**Before You Code** (Rule 16: Planning is Mandatory)
+- [ ] **VERIFY PLAN EXISTS**: Every user-requested task MUST have a plan in `.github/` (TODO.md, PLANNING.md, or {TASK}_PLAN.md) BEFORE coding starts. See Rule 16 above for requirements.
+- [ ] **Read the plan**: Understand objective, subtasks, dependencies, success criteria
 - [ ] Read 2-3 similar functions to understand patterns in this codebase
 - [ ] Identify the existing approach, not your preferred approach
 - [ ] Ask: "What would someone familiar with this codebase write?"
-- [ ] Plan the implementation (2-3 bullet points)
+- [ ] Plan the implementation (2-3 bullet points) — this is documented in `.github/`
 - [ ] Identify test cases before writing code
 
 **While You Code**
@@ -489,6 +669,8 @@ Each AI follows their governance rules independently. Coordinating prompts shoul
 
 ---
 
-**Last Reviewed**: 2026-05-02  
-**Status**: ACTIVE  
-**Owner**: Repository maintainers
+**Last Reviewed**: 2026-05-18  
+**Status**: ACTIVE Governance File (Protected)  
+**Owner**: Repository maintainers  
+**Editor**: Claude AI agents  
+**Related Files**: `.github/copilot-instructions.md`, `.github/PLANNING.md`, `.github/TODO.md`
